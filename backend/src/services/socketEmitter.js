@@ -143,6 +143,37 @@ const emitSupportMessage = (ticket, reply) => {
   emitToRoom("room:admin", "support_message", payload);
 };
 
+/**
+ * Emit a new seller support ticket notification to admins.
+ */
+const emitSellerSupportTicketCreated = (ticket) => {
+  if (!_io || !ticket) return;
+  emitToRoom("room:admin", "seller_support_ticket_created", ticket);
+};
+
+/**
+ * Emit a seller support chat message to the seller room and admin room.
+ */
+const emitSellerSupportMessage = (ticket, reply) => {
+  if (!_io || !ticket || !reply) return;
+  const payload = {
+    ticketId: ticket.ticketId,
+    _id: String(ticket._id),
+    sellerId: String(ticket.sellerId),
+    reply: {
+      from: reply.from,
+      text: reply.text,
+      date: reply.date || new Date()
+    },
+    status: ticket.status
+  };
+  
+  // Send to specific seller
+  emitToRoom(`room:seller_${ticket.sellerId}`, "seller_support_message", payload);
+  // Send to admins
+  emitToRoom("room:admin", "seller_support_message", payload);
+};
+
 module.exports = {
   setIo,
   getIo,
@@ -152,4 +183,6 @@ module.exports = {
   emitBroadcastNotification,
   emitSupportTicketCreated,
   emitSupportMessage,
+  emitSellerSupportTicketCreated,
+  emitSellerSupportMessage,
 };

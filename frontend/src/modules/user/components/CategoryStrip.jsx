@@ -110,12 +110,7 @@ const CategoryStrip = () => {
 
                 <div className="relative flex items-center group">
                     {/* Scroll Navigation */}
-                    <button
-                        onClick={() => scroll('left')}
-                        className="absolute -left-6 md:left-2 z-20 bg-white shadow-[0_4px_25px_rgba(0,0,0,0.1)] p-4 rounded-full hover:bg-primary hover:text-white transition-all active:scale-90 border border-gray-50 flex items-center justify-center hidden md:flex"
-                    >
-                        <ChevronLeft size={24} />
-                    </button>
+                    
 
                     <motion.div
                         ref={scrollRef}
@@ -171,12 +166,7 @@ const CategoryStrip = () => {
                         ))}
                     </motion.div>
 
-                    <button
-                        onClick={() => scroll('right')}
-                        className="absolute -right-6 md:right-2 z-20 bg-white shadow-[0_4px_25px_rgba(0,0,0,0.1)] p-4 rounded-full hover:bg-primary hover:text-white transition-all active:scale-90 border border-gray-50 flex items-center justify-center hidden md:flex"
-                    >
-                        <ChevronRight size={24} />
-                    </button>
+                    
                 </div>
             </div>
         </section>

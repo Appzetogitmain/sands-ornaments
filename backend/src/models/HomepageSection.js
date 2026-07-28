@@ -12,6 +12,7 @@ const homepageItemSchema = new mongoose.Schema({
   subtitle: String,
   description: String,
   image: String,
+  mobileImage: String,
   hoverImage: String,
   relationKey: String,
   recipient: String,

@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 
 const directSaleSchema = new mongoose.Schema(
   {
-    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller", required: true, index: true },
+    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller", default: null, index: true },
     productId: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true, index: true },
     variantId: { type: mongoose.Schema.Types.ObjectId, required: true, index: true },
 

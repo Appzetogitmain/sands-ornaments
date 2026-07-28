@@ -53,11 +53,11 @@ const CategoryNav = ({ showMetalToggle = true }) => {
     }, [activeMetal, location.pathname, location.search, updateActiveMetal]);
 
     return (
-        <div className="bg-[#FFF0F4] border-b border-pink-100 hidden md:block w-full">
+        <div className="border-b hidden md:block w-full" style={{ background: '#FFFFFF', borderColor: '#EBEBEB', fontFamily: "'Inter', 'Lato', sans-serif" }}>
             <div className="container mx-auto px-4 md:px-12 relative" onMouseLeave={resetMenu}>
                 {/* Navigation Links - Centered and Spaced Out */}
-                <div className="flex justify-center items-center py-1.5">
-                    <ul className="flex items-center gap-12">
+                <div className="flex justify-center items-center py-0.5 w-full">
+                    <ul className="flex items-center justify-between lg:justify-center w-full gap-2 lg:gap-5 xl:gap-8 flex-nowrap px-1">
                         {navItems.map((item) => (
                             <li
                                 key={item.id}
@@ -72,10 +72,10 @@ const CategoryNav = ({ showMetalToggle = true }) => {
                             >
                                 <Link
                                     to={item.path}
-                                    className="text-[15px] font-medium text-gray-900 hover:text-[#9C3D5E] flex items-center gap-1.5 transition-all duration-300 whitespace-nowrap"
+                                    className="text-[9px] md:text-[10px] xl:text-[12px] font-bold uppercase tracking-tighter md:tracking-normal xl:tracking-[0.08em] font-sans text-gray-800 hover:text-[#9C3D5E] flex items-center gap-0.5 xl:gap-1 transition-all duration-300 whitespace-nowrap"
                                 >
                                     {item.name}
-                                    {item.hasChevron && <ChevronDown className="w-4 h-4 text-gray-600" />}
+                                    {item.hasChevron && <ChevronDown className="w-4 h-4 text-gray-500" />}
                                 </Link>
 
                                 {/* Dropdowns Mapping — Positioned to show "Pura Box" (Full width) */}
@@ -102,14 +102,33 @@ const CategoryNav = ({ showMetalToggle = true }) => {
 
                 {/* Silver / Gold Toggle - Precise SANDS Polish with Navigation logic */}
                 {showMetalToggle && (
-                    <div className="flex justify-center pb-1 pt-0 relative">
-                        <div className="p-0.5 rounded-full border border-[#D4B390]/40 flex items-center bg-white shadow-[0_4px_25px_rgba(212,179,144,0.15)] overflow-hidden" style={{ minWidth: '850px' }}>
+                    <div className="flex justify-center pb-0.5 pt-0.5 relative">
+                        <div className="p-1 w-[600px] max-w-[95%] rounded-full border border-[#D4B390]/40 flex items-center bg-white shadow-[0_4px_25px_rgba(212,179,144,0.15)] relative">
+                            {/* Animated Background Pill */}
+                            <div className="absolute inset-1 flex" style={{ zIndex: 0 }}>
+                                <motion.div
+                                    layout
+                                    initial={false}
+                                    animate={{
+                                        x: activeMetal === 'gold' ? '100%' : '0%',
+                                        background: activeMetal === 'gold' 
+                                            ? 'linear-gradient(to right, #BF953F, #FCF6BA, #B38728)' 
+                                            : 'linear-gradient(to right, #4B5563, #374151, #1F2937)',
+                                        boxShadow: activeMetal === 'gold'
+                                            ? '0 8px 20px rgba(191,149,63,0.35)'
+                                            : '0 8px 20px rgba(0,0,0,0.25)'
+                                    }}
+                                    transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+                                    className="w-1/2 h-full rounded-full"
+                                />
+                            </div>
+
                             <button
                                 onClick={() => {
                                     updateActiveMetal('silver');
                                     navigate('/');
                                 }}
-                                className={`flex-1 py-1 px-16 rounded-full text-[15px] font-bold uppercase tracking-widest transition-all duration-500 transform ${activeMetal === 'silver' ? 'bg-gradient-to-r from-[#434343] via-[#C0C0C0] to-[#434343] text-white shadow-[0_8px_30px_rgba(0,0,0,0.25)] scale-[1.01]' : 'text-[#4A4A4A] hover:bg-gray-50 hover:text-black'}`}
+                                className={`relative flex-1 py-1 px-8 rounded-full text-[13px] font-bold uppercase tracking-widest transition-colors duration-300 z-10 ${activeMetal === 'silver' ? 'text-white' : 'text-[#4A4A4A] hover:text-black'}`}
                             >
                                 Silver
                             </button>
@@ -118,7 +137,7 @@ const CategoryNav = ({ showMetalToggle = true }) => {
                                     updateActiveMetal('gold');
                                     navigate('/gold-collection');
                                 }}
-                                className={`flex-1 py-1 px-16 rounded-full text-[15px] font-bold uppercase tracking-widest transition-all duration-500 transform ${activeMetal === 'gold' ? 'bg-gradient-to-r from-[#BF953F] via-[#FCF6BA] to-[#B38728] text-[#3D2B1F] shadow-[0_8px_30px_rgba(191,149,63,0.35)] scale-[1.01]' : 'text-[#4A4A4A] hover:bg-gray-50 hover:text-black'}`}
+                                className={`relative flex-1 py-1 px-8 rounded-full text-[13px] font-bold uppercase tracking-widest transition-colors duration-300 z-10 ${activeMetal === 'gold' ? 'text-[#3D2B1F]' : 'text-[#4A4A4A] hover:text-black'}`}
                             >
                                 Gold
                             </button>

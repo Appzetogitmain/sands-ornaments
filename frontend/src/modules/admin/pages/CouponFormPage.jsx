@@ -216,6 +216,7 @@ const CouponFormPage = () => {
                             <div className="flex flex-col gap-1.5">
                                 <Input
                                     label="Promotional Code"
+                                    helperText="The unique code customers type at checkout to get the discount."
                                     name="code"
                                     value={formData.code}
                                     onChange={handleChange}
@@ -236,6 +237,7 @@ const CouponFormPage = () => {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                 <Select
                                     label="Discount Type"
+                                    helperText="Select flat discount, percentage-based discount, or free shipping."
                                     name="type"
                                     value={formData.type}
                                     onChange={handleChange}
@@ -247,6 +249,7 @@ const CouponFormPage = () => {
                                 />
                                 <Input
                                     label="Discount Value"
+                                    helperText="Enter the discount size (e.g., 500 for flat ₹500 discount, or 10 for 10% percentage)."
                                     type="number"
                                     name="value"
                                     value={formData.value}
@@ -259,12 +262,13 @@ const CouponFormPage = () => {
                             </div>
 
                             <TextArea
-                                label="Campaign Description"
-                                name="description"
-                                value={formData.description}
-                                onChange={handleChange}
-                                rows="3"
-                                placeholder="Explain the offer to customers..."
+                                    label="Campaign Description"
+                                    helperText="Describe this coupon campaign. This is shown to customers."
+                                    name="description"
+                                    value={formData.description}
+                                    onChange={handleChange}
+                                    rows="3"
+                                    placeholder="Explain the offer to customers..."
                             />
                         </div>
                     </FormSection>
@@ -396,6 +400,7 @@ const CouponFormPage = () => {
                         <div className="space-y-4">
                             <Input
                                 label="Start Date"
+                                helperText="The date when this coupon goes active."
                                 type="date"
                                 name="validFrom"
                                 value={formData.validFrom}
@@ -404,6 +409,7 @@ const CouponFormPage = () => {
                             />
                             <Input
                                 label="Expiry Date"
+                                helperText="The date when this coupon expires."
                                 type="date"
                                 name="validUntil"
                                 value={formData.validUntil}
@@ -419,6 +425,7 @@ const CouponFormPage = () => {
                         <div className="space-y-4">
                             <Input
                                 label="Min Order (INR)"
+                                helperText="Minimum purchase value of applicable items required to use this coupon."
                                 type="number"
                                 name="minOrderValue"
                                 value={formData.minOrderValue}
@@ -428,6 +435,7 @@ const CouponFormPage = () => {
                             />
                             <Input
                                 label="Max Discount (INR)"
+                                helperText="Max discount cap (only applies to Percentage type)."
                                 type="number"
                                 name="maxDiscount"
                                 value={formData.maxDiscount}
@@ -439,6 +447,7 @@ const CouponFormPage = () => {
                             <div className="grid grid-cols-2 gap-4">
                                 <Input
                                     label="Total Limit"
+                                    helperText="Max overall coupon usages site-wide."
                                     type="number"
                                     name="usageLimit"
                                     value={formData.usageLimit}
@@ -448,6 +457,7 @@ const CouponFormPage = () => {
                                 />
                                 <Input
                                     label="User Limit"
+                                    helperText="Max coupon usages per customer."
                                     type="number"
                                     name="perUserLimit"
                                     value={formData.perUserLimit}

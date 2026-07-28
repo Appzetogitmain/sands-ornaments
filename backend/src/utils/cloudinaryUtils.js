@@ -35,4 +35,28 @@ const deleteFromCloudinary = async (url) => {
   }
 };
 
-module.exports = { deleteFromCloudinary };
+/**
+ * Generates a signed upload signature for secure client-side uploading to Cloudinary
+ * @param {string} folder - The Cloudinary folder path
+ * @returns {object} - Timestamp, signature, apiKey, cloudName, and folder
+ */
+const generateUploadSignature = (folder) => {
+  const timestamp = Math.round(new Date().getTime() / 1000);
+  const signature = cloudinary.utils.api_sign_request(
+    {
+      timestamp,
+      folder
+    },
+    cloudinary.config().api_secret
+  );
+
+  return {
+    timestamp,
+    signature,
+    cloudName: cloudinary.config().cloud_name,
+    apiKey: cloudinary.config().api_key,
+    folder
+  };
+};
+
+module.exports = { deleteFromCloudinary, generateUploadSignature };

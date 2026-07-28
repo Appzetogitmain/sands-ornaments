@@ -12,6 +12,7 @@ const {
 } = require("../../../utils/inventorySync");
 const {
   reverseCommissionsForOrder,
+  adjustCommissionsForReturn,
 } = require("../../../services/commissionService");
 const { createNotification } = require("../../../services/notificationService");
 
@@ -396,6 +397,16 @@ exports.updateReturnStatus = async (req, res) => {
     }
 
     if (order) {
+      const fullOrder = await Order.findById(order._id);
+      const totalOrderQty = (fullOrder?.items || []).reduce((sum, item) => sum + (Number(item.quantity) || 0), 0);
+      
+      const completedReturns = await Return.find({ orderId: order._id, status: "Refunded" });
+      const currentRefundTransitioning = (nextStatus === "Refunded" && returnReq.status !== "Refunded");
+      const returnedQty = completedReturns.reduce((sum, r) => sum + r.items.reduce((s, it) => s + (Number(it.qty) || 0), 0), 0) +
+                          (currentRefundTransitioning
+                            ? returnReq.items.reduce((sum, item) => sum + (Number(item.qty) || 0), 0)
+                            : 0);
+
       const nextOrderStatus = buildOrderStatusFromReturnStatus(
         currentStatus,
         nextStatus,
@@ -403,10 +414,28 @@ exports.updateReturnStatus = async (req, res) => {
       const orderUpdate = {};
 
       if (nextStatus === "Refunded") {
-        orderUpdate.paymentStatus = "refunded";
+        orderUpdate.paymentStatus = returnedQty < totalOrderQty ? "partially_refunded" : "refunded";
       }
+
       if (nextOrderStatus) {
-        orderUpdate.status = nextOrderStatus;
+        let finalOrderStatus = nextOrderStatus;
+        
+        if (finalOrderStatus === "Delivered") {
+          const { hasOtherActiveClaims } = require("../../../utils/activeClaimsHelper");
+          const otherActive = await hasOtherActiveClaims(order._id, returnReq._id);
+          if (otherActive) {
+            finalOrderStatus = "Return Requested";
+          }
+        }
+
+        if (returnedQty > 0) {
+          if (returnedQty < totalOrderQty) {
+            finalOrderStatus = "Partially Returned";
+          } else {
+            finalOrderStatus = "Returned";
+          }
+        }
+        orderUpdate.status = finalOrderStatus;
       }
 
       if (Object.keys(orderUpdate).length > 0) {
@@ -425,19 +454,17 @@ exports.updateReturnStatus = async (req, res) => {
         );
       }
 
-      // ── Platform commission reversal (decision F: full reversal on refund) ──
-      // Fire only when the refund actually completes. The service is idempotent
-      // so accidental re-fires (e.g. Refunded → Closed) are no-ops.
+      // ── Platform commission adjustment ──
+      // Fire only when the refund actually completes.
       if (nextStatus === "Refunded") {
         try {
-          await reverseCommissionsForOrder(order._id, {
-            triggeredBy: "return_refunded",
-            reasonNote: `Return ${returnReq.returnId || returnReq._id} refunded`,
+          await adjustCommissionsForReturn(order._id, returnReq, {
+            session: null,
             safe: true,
           });
         } catch (e) {
           console.error(
-            "[Commission] Return-refund reversal error:",
+            "[Commission] Return-refund adjustment error:",
             e.message,
           );
         }

@@ -96,13 +96,11 @@ const HorizontalFilters = ({
             id: 'price',
             label: 'Price',
             value: priceRange >= 50000 ? 'All' : `Under ₹${priceRange.toLocaleString()}`,
-            options: [
-                { label: 'All', value: 50000 },
-                { label: 'Under ₹2,000', value: 2000 },
-                { label: 'Under ₹5,000', value: 5000 },
-                { label: 'Under ₹10,000', value: 10000 },
-                { label: 'Under ₹20,000', value: 20000 },
-            ],
+            isSlider: true,
+            min: 1000,
+            max: 50000,
+            step: 500,
+            current: priceRange,
             onChange: onPriceChange
         },
         {
@@ -181,33 +179,63 @@ const HorizontalFilters = ({
                                         transition={{ duration: 0.2 }}
                                         {...dropdownScroll.events}
                                         ref={dropdownScroll.ref}
-                                        className={`absolute left-0 mt-2 w-56 bg-white border border-[#EBCDD0] rounded-xl shadow-2xl z-[110] py-2 max-h-[350px] overflow-y-auto custom-scrollbar overscroll-contain ${dropdownScroll.isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
+                                        className={`absolute left-0 mt-2 ${group.isSlider ? 'w-64' : 'w-56 py-2 max-h-[350px] overflow-y-auto'} bg-white border border-[#EBCDD0] rounded-xl shadow-2xl z-[110] custom-scrollbar overscroll-contain ${dropdownScroll.isDragging ? 'cursor-grabbing select-none' : 'cursor-grab'}`}
                                     >
-                                        {group.options.map((option) => {
-                                            const label = typeof option === 'string' ? option : option.label;
-                                            const val = typeof option === 'string' ? option : option.value;
-                                            const isSelected = group.isMulti 
-                                                ? tags.includes(val)
-                                                : group.id === 'price' 
-                                                    ? priceRange === val
+                                        {group.isSlider ? (
+                                            <div className="px-5 py-4 w-full">
+                                                <div className="flex justify-between text-xs text-gray-700 font-bold mb-4 tracking-wide">
+                                                    <span>₹0</span>
+                                                    <span className="text-[#8E2B45]">₹{group.current >= group.max ? `${group.max.toLocaleString()}+` : group.current.toLocaleString()}</span>
+                                                </div>
+                                                <input
+                                                    type="range"
+                                                    min={group.min}
+                                                    max={group.max}
+                                                    step={group.step}
+                                                    value={group.current}
+                                                    onChange={(e) => group.onChange(Number(e.target.value))}
+                                                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#8E2B45]"
+                                                />
+                                                <div className="flex justify-between items-center mt-5">
+                                                    <button 
+                                                        onClick={() => group.onChange(group.max)}
+                                                        className="text-[11px] font-bold text-gray-500 hover:text-gray-800 uppercase tracking-widest transition-colors"
+                                                    >
+                                                        Reset
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => setActiveDropdown(null)}
+                                                        className="px-4 py-1.5 bg-[#8E2B45] hover:bg-[#7a243b] text-white text-[11px] font-bold uppercase tracking-widest rounded-full transition-colors shadow-sm"
+                                                    >
+                                                        Apply
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            group.options.map((option) => {
+                                                const label = typeof option === 'string' ? option : option.label;
+                                                const val = typeof option === 'string' ? option : option.value;
+                                                const isSelected = group.isMulti 
+                                                    ? tags.includes(val)
                                                     : group.value === label || (group.id === 'shop-for' && audience === val.toLowerCase());
 
-                                            return (
-                                                <button
-                                                    key={label}
-                                                    onClick={() => {
-                                                        group.onChange(val);
-                                                        if (!group.isMulti) setActiveDropdown(null);
-                                                    }}
-                                                    className={`w-full text-left px-4 py-2.5 text-[13px] hover:bg-[#FDF5F6] transition-colors flex items-center justify-between group ${
-                                                        isSelected ? 'text-[#8E2B45] font-bold bg-[#FDF5F6]' : 'text-gray-600'
-                                                    }`}
-                                                >
-                                                    {label}
-                                                    {isSelected && <Check className="w-4 h-4" />}
-                                                </button>
-                                            );
-                                        })}
+                                                return (
+                                                    <button
+                                                        key={label}
+                                                        onClick={() => {
+                                                            group.onChange(val);
+                                                            if (!group.isMulti) setActiveDropdown(null);
+                                                        }}
+                                                        className={`w-full text-left px-4 py-2.5 text-[13px] hover:bg-[#FDF5F6] transition-colors flex items-center justify-between group ${
+                                                            isSelected ? 'text-[#8E2B45] font-bold bg-[#FDF5F6]' : 'text-gray-600'
+                                                        }`}
+                                                    >
+                                                        {label}
+                                                        {isSelected && <Check className="w-4 h-4" />}
+                                                    </button>
+                                                );
+                                            })
+                                        )}
                                     </motion.div>
                                 )}
                             </AnimatePresence>

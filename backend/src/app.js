@@ -128,7 +128,7 @@ app.use(
 app.use(
   "/api/seller",
   authenticate,
-  requireRole("seller"),
+  requireRole("seller", { allowUnapproved: true }),
   require("./modules/seller/routes/index"),
 );
 

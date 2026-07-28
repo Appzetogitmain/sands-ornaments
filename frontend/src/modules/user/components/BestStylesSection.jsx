@@ -101,18 +101,18 @@ const BestStylesSection = ({ sectionData = null }) => {
     return (
         <section className="pt-2 pb-2 md:pt-4 md:pb-4 bg-white overflow-hidden">
             <div className="container mx-auto px-4 max-w-[1450px]">
-                <div className="relative mb-4 md:mb-6 flex flex-col items-center">
+                <div className="relative mb-3 md:mb-5 flex flex-col items-center">
                     <div className="flex flex-col items-center text-center">
-                        <h2 className="text-[24px] md:text-[40px] font-serif text-gray-900 tracking-tight leading-tight mb-2">
+                        <h2 className="text-[20px] md:text-[32px] font-cinzel text-gray-900 tracking-wide font-medium leading-tight mb-1">
                             {sectionTitle}
                         </h2>
                         {sectionSubtitle ? (
-                            <p className="text-[13px] md:text-[15px] text-gray-500 mb-3">{sectionSubtitle}</p>
+                            <p className="text-[10px] md:text-[11px] font-lato font-bold uppercase tracking-[0.25em] text-gray-400 mb-2">{sectionSubtitle}</p>
                         ) : null}
-                        <Link to={ctaPath} className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] text-[#8E4A50] hover:text-[#5B1E26] transition-all flex items-center gap-2 group">
+                        <Link to={ctaPath} className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.2em] text-[#8E4A50] hover:text-[#5B1E26] transition-all flex items-center gap-1.5 group">
                             {ctaLabel}
-                            <div className="w-4 h-4 rounded-full bg-[#8E4A50]/10 flex items-center justify-center group-hover:bg-[#8E4A50] group-hover:text-white transition-all">
-                                <ChevronRight className="w-2.5 h-2.5" />
+                            <div className="w-3.5 h-3.5 rounded-full bg-[#8E4A50]/10 flex items-center justify-center group-hover:bg-[#8E4A50] group-hover:text-white transition-all">
+                                <ChevronRight className="w-2 h-2" />
                             </div>
                         </Link>
                     </div>
@@ -130,14 +130,16 @@ const BestStylesSection = ({ sectionData = null }) => {
 
                 <div className="flex items-center gap-3">
                     {/* Mobile Left Arrow */}
-                    <button
-                        onClick={() => scroll('left')}
-                        className="md:hidden flex-shrink-0 w-8 h-8 bg-gray-900 hover:bg-[#D4AF37] rounded-full flex items-center justify-center shadow-md transition-all duration-300 hover:scale-110 active:scale-95"
-                    >
-                        <ChevronLeft className="w-4 h-4 text-white" />
-                    </button>
+                    {dynamicProducts.length > 1 && (
+                        <button
+                            onClick={() => scroll('left')}
+                            className="md:hidden flex-shrink-0 w-8 h-8 bg-gray-900 hover:bg-[#D4AF37] rounded-full flex items-center justify-center shadow-md transition-all duration-300 hover:scale-110 active:scale-95"
+                        >
+                            <ChevronLeft className="w-4 h-4 text-white" />
+                        </button>
+                    )}
 
-                    <div ref={scrollRef} className="flex gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-4 md:pb-8 snap-x snap-mandatory px-1 flex-1">
+                    <div ref={scrollRef} className={`flex gap-4 md:gap-6 overflow-x-auto no-scrollbar pb-4 md:pb-8 snap-x snap-mandatory px-1 flex-1 ${dynamicProducts.length === 1 ? 'justify-center' : ''}`}>
                         {dynamicProducts.map((product) => (
                             <div key={product.id} className="min-w-[180px] md:min-w-[280px] w-[180px] md:w-[280px] snap-start">
                                 <ProductCard product={product} />
@@ -146,12 +148,14 @@ const BestStylesSection = ({ sectionData = null }) => {
                     </div>
 
                     {/* Mobile Right Arrow */}
-                    <button
-                        onClick={() => scroll('right')}
-                        className="md:hidden flex-shrink-0 w-8 h-8 bg-gray-900 hover:bg-[#D4AF37] rounded-full flex items-center justify-center shadow-md transition-all duration-300 hover:scale-110 active:scale-95"
-                    >
-                        <ChevronRight className="w-4 h-4 text-white" />
-                    </button>
+                    {dynamicProducts.length > 1 && (
+                        <button
+                            onClick={() => scroll('right')}
+                            className="md:hidden flex-shrink-0 w-8 h-8 bg-gray-900 hover:bg-[#D4AF37] rounded-full flex items-center justify-center shadow-md transition-all duration-300 hover:scale-110 active:scale-95"
+                        >
+                            <ChevronRight className="w-4 h-4 text-white" />
+                        </button>
+                    )}
                 </div>
             </div>
 

@@ -30,8 +30,8 @@ export const useHomepageCms = () => {
     // only needs sections; `/public/cms/pages/home` keeps the contract consistent.
     queryFn: async () => api.get('public/cms/pages/home'),
     select: toHomepageSectionsMap,
-    staleTime: 10 * 60 * 1000, // 10 minutes — CMS rarely changes, no need to refetch on every nav
-    gcTime:   30 * 60 * 1000,  // 30 minutes — keep in cache across page changes
+    staleTime: 30 * 1000, // 30 seconds — keep it responsive for admin updates
+    gcTime:   5 * 60 * 1000,  // 5 minutes — keep in cache across page changes
     retry: 1,
   });
 };

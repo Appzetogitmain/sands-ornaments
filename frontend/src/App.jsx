@@ -21,6 +21,8 @@ import SmoothScrollProvider from './components/SmoothScrollProvider';
 import { usePageTracking } from './hooks/useAnalytics';
 import LeadCapturePopup from './modules/user/components/LeadCapturePopup';
 import CookieConsent from './modules/user/components/CookieConsent';
+import MobileBottomNav from './modules/user/components/MobileBottomNav';
+import WhatsAppFloating from './modules/user/components/WhatsAppFloating';
 
 // Admin Imports — lazy loaded (only used on /admin/* routes, never by mobile users)
 const AdminLogin = lazy(() => import('./modules/admin/pages/Login'));
@@ -71,6 +73,7 @@ const AdminShipments = lazy(() => import('./modules/admin/pages/AdminShipments')
 const AnalyticsDashboard = lazy(() => import('./modules/admin/pages/AnalyticsDashboard'));
 const AuditLogPage = lazy(() => import('./modules/admin/pages/AuditLogPage'));
 const AdminPayouts = lazy(() => import('./modules/admin/pages/AdminPayouts'));
+const AdminDirectSales = lazy(() => import('./modules/admin/pages/AdminDirectSales'));
 
 // Seller Routes — lazy loaded
 const SellerRoutes = lazy(() => import('./modules/seller/routes/sellerRoutes'));
@@ -124,6 +127,23 @@ const AppContent = () => {
   const isSellerPath = location.pathname.startsWith('/seller');
   const { toasts } = useToasterStore();
 
+  const [isHeaderVisible, setIsHeaderVisible] = React.useState(true);
+  const [lastScrollY, setLastScrollY] = React.useState(0);
+
+  React.useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 150) {
+        setIsHeaderVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        setIsHeaderVisible(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   React.useEffect(() => {
     if (isSellerPath) {
       toasts
@@ -169,14 +189,15 @@ const AppContent = () => {
 
   const isAdminPath = location.pathname.startsWith('/admin');
   const isScannerPath = location.pathname === '/scanner';
+  const isLoginPath = location.pathname === '/login' || location.pathname === '/signup';
   const showMetalToggle = location.pathname === '/' || location.pathname === '/gold-collection';
 
   return (
     <div className="min-h-screen flex flex-col font-sans text-gray-900 bg-[#FDF5F6]">
-      {!isAdminPath && !isSellerPath && !isScannerPath && (
+      {!isAdminPath && !isSellerPath && !isScannerPath && !isLoginPath && (
         <>
           <div 
-            className="fixed top-0 left-0 right-0 z-[150] w-full"
+            className={`fixed top-0 left-0 right-0 z-[150] w-full transition-transform duration-300 ${isHeaderVisible ? 'translate-y-0' : '-translate-y-full'}`}
           >
             <AnnouncementBar />
             <Navbar />
@@ -185,10 +206,10 @@ const AppContent = () => {
           <PincodeModal />
           <LeadCapturePopup />
           <CookieConsent />
-          <div className={`h-[104px] ${showMetalToggle ? 'md:h-[226px]' : 'md:h-[166px]'} w-full`}></div>
+          <div className={`h-[104px] ${showMetalToggle ? 'md:h-[180px]' : 'md:h-[166px]'} w-full`}></div>
         </>
       )}
-      <main className={`flex-grow ${!isAdminPath && !isSellerPath && !isScannerPath ? 'md:pb-0' : ''}`}>
+      <main className={`flex-grow ${!isAdminPath && !isSellerPath && !isScannerPath && !isLoginPath ? 'pb-16 md:pb-0' : ''}`}>
         <Suspense fallback={<LoadingFallback />}>
           <Routes>
           {/* User Routes */}
@@ -218,6 +239,7 @@ const AppContent = () => {
           <Route path="/shipping-policy" element={<DynamicPage slug="shipping-policy" />} />
           <Route path="/cancellation-policy" element={<DynamicPage slug="cancellation-policy" />} />
           <Route path="/return-policy" element={<DynamicPage slug="return-refund-policy" />} />
+          <Route path="/replacement-policy" element={<DynamicPage slug="return-refund-policy" />} />
           <Route path="/care-guide" element={<DynamicPage slug="jewelry-care" />} />
           <Route path="/warranty-info" element={<DynamicPage slug="warranty-info" />} />
           <Route path="/craft" element={<DynamicPage slug="our-craftsmanship" />} />
@@ -297,6 +319,7 @@ const AppContent = () => {
                   <Route path="/shipping" element={<AdminShipments />} />
                   <Route path="/audit-logs" element={<AuditLogPage />} />
                   <Route path="/payout" element={<AdminPayouts />} />
+                  <Route path="/direct-sales" element={<AdminDirectSales />} />
                 </Routes>
               </AdminLayout>
             </AdminProtectedRoute>
@@ -309,10 +332,11 @@ const AppContent = () => {
         </Routes>
       </Suspense>
       </main>
-      {!isAdminPath && !isSellerPath && !isScannerPath && (
+      {!isAdminPath && !isSellerPath && !isScannerPath && !isLoginPath && (
         <>
           <Footer />
           <FloatingContactStack />
+          <MobileBottomNav />
         </>
       )}
     </div>

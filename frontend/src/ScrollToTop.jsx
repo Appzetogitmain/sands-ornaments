@@ -58,7 +58,7 @@ const ScrollToTop = () => {
     };
   }, [location.pathname, location.search]);
 
-  // 4. Handle Restoration on POP (Back/Forward)
+  // 4. Handle Restoration on POP (Back/Forward) or PUSH (New Page)
   useEffect(() => {
     const key = location.pathname + location.search;
 
@@ -69,39 +69,73 @@ const ScrollToTop = () => {
         0;
 
       if (savedScroll > 0) {
-        let attempts = 0;
+        let observer = null;
+        let timeoutId = null;
+
         const performRestore = () => {
           const lenis = getLenis();
-          const currentHeight = document.documentElement.scrollHeight;
-
-          // Restoration logic: Wait for page height to be sufficient
-          if (currentHeight >= savedScroll || attempts > 20) {
+          console.log("[ScrollToTop] Performing restore to", savedScroll, "Lenis:", !!lenis);
+          
+          const doScroll = () => {
             if (lenis) {
+              lenis.resize();
               lenis.scrollTo(savedScroll, { immediate: true });
+              // Backup after a tiny delay in case lenis takes a frame to update bounds
+              setTimeout(() => {
+                  if (lenis) {
+                      lenis.resize();
+                      lenis.scrollTo(savedScroll, { immediate: true });
+                  }
+              }, 100);
             } else {
               window.scrollTo(0, savedScroll);
             }
-            return true;
-          }
-          return false;
+          };
+
+          requestAnimationFrame(doScroll);
+
+          if (observer) observer.disconnect();
         };
 
-        // Rapid-fire attempts for the first 500ms
-        const interval = setInterval(() => {
-          attempts++;
-          if (performRestore() || attempts > 60) {
-            clearInterval(interval);
-          }
-        }, 50);
+        console.log("[ScrollToTop] Page height is", document.documentElement.scrollHeight, "Target is", savedScroll);
+        // Try immediately in case the page is already tall enough
+        if (document.documentElement.scrollHeight >= savedScroll) {
+          console.log("[ScrollToTop] Page already tall enough, restoring immediately.");
+          performRestore();
+        } else {
+          console.log("[ScrollToTop] Page too short, waiting for resize...");
+          // If not tall enough, wait for the page to render using ResizeObserver
+          observer = new ResizeObserver(() => {
+            if (document.documentElement.scrollHeight >= savedScroll) {
+              console.log("[ScrollToTop] Page became tall enough (", document.documentElement.scrollHeight, "), restoring now.");
+              performRestore();
+            }
+          });
+          observer.observe(document.documentElement);
+          
+          // Timeout as a fallback to try restoring anyway and clean up after 2.5s
+          timeoutId = setTimeout(() => {
+             console.log("[ScrollToTop] Timeout reached, restoring anyway.");
+             performRestore(); // will just try its best
+          }, 2500);
+        }
 
-        return () => clearInterval(interval);
+        return () => {
+          if (observer) observer.disconnect();
+          if (timeoutId) clearTimeout(timeoutId);
+        };
+      } else {
+         console.log("[ScrollToTop] No saved scroll found for", key);
       }
-    } else if (navType === "PUSH") {
-      // New navigation: Always scroll to top
-      const frame = requestAnimationFrame(() => {
-        scrollToTop();
-      });
-      return () => cancelAnimationFrame(frame);
+    } else {
+      console.log("[ScrollToTop] New navigation (PUSH/REPLACE). Scrolling to top.");
+      // New navigation (PUSH/REPLACE): Always scroll to top immediately
+      const lenis = getLenis();
+      if (lenis) {
+        lenis.scrollTo(0, { immediate: true });
+      } else {
+        window.scrollTo(0, 0);
+      }
     }
   }, [location.pathname, location.search, navType]);
 

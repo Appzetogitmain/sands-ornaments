@@ -53,6 +53,7 @@ import giftWifeSilver from "../../../user/assets/gift_wife_silver.png";
 import giftGfSilver from "../../../user/assets/gift_gf_silver.png";
 import giftMotherSilver from "../../../user/assets/gift_mother_silver.png";
 import giftSisterSilver from "../../../user/assets/gift_sister_silver.png";
+import { useDraftState } from "../../hooks/useDraftState";
 
 const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
   const navigate = useNavigate();
@@ -688,8 +689,14 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
         ? defaultItems
         : defaultFallbackItems;
 
-  const [items, setItems] = useState(initialItemsFromProps);
-  const [settings, setSettings] = useState(sectionData.settings || {});
+  const [items, setItems] = useDraftState(
+    `draft_items_${sectionData?.sectionKey || sectionData?.id || ""}_${sectionData?.pageKey || ""}`,
+    initialItemsFromProps,
+  );
+  const [settings, setSettings] = useDraftState(
+    `draft_settings_${sectionData?.sectionKey || sectionData?.id || ""}_${sectionData?.pageKey || ""}`,
+    sectionData.settings || {},
+  );
 
   const handleSettingChange = (field, value) => {
     setSettings((prev) => ({ ...prev, [field]: value }));
@@ -2723,6 +2730,7 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                             )
                           }
                         />
+                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1080x1080px (1:1 Ratio)</p>
                       </label>
                     </div>
                   )}
@@ -2921,6 +2929,11 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                                   handleImageUpload(item.id, e.target.files[0])
                                 }
                               />
+                              <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">
+                                {isGoldExploreCollectionsSection 
+                                  ? "✨ Recommended Size: 1200x600px (2:1 Ratio)"
+                                  : "✨ Recommended Size: 1080x1080px (1:1 Ratio)"}
+                              </p>
                             </label>
                           </div>
                         )}
@@ -2972,6 +2985,7 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                                 )
                               }
                             />
+                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1080x1080px (1:1 Ratio)</p>
                           </label>
                         </div>
                       )}
@@ -3895,6 +3909,7 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                                       )
                                     }
                                   />
+                                  <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1080x1080px (1:1 Ratio)</p>
                                 </label>
                               )}
                             </div>

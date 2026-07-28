@@ -718,6 +718,13 @@ const Shop = () => {
       baseProducts = baseProducts.filter((p) =>
         matchesCategory(p, categoryQuery, categoryQueryObj),
       );
+      if (!title || title === "All Jewellery" || title === "Men's Jewellery" || title === "Women's Jewellery") {
+        let prefix = "";
+        if (isMenFlow) prefix = "Men's ";
+        else if (isWomenFlow) prefix = "Women's ";
+        const catName = categoryQueryObj ? categoryQueryObj.name : categoryQuery.charAt(0).toUpperCase() + categoryQuery.slice(1);
+        title = `${prefix}${catName}`;
+      }
     }
 
     if (priceMaxQuery && priceMinQuery) {
@@ -1045,46 +1052,37 @@ const Shop = () => {
           className={`sticky z-[100] bg-white transition-all duration-300 ${isNavVisible ? "top-[50px] md:top-[141px]" : "top-0"}`}
         >
           {/* Header Section - Back Left, Title Center, Items Right */}
-          <div className="py-2.5 md:py-3 flex flex-row justify-between items-center gap-4 border-b border-[#EBCDD0] px-4 md:px-0">
+          <div className="py-2 md:py-3 flex flex-row justify-between items-center gap-2 md:gap-4 border-b border-[#EBCDD0] px-4 md:px-0">
             {/* Back Button */}
             <button
               onClick={() => navigate(-1)}
-              className="flex items-center gap-1.5 text-black hover:text-[#9C3D5E] transition-all group font-medium uppercase tracking-wide text-[10px] md:text-xs shrink-0"
+              className="flex items-center gap-1 text-black hover:text-[#9C3D5E] transition-all group font-bold uppercase tracking-wide text-[10px] md:text-xs shrink-0 min-w-[50px]"
             >
               <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-1 transition-transform" />
               Back
             </button>
 
             {/* Title - Center */}
-            <div className="text-center flex-1">
-              <h1 className="text-lg md:text-2xl font-serif font-medium text-black leading-tight">
+            <div className="text-center flex-1 mx-1 overflow-hidden">
+              <h1 className="text-base md:text-xl font-sans font-bold text-gray-800 leading-tight truncate">
                 {pageTitle}
               </h1>
             </div>
 
-            <div className="hidden md:flex items-center gap-2 md:gap-3 shrink-0">
-              <button
-                onClick={() => setIsFilterOpen(true)}
-                className="flex items-center gap-1.5 border border-[#D39A9F] px-4 py-1.5 rounded-lg hover:bg-[#D39A9F] hover:text-white hover:border-[#D39A9F] transition-all text-black text-xs md:text-sm font-medium"
-              >
-                <Filter className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                <span>Filters</span>
-              </button>
-            </div>
 
             {/* Mobile Actions */}
-            <div className="flex md:hidden items-center gap-2">
+            <div className="flex md:hidden items-center gap-1.5 shrink-0">
               <button
                 onClick={() => setIsSortOpen(true)}
-                className="p-1.5 border border-[#EBCDD0] rounded-lg text-black hover:bg-[#EBCDD0] transition-all"
+                className="p-1 border border-[#EBCDD0] rounded-md text-black hover:bg-[#EBCDD0] transition-all"
               >
-                <ArrowUpDown className="w-4 h-4" />
+                <ArrowUpDown className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={() => setIsFilterOpen(true)}
-                className="flex items-center gap-1.5 bg-[#9C3D5E] text-white px-3 py-1.5 rounded-lg font-medium text-[11px] uppercase tracking-wider"
+                className="flex items-center gap-1 bg-[#9C3D5E] text-white px-2.5 py-1 rounded-md font-bold text-[10px] uppercase tracking-wider"
               >
-                <Filter className="w-3.5 h-3.5" />
+                <Filter className="w-3 h-3" />
                 Filter
               </button>
             </div>
@@ -1439,8 +1437,6 @@ const Shop = () => {
             <div className="space-y-4">
               {[
                 "Newest",
-                "Price: High to Low",
-                "Price: Low to High",
                 "Best Selling",
               ].map((option) => (
                 <button
@@ -1465,6 +1461,31 @@ const Shop = () => {
                   )}
                 </button>
               ))}
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-gray-100">
+                <h3 className="text-lg font-serif font-bold text-black mb-6">
+                  Filter by Price
+                </h3>
+                <div className="px-2">
+                  <input
+                    type="range"
+                    min="1000"
+                    max="50000"
+                    step="1000"
+                    value={priceRange}
+                    onChange={(e) => handlePriceRangeChange(e.target.value)}
+                    className="w-full h-1.5 bg-gray-100 rounded-lg appearance-none cursor-pointer accent-[#8E2B45]"
+                  />
+                  <div className="flex justify-between mt-4">
+                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                      ₹1,000
+                    </span>
+                    <span className="text-[9px] text-gray-400 font-bold uppercase tracking-widest">
+                      ₹{priceRange.toLocaleString()}{priceRange >= 50000 ? '+' : ''}
+                    </span>
+                  </div>
+                </div>
             </div>
           </div>
         </>

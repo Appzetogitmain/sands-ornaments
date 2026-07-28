@@ -4,21 +4,21 @@ const AdminStatsCard = ({ label, value, icon: Icon, color, bgColor, badge, badge
     return (
         <div 
             onClick={onClick}
-            className={`bg-white p-5 rounded-xl border border-gray-200 shadow-sm transition-all group relative overflow-hidden flex items-center justify-between gap-4 h-full ${onClick ? 'cursor-pointer hover:border-gray-300 hover:shadow-md' : 'hover:shadow-md'}`}
+            className={`bg-white p-4 rounded-xl border border-gray-200 shadow-sm transition-all group relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-3 h-full ${onClick ? 'cursor-pointer hover:border-gray-300 hover:shadow-md' : 'hover:shadow-md'}`}
         >
-            <div className="text-left flex-1 min-w-0">
-                <p className="text-[10px] md:text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">{label}</p>
-                <h3 className="text-xl sm:text-2xl md:text-3xl font-bold text-gray-900 break-all sm:break-words leading-tight">{value}</h3>
+            <div className="text-left flex-1 min-w-0 w-full">
+                <p className="text-[9px] md:text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-1 truncate">{label}</p>
+                <h3 className="text-sm md:text-base font-bold text-gray-900 truncate leading-tight" title={typeof value === 'string' || typeof value === 'number' ? value : ''}>{value}</h3>
                 {badge && (
-                    <div className="mt-2">
-                        <span className={`text-[8px] md:text-[10px] font-bold px-2 py-0.5 rounded-md bg-gray-50 border border-gray-100 ${badgeColor || 'text-gray-400'} uppercase tracking-tight`}>
+                    <div className="mt-1.5">
+                        <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded bg-gray-50 border border-gray-100 ${badgeColor || 'text-gray-400'} uppercase tracking-tight`}>
                             {badge}
                         </span>
                     </div>
                 )}
             </div>
-            <div className={`w-10 h-10 md:w-12 md:h-12 ${bgColor || 'bg-gray-50'} rounded-xl flex items-center justify-center transition-transform group-hover:scale-110 shrink-0`}>
-                <Icon className={`w-5 h-5 md:w-6 md:h-6 ${color}`} strokeWidth={2.5} />
+            <div className={`w-8 h-8 md:w-10 md:h-10 ${bgColor || 'bg-gray-50'} rounded-lg flex items-center justify-center transition-transform group-hover:scale-110 shrink-0 self-end md:self-auto`}>
+                <Icon className={`w-4 h-4 md:w-5 md:h-5 ${color}`} strokeWidth={2.5} />
             </div>
         </div>
     );

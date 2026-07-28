@@ -945,5 +945,43 @@ export const adminService = {
         message: err.response?.data?.message || "Failed to broadcast notification"
       };
     }
+  },
+
+  // FAQ Management
+  getFAQs: async () => {
+    try {
+      const res = await api.get('admin/cms/faqs');
+      return res.data.data?.faqs || res.data.faqs || [];
+    } catch (err) {
+      console.error("Admin fetch FAQs failed:", err);
+      return [];
+    }
+  },
+  createFAQ: async (faqData) => {
+    try {
+      const res = await api.post('admin/cms/faqs', faqData);
+      return { success: true, faq: res.data.data?.faq || res.data.faq };
+    } catch (err) {
+      console.error("Admin create FAQ failed:", err);
+      return { success: false, message: err.response?.data?.message || "Failed to create FAQ" };
+    }
+  },
+  updateFAQ: async (id, faqData) => {
+    try {
+      const res = await api.put(`admin/cms/faqs/${id}`, faqData);
+      return { success: true, faq: res.data.data?.faq || res.data.faq };
+    } catch (err) {
+      console.error("Admin update FAQ failed:", err);
+      return { success: false, message: err.response?.data?.message || "Failed to update FAQ" };
+    }
+  },
+  deleteFAQ: async (id) => {
+    try {
+      await api.delete(`admin/cms/faqs/${id}`);
+      return { success: true };
+    } catch (err) {
+      console.error("Admin delete FAQ failed:", err);
+      return { success: false, message: err.response?.data?.message || "Failed to delete FAQ" };
+    }
   }
 };

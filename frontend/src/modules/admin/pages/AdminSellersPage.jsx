@@ -5,6 +5,7 @@ import AdminTable from '../components/AdminTable';
 import AdminStatsCard from '../components/AdminStatsCard';
 import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
+import { exportToExcelCSV } from '../../../utils/exportUtils';
 
 const AdminSellersPage = () => {
     const navigate = useNavigate();
@@ -12,6 +13,42 @@ const AdminSellersPage = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('ALL');
+
+    const handleExport = () => {
+        const headers = [
+            'fullName',
+            'shopName',
+            'email',
+            'mobileNumber',
+            'city',
+            'state',
+            'firmType',
+            'gstNumber',
+            'panNumber',
+            'status',
+            'createdAt'
+        ];
+        const columnNames = [
+            'Seller Name',
+            'Shop Name',
+            'Email Address',
+            'Mobile Number',
+            'City',
+            'State',
+            'Firm Type',
+            'GST Number',
+            'PAN Number',
+            'Status',
+            'Registration Date'
+        ];
+        const formattedSellers = filteredSellers.map(seller => ({
+            ...seller,
+            mobileNumber: seller.mobileNumber ? `\t${seller.mobileNumber}` : '',
+            createdAt: seller.registrationDate || seller.createdAt ? new Date(seller.registrationDate || seller.createdAt).toISOString().split('T')[0] : ''
+        }));
+        exportToExcelCSV(formattedSellers, headers, columnNames, 'Sellers_Report');
+        toast.success("Sellers report exported successfully");
+    };
 
     const fetchSellers = async () => {
         setLoading(true);
@@ -69,7 +106,17 @@ const AdminSellersPage = () => {
             className: 'w-[18%]',
             render: (row) => (
                 <div className="flex flex-col text-left">
-                    <span className="text-xs font-bold text-gray-900 uppercase tracking-tight">{row.fullName}</span>
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="text-xs font-bold text-gray-900 uppercase tracking-tight">{row.fullName}</span>
+                        {row.isDuplicate && (
+                            <span 
+                                title={`Shares registered details with other sellers on: ${row.duplicateMatches.map(m => `${m.reasons.join(', ')} (${m.shopName})`).join(' & ')}`} 
+                                className="px-1.5 py-0.5 bg-rose-50 text-rose-600 border border-rose-100 rounded text-[8px] font-black uppercase tracking-wider flex items-center shrink-0 cursor-help"
+                            >
+                                Duplicate
+                            </span>
+                        )}
+                    </div>
                     <span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest leading-none mt-0.5">{row.email}</span>
                 </div>
             )
@@ -237,15 +284,24 @@ const AdminSellersPage = () => {
                     <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">SELLER MANAGEMENT</h1>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">APPROVE PARTNERS & OVERSEE MARKETPLACE SCALE</p>
                 </div>
-                <div className="relative w-full md:w-72 group">
-                    <input 
-                        type="text"
-                        placeholder="SEARCH SELLERS..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-[#3E2723] focus:ring-4 focus:ring-[#3E2723]/5 transition-all outline-none"
-                    />
-                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#3E2723] transition-colors" />
+                <div className="flex items-center gap-2 w-full md:w-auto">
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                        title="Export Sellers as Excel/CSV"
+                    >
+                        Export Excel
+                    </button>
+                    <div className="relative w-full md:w-72 group">
+                        <input 
+                            type="text"
+                            placeholder="SEARCH SELLERS..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full bg-white border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-[10px] font-black uppercase tracking-widest focus:outline-none focus:border-[#3E2723] focus:ring-4 focus:ring-[#3E2723]/5 transition-all outline-none"
+                        />
+                        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#3E2723] transition-colors" />
+                    </div>
                 </div>
             </div>
 

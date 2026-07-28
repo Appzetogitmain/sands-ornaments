@@ -68,6 +68,7 @@ const sanitizeVariants = (variants, fallback = {}) => {
 
   return variants.map(v => ({
     name: v.name || "Standard",
+    size: v.size || "",
     variantCode: v.variantCode || "",
     diamondType: normalizeDiamondType(v.diamondType),
     variantImages: Array.isArray(v.variantImages)
@@ -207,6 +208,20 @@ exports.createProduct = async (req, res) => {
     const tags = tryParse(data.tags) || {};
     const faqs = tryParse(data.faqs) || [];
     const material = normalizeMaterial(data);
+    const sellerProfile = await Seller.findById(sellerId).select("bisNumberGold bisNumberSilver").lean();
+    if (!sellerProfile) return error(res, "Seller profile not found.", 404);
+
+    const normMaterial = String(material || "").trim().toLowerCase();
+    if (normMaterial === "gold" && !sellerProfile.bisNumberGold) {
+      return error(res, "You must add your Gold BIS Hallmark License Number in your profile settings to list Gold products.", 400);
+    }
+    if (normMaterial === "silver" && !sellerProfile.bisNumberSilver) {
+      return error(res, "You must add your Silver BIS Hallmark License Number in your profile settings to list Silver products.", 400);
+    }
+    if (!sellerProfile.bisNumberGold && !sellerProfile.bisNumberSilver) {
+      return error(res, "Please update your BIS Hallmark License Number for Gold or Silver in your profile settings to add products.", 400);
+    }
+
     const audience = normalizeAudience(tryParse(data.audience));
     const baseSlug = data.slug ? slugify(data.slug) : slugify(data.name);
 
@@ -455,6 +470,22 @@ exports.updateProduct = async (req, res) => {
     if (safeData.material !== undefined || safeData.metal !== undefined || safeData.metalType !== undefined) {
       safeData.material = normalizeMaterial(safeData);
     }
+
+    const checkMaterial = safeData.material !== undefined ? safeData.material : product.material;
+    const sellerProfile = await Seller.findById(sellerId).select("bisNumberGold bisNumberSilver").lean();
+    if (!sellerProfile) return error(res, "Seller profile not found.", 404);
+
+    const normMaterial = String(checkMaterial || "").trim().toLowerCase();
+    if (normMaterial === "gold" && !sellerProfile.bisNumberGold) {
+      return error(res, "You must add your Gold BIS Hallmark License Number in your profile settings to list Gold products.", 400);
+    }
+    if (normMaterial === "silver" && !sellerProfile.bisNumberSilver) {
+      return error(res, "You must add your Silver BIS Hallmark License Number in your profile settings to list Silver products.", 400);
+    }
+    if (!sellerProfile.bisNumberGold && !sellerProfile.bisNumberSilver) {
+      return error(res, "Please update your BIS Hallmark License Number for Gold or Silver in your profile settings to save products.", 400);
+    }
+
     // Apply only explicitly allowed fields.
     SELLER_UPDATE_WHITELIST.forEach((key) => {
       if (safeData[key] !== undefined) {

@@ -20,7 +20,9 @@ const ProductGeneralTab = ({
     categories, 
     isViewMode, 
     handleCategoryChange,
-    createdProductData
+    createdProductData,
+    sellerProfile,
+    editorMode
 }) => {
     const [categorySearchQuery, setCategorySearchQuery] = React.useState('');
     const filteredCategories = React.useMemo(() => {
@@ -28,6 +30,16 @@ const ProductGeneralTab = ({
             cat && String(cat.name || '').toLowerCase().includes(categorySearchQuery.toLowerCase())
         );
     }, [categories, categorySearchQuery]);
+
+    const materialOptions = React.useMemo(() => {
+        const options = [];
+        const hasGold = editorMode !== 'seller' || !sellerProfile || !!sellerProfile.bisNumberGold;
+        const hasSilver = editorMode !== 'seller' || !sellerProfile || !!sellerProfile.bisNumberSilver;
+
+        if (hasGold) options.push({ label: 'Gold', value: 'Gold' });
+        if (hasSilver) options.push({ label: 'Silver', value: 'Silver' });
+        return options;
+    }, [sellerProfile, editorMode]);
 
     return (
         <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -44,7 +56,7 @@ const ProductGeneralTab = ({
                             error={errors.name}
                         />
                         <Input
-                            label={<span>HUID (Hallmark Unique ID) <span className="text-red-500">*</span></span>}
+                            label={<span>HUID (Hallmark Unique ID) <span className="text-gray-400 text-xs font-normal">(Optional)</span></span>}
                             value={formData.huid}
                             onChange={(e) => setFormData({ ...formData, huid: e.target.value.toUpperCase() })}
                             placeholder="e.g. ABC123"
@@ -100,58 +112,30 @@ const ProductGeneralTab = ({
                             {errors.categories && <span className="text-xs text-red-500 mt-1 block">{errors.categories}</span>}
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Select
-                                label="Audience"
-                                value={Array.isArray(formData.audience) ? formData.audience[0] : 'unisex'}
-                                onChange={(e) => setFormData({ ...formData, audience: [e.target.value] })}
-                                options={[
-                                    { label: 'Unisex', value: 'unisex' },
-                                    { label: 'Men', value: 'men' },
-                                    { label: 'Women', value: 'women' },
-                                    { label: 'Family', value: 'family' }
-                                ]}
-                                disabled={isViewMode}
-                            />
-                            <Select
-                                label="Diamond Origin"
-                                value={formData.diamondType || 'none'}
-                                onChange={(e) => setFormData({ ...formData, diamondType: e.target.value })}
-                                options={[
-                                    { label: 'None', value: 'none' },
-                                    { label: 'Lab Grown', value: 'lab_grown' },
-                                    { label: 'Natural', value: 'natural' }
-                                ]}
-                                disabled={isViewMode}
-                            />
-                        </div>
+                        <Select
+                            label="Audience"
+                            value={Array.isArray(formData.audience) ? formData.audience[0] : 'unisex'}
+                            onChange={(e) => setFormData({ ...formData, audience: [e.target.value] })}
+                            options={[
+                                { label: 'Unisex', value: 'unisex' },
+                                { label: 'Men', value: 'men' },
+                                { label: 'Women', value: 'women' },
+                                { label: 'Family', value: 'family' }
+                            ]}
+                            disabled={isViewMode}
+                        />
                     </div>
                 </FormSection>
 
                 <FormSection title="Metal & Weight Protocol">
                     <div className="space-y-5">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Select
-                                label="Primary Material"
-                                value={formData.material}
-                                onChange={(e) => setFormData({ ...formData, material: e.target.value })}
-                                options={[
-                                    { label: 'Gold', value: 'Gold' },
-                                    { label: 'Silver', value: 'Silver' }
-                                ]}
-                                disabled={isViewMode}
-                            />
-                            <Select
-                                label="Weight Unit"
-                                value={formData.weightUnit}
-                                onChange={(e) => setFormData({ ...formData, weightUnit: e.target.value })}
-                                options={[
-                                    { label: 'Grams', value: 'Grams' },
-                                    { label: 'Milligrams', value: 'Milligrams' }
-                                ]}
-                                disabled={isViewMode}
-                            />
-                        </div>
+                        <Select
+                            label="Primary Material"
+                            value={formData.material}
+                            onChange={(e) => setFormData({ ...formData, material: e.target.value })}
+                            options={materialOptions}
+                            disabled={isViewMode}
+                        />
 
                         {formData.material === 'Silver' && (
                             <Select
@@ -188,42 +172,16 @@ const ProductGeneralTab = ({
                             />
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <Input
-                                label="Default Weight"
-                                type="number"
-                                value={formData.weight}
-                                onChange={(e) => {
-                                    const val = e.target.value;
-                                    if (val !== '' && Number(val) < 0) return;
-                                    setFormData(prev => ({ ...prev, weight: val }));
-                                }}
-                                onFocus={(e) => {
-                                    if (e.target.value === '0' || Number(e.target.value) === 0) {
-                                        setFormData(prev => ({ ...prev, weight: '' }));
-                                    }
-                                }}
-                                onBlur={(e) => {
-                                    if (e.target.value === '') {
-                                        setFormData(prev => ({ ...prev, weight: '' }));
-                                    }
-                                }}
-                                disabled={isViewMode}
-                                placeholder="0.00"
-                                error={errors.weight}
-                                min={0}
-                            />
-                            <Select
-                                label="PG Fee Bearer"
-                                value={formData.paymentGatewayChargeBearer || 'seller'}
-                                onChange={(e) => setFormData({ ...formData, paymentGatewayChargeBearer: e.target.value })}
-                                options={[
-                                    { label: 'Seller / Admin', value: 'seller' },
-                                    { label: 'User', value: 'user' }
-                                ]}
-                                disabled={isViewMode}
-                            />
-                        </div>
+                        <Select
+                            label="PG Fee Bearer"
+                            value={formData.paymentGatewayChargeBearer || 'seller'}
+                            onChange={(e) => setFormData({ ...formData, paymentGatewayChargeBearer: e.target.value })}
+                            options={[
+                                { label: 'Seller / Admin', value: 'seller' },
+                                { label: 'User', value: 'user' }
+                            ]}
+                            disabled={isViewMode}
+                        />
                     </div>
                 </FormSection>
             </div>
@@ -245,36 +203,18 @@ const ProductGeneralTab = ({
                             />
                         </div>
                     </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <div className="space-y-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Specifications</label>
-                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                                <ReactQuill
-                                    theme="snow"
-                                    value={formData.specifications}
-                                    onChange={(value) => setFormData((prev) => ({ ...prev, specifications: value }))}
-                                    readOnly={isViewMode}
-                                    modules={quillModules}
-                                    formats={quillFormats}
-                                    style={{ height: '150px', marginBottom: '50px' }}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="space-y-3">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Supplier Info</label>
-                            <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
-                                <ReactQuill
-                                    theme="snow"
-                                    value={formData.supplierInfo}
-                                    onChange={(value) => setFormData((prev) => ({ ...prev, supplierInfo: value }))}
-                                    readOnly={isViewMode}
-                                    modules={quillModules}
-                                    formats={quillFormats}
-                                    style={{ height: '150px', marginBottom: '50px' }}
-                                />
-                            </div>
+                    <div className="space-y-3">
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Specifications</label>
+                        <div className="bg-white rounded-2xl overflow-hidden border border-gray-100 shadow-sm">
+                            <ReactQuill
+                                theme="snow"
+                                value={formData.specifications}
+                                onChange={(value) => setFormData((prev) => ({ ...prev, specifications: value }))}
+                                readOnly={isViewMode}
+                                modules={quillModules}
+                                formats={quillFormats}
+                                style={{ height: '150px', marginBottom: '50px' }}
+                            />
                         </div>
                     </div>
 
@@ -326,7 +266,7 @@ const ProductGeneralTab = ({
             {/* Identity & Tracking (Visual Signatures) */}
             {(isViewMode || createdProductData || formData.productCode) && (
                 <FormSection title="Registry Identity">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                    <div className="max-w-md mx-auto">
                         <div className="p-4 sm:p-8 bg-[#FDFBF7] rounded-[2rem] border border-amber-100/50 flex flex-col items-center justify-center text-center shadow-inner">
                              <p className="text-sm font-medium text-amber-700 mb-4">Master Identity</p>
                              <div className="flex items-center gap-4">
@@ -347,54 +287,6 @@ const ProductGeneralTab = ({
                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                                 <span className="text-xs font-medium text-amber-700">Registry Synchronized</span>
                              </div>
-                        </div>
-
-                        <div className="bg-white p-4 sm:p-8 rounded-[2rem] border border-gray-100 space-y-6 shadow-sm flex flex-col items-center justify-center group">
-                            <div className="flex items-center justify-between w-full">
-                                 <span className="text-sm font-medium text-gray-500">Barcode Artifact</span>
-                                 <button 
-                                    onClick={() => downloadImage(formData.barcode || createdProductData?.barcode, `barcode-${formData.productCode}.png`)}
-                                    className="p-2 text-gray-400 hover:text-[#3E2723] hover:bg-gray-50 rounded-xl transition-all"
-                                 >
-                                     <Download size={16} />
-                                 </button>
-                            </div>
-                            <div className="w-full bg-gray-50/50 rounded-2xl flex items-center justify-center p-4 border border-gray-50 transition-colors group-hover:bg-white">
-                                 <Barcode 
-                                    value={formData.productCode || createdProductData?.productCode || 'N/A'} 
-                                    width={1.2} 
-                                    height={45} 
-                                    fontSize={10}
-                                    background="transparent"
-                                 />
-                            </div>
-                        </div>
-
-                        <div className="bg-white p-4 sm:p-8 rounded-[2rem] border border-gray-100 space-y-6 shadow-sm flex flex-col items-center justify-center group">
-                            <div className="flex items-center justify-between w-full">
-                                 <span className="text-sm font-medium text-gray-500">Visual QR Artifact</span>
-                                 <button 
-                                    onClick={() => downloadImage(formData.qrCode || createdProductData?.qrCode || `https://api.qrserver.com/v1/create-qr-code/?size=500x500&data=${formData.productCode || createdProductData?.productCode}`, `qr-${formData.productCode}.png`)}
-                                    className="p-2 text-gray-400 hover:text-[#3E2723] hover:bg-gray-50 rounded-xl transition-all"
-                                 >
-                                     <Download size={16} />
-                                 </button>
-                            </div>
-                            <div className="w-28 h-28 bg-gray-50/50 rounded-2xl flex items-center justify-center p-3 border border-dashed border-gray-200 group-hover:bg-white transition-colors">
-                                 {(formData.qrCode || createdProductData?.qrCode) ? (
-                                     <img 
-                                        src={formData.qrCode || createdProductData?.qrCode} 
-                                        alt="qr" 
-                                        className="w-full h-full object-contain" 
-                                        onError={(e) => { e.target.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${formData.productCode || createdProductData?.productCode}`; }}
-                                     />
-                                 ) : (
-                                     <div className="flex flex-col items-center text-gray-300">
-                                        <Loader2 className="w-5 h-5 animate-spin mb-2" />
-                                        <span className="text-xs font-medium text-gray-500">Rendering</span>
-                                     </div>
-                                 )}
-                            </div>
                         </div>
                     </div>
                 </FormSection>

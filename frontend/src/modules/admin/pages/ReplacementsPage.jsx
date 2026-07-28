@@ -60,8 +60,8 @@ const ReplacementsPage = () => {
     return (
         <div className="space-y-8 font-sans animate-in fade-in duration-500">
             <div>
-                <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Replacement Management</h1>
-                <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-1">Manage replacement requests, pickups and outbound shipment progress</p>
+                <h1 className="text-2xl font-medium text-gray-900 tracking-tight">Replacement Management</h1>
+                <p className="text-xs font-semibold text-gray-500 tracking-wide mt-1">Manage replacement requests, pickups and outbound shipment progress</p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -76,7 +76,7 @@ const ReplacementsPage = () => {
                     <input
                         type="text"
                         placeholder="Search by replacement ID, order ID, customer or reason..."
-                        className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border-none text-xs font-bold text-gray-900 focus:ring-0 placeholder:text-gray-400"
+                        className="w-full pl-10 pr-4 py-2 bg-gray-50 rounded-xl border-none text-xs font-medium text-gray-900 focus:ring-0 placeholder:text-gray-400"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
@@ -86,7 +86,7 @@ const ReplacementsPage = () => {
                         <button
                             key={status}
                             onClick={() => setStatusFilter(status)}
-                            className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${statusFilter === status ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
+                            className={`px-4 py-2 rounded-lg text-[10px] font-medium tracking-wide transition-all whitespace-nowrap ${statusFilter === status ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-400 hover:text-gray-600'}`}
                         >
                             {status}
                         </button>
@@ -99,40 +99,40 @@ const ReplacementsPage = () => {
                     <table className="w-full text-left">
                         <thead className="bg-white border-b border-gray-200">
                             <tr>
-                                <th className="px-6 py-4 text-[10px] md:text-xs font-bold text-gray-800 uppercase tracking-widest">Replacement ID</th>
-                                <th className="px-6 py-4 text-[10px] md:text-xs font-bold text-gray-800 uppercase tracking-widest">Order ID</th>
-                                <th className="px-6 py-4 text-[10px] md:text-xs font-bold text-gray-800 uppercase tracking-widest">Customer</th>
-                                <th className="px-6 py-4 text-[10px] md:text-xs font-bold text-gray-800 uppercase tracking-widest">Reason</th>
-                                <th className="px-6 py-4 text-[10px] md:text-xs font-bold text-gray-800 uppercase tracking-widest">Date</th>
-                                <th className="px-6 py-4 text-[10px] md:text-xs font-bold text-gray-800 uppercase tracking-widest">Status</th>
-                                <th className="px-6 py-4 text-[10px] md:text-xs font-bold text-gray-800 uppercase tracking-widest text-right">Action</th>
+                                <th className="px-6 py-4 text-[10px] md:text-xs font-medium text-gray-800 tracking-wide">Replacement ID</th>
+                                <th className="px-6 py-4 text-[10px] md:text-xs font-medium text-gray-800 tracking-wide">Order ID</th>
+                                <th className="px-6 py-4 text-[10px] md:text-xs font-medium text-gray-800 tracking-wide">Customer</th>
+                                <th className="px-6 py-4 text-[10px] md:text-xs font-medium text-gray-800 tracking-wide">Reason</th>
+                                <th className="px-6 py-4 text-[10px] md:text-xs font-medium text-gray-800 tracking-wide">Date</th>
+                                <th className="px-6 py-4 text-[10px] md:text-xs font-medium text-gray-800 tracking-wide">Status</th>
+                                <th className="px-6 py-4 text-[10px] md:text-xs font-medium text-gray-800 tracking-wide text-right">Action</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100 uppercase tracking-tighter text-[10px] md:text-[11px] text-gray-900">
+                        <tbody className="divide-y divide-gray-100 tracking-wide text-[10px] md:text-[11px] text-gray-900">
                             {loading && (
                                 <tr>
                                     <td colSpan="7" className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center justify-center opacity-60">
                                             <RefreshCcw size={40} className="text-gray-300 mb-4 animate-spin" />
-                                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">Loading replacement requests...</p>
+                                            <p className="text-sm font-medium text-gray-400 tracking-wide">Loading replacement requests...</p>
                                         </div>
                                     </td>
                                 </tr>
                             )}
                             {!loading && filteredReplacements.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50/50 transition-colors group">
-                                    <td className="px-6 py-4 text-xs font-bold text-black">{item.replacementDisplayId}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-gray-500">{item.orderDisplayId}</td>
+                                    <td className="px-6 py-4 text-xs font-medium text-black">{item.replacementDisplayId}</td>
+                                    <td className="px-6 py-4 text-xs font-medium text-gray-500">{item.orderDisplayId}</td>
                                     <td className="px-6 py-4">
-                                        <div className="text-xs font-bold text-black">{item.customerName}</div>
-                                        <div className="text-[10px] font-bold text-gray-400 mt-1">{item.customerPhone || item.customerEmail || 'No contact saved'}</div>
+                                        <div className="text-xs font-medium text-black">{item.customerName}</div>
+                                        <div className="text-[10px] font-medium text-gray-400 mt-1">{item.customerPhone || item.customerEmail || 'No contact saved'}</div>
                                     </td>
                                     <td className="px-6 py-4 text-xs font-medium text-gray-500">{item.reason}</td>
-                                    <td className="px-6 py-4 text-xs font-bold text-gray-500">
+                                    <td className="px-6 py-4 text-xs font-medium text-gray-500">
                                         {new Date(item.createdAt || item.updatedAt).toLocaleDateString()}
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest ${STATUS_STYLES[item.status] || 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
+                                        <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[9px] font-medium tracking-wide ${STATUS_STYLES[item.status] || 'bg-gray-50 text-gray-600 border border-gray-100'}`}>
                                             <span className="w-1.5 h-1.5 rounded-full bg-current"></span>
                                             {item.status}
                                         </span>
@@ -140,7 +140,7 @@ const ReplacementsPage = () => {
                                     <td className="px-6 py-4 text-right">
                                         <button
                                             onClick={() => navigate(`/admin/replacements/${item.id}`)}
-                                            className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-4 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg shadow-gray-200 active:scale-95"
+                                            className="inline-flex items-center gap-2 bg-[#0f172a] text-white px-4 py-1.5 rounded-lg text-[10px] font-medium tracking-wide hover:bg-black transition-all shadow-lg shadow-gray-200 active:scale-95"
                                         >
                                             <Eye size={14} /> View
                                         </button>
@@ -152,7 +152,7 @@ const ReplacementsPage = () => {
                                     <td colSpan="7" className="px-6 py-20 text-center">
                                         <div className="flex flex-col items-center justify-center opacity-50">
                                             <RefreshCcw size={48} className="text-gray-300 mb-4" />
-                                            <p className="text-sm font-bold text-gray-400 uppercase tracking-widest">No replacement requests found</p>
+                                            <p className="text-sm font-medium text-gray-400 tracking-wide">No replacement requests found</p>
                                         </div>
                                     </td>
                                 </tr>

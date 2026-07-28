@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     HelpCircle, Plus, Search, Filter,
     Edit3, Trash2, ChevronDown, ChevronUp,
@@ -7,38 +7,12 @@ import {
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import AdminStatsCard from '../components/AdminStatsCard';
+import { adminService } from '../services/adminService';
+import toast from 'react-hot-toast';
 
 const FAQManagement = () => {
-    const [faqs, setFaqs] = useState([
-        {
-            id: 1,
-            category: 'Orders',
-            question: 'How can I track my order?',
-            answer: 'You can track your order by visiting the "My Orders" section in your profile or by using the tracking link sent to your email.',
-            status: 'Active'
-        },
-        {
-            id: 2,
-            category: 'Returns',
-            question: 'What is your return policy?',
-            answer: 'We offer a 7-day easy return policy for most items. The product must be unused and in its original packaging.',
-            status: 'Active'
-        },
-        {
-            id: 3,
-            category: 'Payments',
-            question: 'What payment methods do you accept?',
-            answer: 'We accept all major credit/debit cards, UPI, Wallets, and Net Banking. Cash on Delivery is also available for selected locations.',
-            status: 'Active'
-        },
-        {
-            id: 4,
-            category: 'Shopping',
-            question: 'Are your silver ornaments hallmarked?',
-            answer: 'Yes, all our 925 Silver ornaments are hallmarked and come with an authenticity certificate.',
-            status: 'Active'
-        }
-    ]);
+    const [faqs, setFaqs] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingFaq, setEditingFaq] = useState(null);
@@ -52,12 +26,32 @@ const FAQManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
 
-    const categories = ['Orders', 'Returns', 'Payments', 'Shopping', 'General'];
+    const categories = ['Orders', 'Returns', 'Payments', 'Shopping', 'General', 'Seller'];
+
+    const fetchFaqs = async () => {
+        setIsLoading(true);
+        try {
+            const data = await adminService.getFAQs();
+            setFaqs(data);
+        } catch (err) {
+            console.error('Failed to load FAQs:', err);
+            toast.error('Failed to load FAQs');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchFaqs();
+    }, []);
 
     const handleOpenModal = (faq = null) => {
         if (faq) {
             setEditingFaq(faq);
-            setFormData(faq);
+            setFormData({
+                ...faq,
+                status: faq.isActive ? 'Active' : 'Inactive'
+            });
         } else {
             setEditingFaq(null);
             setFormData({
@@ -70,23 +64,64 @@ const FAQManagement = () => {
         setIsModalOpen(true);
     };
 
-    const handleSave = (e) => {
+    const handleSave = async (e) => {
         e.preventDefault();
-        if (editingFaq) {
-            setFaqs(faqs.map(f => f.id === editingFaq.id ? { ...formData, id: f.id } : f));
-        } else {
-            setFaqs([...faqs, { ...formData, id: Date.now() }]);
+        try {
+            const payload = {
+                category: formData.category,
+                question: formData.question,
+                answer: formData.answer,
+                isActive: formData.status === 'Active'
+            };
+
+            if (editingFaq) {
+                const res = await adminService.updateFAQ(editingFaq._id, payload);
+                if (res.success) {
+                    toast.success('FAQ updated successfully');
+                    fetchFaqs();
+                } else {
+                    toast.error(res.message);
+                }
+            } else {
+                const res = await adminService.createFAQ(payload);
+                if (res.success) {
+                    toast.success('FAQ created successfully');
+                    fetchFaqs();
+                } else {
+                    toast.error(res.message);
+                }
+            }
+            setIsModalOpen(false);
+        } catch (err) {
+            console.error('Failed to save FAQ:', err);
+            toast.error('Failed to save FAQ');
         }
-        setIsModalOpen(false);
     };
 
-    const handleDelete = (id) => {
+    const handleDelete = async (id) => {
         if (window.confirm('Are you sure you want to delete this FAQ?')) {
-            setFaqs(faqs.filter(f => f.id !== id));
+            try {
+                const res = await adminService.deleteFAQ(id);
+                if (res.success) {
+                    toast.success('FAQ deleted successfully');
+                    fetchFaqs();
+                } else {
+                    toast.error(res.message || 'Failed to delete FAQ');
+                }
+            } catch (err) {
+                console.error('Failed to delete FAQ:', err);
+                toast.error('Failed to delete FAQ');
+            }
         }
     };
 
-    const filteredFaqs = faqs.filter(f => {
+    const mappedFaqs = faqs.map(faq => ({
+        ...faq,
+        status: faq.isActive ? 'Active' : 'Inactive',
+        id: faq._id
+    }));
+
+    const filteredFaqs = mappedFaqs.filter(f => {
         const matchesSearch = f.question.toLowerCase().includes(searchTerm.toLowerCase()) ||
             f.answer.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesCategory = activeCategory === 'All' || f.category === activeCategory;
@@ -95,8 +130,8 @@ const FAQManagement = () => {
 
     // Stats
     const statsData = [
-        { label: 'Total FAQs', value: faqs.length, icon: MessageSquare, color: 'text-blue-600', bgColor: 'bg-blue-50' },
-        { label: 'Active', value: faqs.filter(f => f.status === 'Active').length, icon: CheckCircle2, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
+        { label: 'Total FAQs', value: mappedFaqs.length, icon: MessageSquare, color: 'text-blue-600', bgColor: 'bg-blue-50' },
+        { label: 'Active', value: mappedFaqs.filter(f => f.status === 'Active').length, icon: CheckCircle2, color: 'text-emerald-600', bgColor: 'bg-emerald-50' },
         { label: 'Categories', value: categories.length, icon: LayoutGrid, color: 'text-amber-600', bgColor: 'bg-amber-50' },
     ];
 

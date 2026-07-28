@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Package, MapPin, Heart, CreditCard, Tag, Gift, HelpCircle, FileText, ShieldCheck, Bell, BellOff, Shield, LogOut, Trash2, Edit2, Plus } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const ProfileSidebar = ({ 
     user, 
@@ -13,9 +13,24 @@ const ProfileSidebar = ({
     toggleNotificationSettings, 
     handleLogout, 
     setShowDeleteModal, 
-    tabParam 
+    tabParam,
+    safeReplacements
 }) => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const pathname = location.pathname;
+
+    const isProfileActive = pathname.startsWith('/profile/profile');
+    const isOrdersActive = pathname.startsWith('/profile/orders') || pathname.startsWith('/order-tracking');
+    const isAddressesActive = pathname.startsWith('/profile/addresses');
+    const isWishlistActive = pathname.startsWith('/wishlist');
+    const isPaymentsActive = pathname.startsWith('/profile/payments');
+    const isCouponsActive = pathname.startsWith('/profile/coupons');
+    const isGiftCardsActive = pathname.startsWith('/profile/gift-cards');
+    const isHelpActive = pathname.startsWith('/help');
+    const isReturnPolicyActive = pathname.startsWith('/return-policy');
+    const isReplacementPolicyActive = pathname.startsWith('/replacement-policy');
+    const isReplacementsActive = pathname.startsWith('/replacements') || pathname.startsWith('/replacement/');
 
     return (
         <div className={`${tabParam ? 'hidden md:block' : 'block'} md:bg-white md:p-6 md:rounded-2xl md:shadow-sm h-fit border border-[#EBCDD0]`}>
@@ -45,48 +60,53 @@ const ProfileSidebar = ({
             </div>
 
             <nav className="space-y-1 md:space-y-2 md:bg-transparent md:p-0 p-1 rounded-2xl md:rounded-none md:shadow-none md:border-transparent">
-                <button onClick={() => navigate('/profile/profile')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${activeTab === 'profile' ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                <button onClick={() => navigate('/profile/profile')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isProfileActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
                     <User className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">Profile Details</span>
                 </button>
-                <button onClick={() => navigate('/profile/orders')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${activeTab === 'orders' ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                <button onClick={() => navigate('/profile/orders')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isOrdersActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
                     <Package className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">My Orders</span>
-                    {safeOrders.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${activeTab === 'orders' ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{safeOrders.length}</span>}
+                    {safeOrders.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${isOrdersActive ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{safeOrders.length}</span>}
                 </button>
-                <button onClick={() => navigate('/profile/addresses')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${activeTab === 'addresses' ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                <button onClick={() => navigate('/replacements')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isReplacementsActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                    <ShieldCheck className="w-4 h-4 md:w-5 md:h-5" />
+                    <span className="font-medium text-sm md:text-base">My Replacements</span>
+                    {safeReplacements && safeReplacements.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${isReplacementsActive ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{safeReplacements.length}</span>}
+                </button>
+                <button onClick={() => navigate('/profile/addresses')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isAddressesActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
                     <MapPin className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">My Addresses</span>
-                    {safeAddresses.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${activeTab === 'addresses' ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{safeAddresses.length}</span>}
+                    {safeAddresses.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${isAddressesActive ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{safeAddresses.length}</span>}
                 </button>
-                <button onClick={() => navigate('/wishlist')} className="w-full flex items-center space-x-3 px-3 md:px-4 py-3 text-gray-600 hover:bg-[#F3F4F6] rounded-xl transition-all">
-                    <Heart className="w-4 h-4 md:w-5 md:h-5 text-red-500" />
+                <button onClick={() => navigate('/wishlist')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isWishlistActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                    <Heart className={`w-4 h-4 md:w-5 md:h-5 ${isWishlistActive ? 'text-white' : 'text-red-500'}`} />
                     <span className="font-medium text-sm md:text-base">My Wishlist</span>
-                    {safeWishlist.length > 0 && <span className="ml-auto text-xs py-0.5 px-2 rounded-full bg-[#F3F4F6]">{safeWishlist.length}</span>}
+                    {safeWishlist.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${isWishlistActive ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{safeWishlist.length}</span>}
                 </button>
-                <button onClick={() => navigate('/profile/payments')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${activeTab === 'payments' ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                <button onClick={() => navigate('/profile/payments')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isPaymentsActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
                     <CreditCard className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">Payments</span>
                 </button>
-                <button onClick={() => navigate('/profile/coupons')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${activeTab === 'coupons' ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                <button onClick={() => navigate('/profile/coupons')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isCouponsActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
                     <Tag className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">My Coupons</span>
-                    {availableCoupons.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${activeTab === 'coupons' ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{availableCoupons.length}</span>}
+                    {availableCoupons.length > 0 && <span className={`ml-auto text-xs py-0.5 px-2 rounded-full ${isCouponsActive ? 'bg-white/20' : 'bg-[#F3F4F6]'}`}>{availableCoupons.length}</span>}
                 </button>
-                <button onClick={() => navigate('/profile/gift-cards')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${activeTab === 'gift-cards' ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                <button onClick={() => navigate('/profile/gift-cards')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isGiftCardsActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
                     <Gift className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">My Gift Cards</span>
                 </button>
-                <button onClick={() => navigate('/help')} className="w-full flex items-center space-x-3 px-3 md:px-4 py-3 text-gray-600 hover:bg-[#F3F4F6] rounded-xl transition-all">
-                    <HelpCircle className="w-4 h-4 md:w-5 md:h-5 text-gray-500" />
+                <button onClick={() => navigate('/help')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isHelpActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                    <HelpCircle className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">Help Center</span>
                 </button>
-                <button onClick={() => navigate('/return-policy')} className="w-full flex items-center space-x-3 px-3 md:px-4 py-3 text-gray-600 hover:bg-[#EFEBE9] rounded-xl transition-all">
-                    <FileText className="w-4 h-4 md:w-5 md:h-5 text-[#8D6E63]" />
+                <button onClick={() => navigate('/return-policy')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isReturnPolicyActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                    <FileText className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">Return Policy</span>
                 </button>
-                <button onClick={() => navigate('/replacements')} className="w-full flex items-center space-x-3 px-3 md:px-4 py-3 text-gray-600 hover:bg-[#EFEBE9] rounded-xl transition-all">
-                    <ShieldCheck className="w-4 h-4 md:w-5 md:h-5 text-[#8D6E63]" />
+                <button onClick={() => navigate('/replacement-policy')} className={`w-full flex items-center space-x-3 px-3 md:px-4 py-3 rounded-xl transition-all ${isReplacementPolicyActive ? 'bg-black text-white shadow-md' : 'text-gray-600 hover:bg-[#F3F4F6]'}`}>
+                    <ShieldCheck className="w-4 h-4 md:w-5 md:h-5" />
                     <span className="font-medium text-sm md:text-base">Replacement Policy</span>
                 </button>
 

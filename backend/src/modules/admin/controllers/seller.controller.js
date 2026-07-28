@@ -134,18 +134,57 @@ exports.getSellers = async (req, res) => {
 
     const sellers = await Seller.find(query).select("-password").sort({ createdAt: -1 }).lean();
     const metricsMap = await buildSellerMetrics(sellers.map((seller) => seller._id));
+    const allSellers = await Seller.find({}).select("_id fullName shopName email gstNumber panNumber bankAccount").lean();
 
-    const enrichedSellers = sellers.map((seller) => ({
-      ...seller,
-      metrics: metricsMap.get(String(seller._id)) || {
-        productCount: 0,
-        variantCount: 0,
-        stockUnits: 0,
-        orderCount: 0,
-        unitsSold: 0,
-        totalRevenue: 0
+    const enrichedSellers = sellers.map((seller) => {
+      const duplicates = [];
+      const gst = String(seller.gstNumber || "").trim().toUpperCase();
+      const pan = String(seller.panNumber || "").trim().toUpperCase();
+      const bankAcc = String(seller.bankAccount?.accountNumber || "").trim();
+
+      for (const other of allSellers) {
+        if (String(other._id) === String(seller._id)) continue;
+
+        const otherGst = String(other.gstNumber || "").trim().toUpperCase();
+        const otherPan = String(other.panNumber || "").trim().toUpperCase();
+        const otherBankAcc = String(other.bankAccount?.accountNumber || "").trim();
+
+        const matchReasons = [];
+        if (gst && gst === otherGst) {
+          matchReasons.push("GST");
+        }
+        if (pan && pan === otherPan) {
+          matchReasons.push("PAN");
+        }
+        if (bankAcc && bankAcc === otherBankAcc) {
+          matchReasons.push("Bank Account");
+        }
+
+        if (matchReasons.length > 0) {
+          duplicates.push({
+            sellerId: other._id,
+            fullName: other.fullName,
+            shopName: other.shopName,
+            email: other.email,
+            reasons: matchReasons
+          });
+        }
       }
-    }));
+
+      return {
+        ...seller,
+        isDuplicate: duplicates.length > 0,
+        duplicateMatches: duplicates,
+        metrics: metricsMap.get(String(seller._id)) || {
+          productCount: 0,
+          variantCount: 0,
+          stockUnits: 0,
+          orderCount: 0,
+          unitsSold: 0,
+          totalRevenue: 0
+        }
+      };
+    });
 
     return success(res, { sellers: enrichedSellers }, "Sellers retrieved");
   } catch (err) {
@@ -161,6 +200,39 @@ exports.getSellerDetail = async (req, res) => {
 
     const seller = await Seller.findById(req.params.id).select("-password").lean();
     if (!seller) return error(res, "Seller not found", 404);
+
+    const gst = String(seller.gstNumber || "").trim().toUpperCase();
+    const pan = String(seller.panNumber || "").trim().toUpperCase();
+    const bankAcc = String(seller.bankAccount?.accountNumber || "").trim();
+
+    const duplicateQuery = [];
+    if (gst) duplicateQuery.push({ gstNumber: { $regex: new RegExp(`^${escapeRegex(gst)}$`, "i") } });
+    if (pan) duplicateQuery.push({ panNumber: { $regex: new RegExp(`^${escapeRegex(pan)}$`, "i") } });
+    if (bankAcc) duplicateQuery.push({ "bankAccount.accountNumber": bankAcc });
+
+    let duplicateMatches = [];
+    if (duplicateQuery.length > 0) {
+      const matchRecords = await Seller.find({
+        _id: { $ne: seller._id },
+        $or: duplicateQuery
+      }).select("fullName shopName email gstNumber panNumber bankAccount").lean();
+
+      duplicateMatches = matchRecords.map(other => {
+        const matchReasons = [];
+        if (gst && gst === String(other.gstNumber || "").trim().toUpperCase()) matchReasons.push("GST");
+        if (pan && pan === String(other.panNumber || "").trim().toUpperCase()) matchReasons.push("PAN");
+        if (bankAcc && bankAcc === String(other.bankAccount?.accountNumber || "").trim()) matchReasons.push("Bank Account");
+        return {
+          sellerId: other._id,
+          fullName: other.fullName,
+          shopName: other.shopName,
+          email: other.email,
+          reasons: matchReasons
+        };
+      });
+    }
+
+    seller.duplicateMatches = duplicateMatches;
 
     const metricsMap = await buildSellerMetrics([seller._id]);
     const recentProducts = await Product.find({ sellerId: seller._id })
@@ -238,9 +310,9 @@ exports.updateSellerStatus = async (req, res) => {
     if (seller.email) {
       try {
         await sendEmail({
-          email: seller.email,
+          to: seller.email,
           subject: status === "APPROVED" ? "Seller account approved" : "Seller account application update",
-          message:
+          html:
             status === "APPROVED"
               ? `Hi ${seller.fullName}, your seller account for ${seller.shopName} is approved. You can now log in to the seller panel.`
               : `Hi ${seller.fullName}, your seller account application for ${seller.shopName} was rejected. Reason: ${trimmedReason}.`

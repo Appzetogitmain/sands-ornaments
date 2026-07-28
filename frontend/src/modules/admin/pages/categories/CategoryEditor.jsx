@@ -350,6 +350,10 @@ const CategoryEditor = () => {
                                 onChange={handleBannerImageUpload}
                                 className="block text-xs text-gray-600"
                             />
+                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1080x1080px (1:1 Ratio)</p>
+                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 w-fit">
+                                ✨ Recommended: 1920x1080px (16:9 Ratio)
+                            </p>
                             {bannerPreviewImage && (
                                 <button
                                     type="button"
@@ -418,6 +422,10 @@ const CategoryEditor = () => {
                                 onChange={handleImageUpload}
                                 className="block text-xs text-gray-600"
                             />
+                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1080x1080px (1:1 Ratio)</p>
+                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 w-fit">
+                                ✨ Recommended: 1080x1080px (1:1 Ratio)
+                            </p>
                             {previewImage && (
                                 <button
                                     type="button"

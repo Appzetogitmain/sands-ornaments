@@ -43,6 +43,7 @@ const SharedProductEditor = ({
     const navigate = useNavigate();
     const location = useLocation();
     const isAdminMode = editorMode === 'admin';
+    const storageKey = editorMode === 'admin' ? 'sands_admin_add_product_form' : 'sands_seller_add_product_form';
 
     const isViewMode = location.pathname.includes('/view/');
     const isEditMode = Boolean(id) && !isViewMode;
@@ -68,6 +69,7 @@ const SharedProductEditor = ({
     const [createdProductData, setCreatedProductData] = useState(null);
     const [gstRate, setGstRate] = useState(3);
     const [metalRates, setMetalRates] = useState({ gold: 0, silver: 0, platinum: 0 });
+    const [sellerProfile, setSellerProfile] = useState(null);
     
     const serialBarcodeRefs = useRef({});
     
@@ -92,6 +94,7 @@ const SharedProductEditor = ({
             variants: [{ 
                 id: Date.now(), 
                 name: 'Standard', 
+                size: '', 
                 weight: '', 
                 weightUnit: 'Grams',
                 makingCharge: '0', 
@@ -150,7 +153,7 @@ const SharedProductEditor = ({
         };
 
         if (typeof window !== 'undefined' && !Boolean(id)) {
-            const saved = localStorage.getItem('sands_seller_add_product_form');
+            const saved = localStorage.getItem(storageKey);
             if (saved) {
                 try {
                     const parsed = JSON.parse(saved);
@@ -167,9 +170,9 @@ const SharedProductEditor = ({
 
     useEffect(() => {
         if (!isEditMode && !isViewMode) {
-            localStorage.setItem('sands_seller_add_product_form', JSON.stringify(formData));
+            localStorage.setItem(storageKey, JSON.stringify(formData));
         }
-    }, [formData, isEditMode, isViewMode]);
+    }, [formData, isEditMode, isViewMode, storageKey]);
 
     useEffect(() => {
         const newErrors = {};
@@ -177,31 +180,16 @@ const SharedProductEditor = ({
         // 1. Name
         if (!formData.name) {
             newErrors.name = "Name is required";
-        } else if (/\d/.test(formData.name)) {
-            newErrors.name = "Product name should not contain numbers";
         }
 
-        // 2. HUID
-        if (!formData.huid) {
-            newErrors.huid = "HUID is required";
-        } else if (formData.huid.length !== 6) {
-            newErrors.huid = "HUID must be exactly 6 characters";
-        } else if (/[^a-zA-Z0-9]/.test(formData.huid)) {
-            newErrors.huid = "HUID must be alphanumeric";
-        }
+        // 2. HUID (Optional - no validation logic required here)
 
         // 3. Category
         if (!formData.categories?.[0]?.category) {
             newErrors.categories = "Category is required.";
         }
 
-        // 4. Default Weight
-        if (formData.weight !== undefined && formData.weight !== '') {
-            const w = parseFloat(formData.weight);
-            if (isNaN(w) || w <= 0) {
-                newErrors.weight = "Weight must be a positive number";
-            }
-        }
+
 
         // 5. Logistics - Shipping Days
         if (formData.logistics?.estimatedShippingDays !== undefined && formData.logistics?.estimatedShippingDays !== '') {
@@ -290,7 +278,112 @@ const SharedProductEditor = ({
     const handleDownloadAllSerialBarcodes = (variant) => {
         const codes = (variant.serialCodes || []).map(c => c.code);
         if (codes.length === 0) return;
-        downloadTextFile(codes.join('\n'), `barcodes-${variant.name || 'variant'}.txt`);
+
+        // Create a printable window
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            toast.error("Popup blocker prevented opening the print window. Please allow popups for this site.");
+            return;
+        }
+
+        // Gather all SVGs from the DOM
+        let svgItemsHtml = '';
+        codes.forEach(code => {
+            const container = serialBarcodeRefs.current[code];
+            const svgNode = container?.querySelector?.('svg');
+            if (svgNode) {
+                const serializer = new XMLSerializer();
+                const svgMarkup = serializer.serializeToString(svgNode);
+                svgItemsHtml += `
+                    <div class="barcode-card">
+                        <div class="barcode-svg">${svgMarkup}</div>
+                        <div class="barcode-code">${code}</div>
+                    </div>
+                `;
+            }
+        });
+
+        if (!svgItemsHtml) {
+            toast.error("Barcodes are not loaded in the view yet. Please make sure the variant section is expanded first.");
+            printWindow.close();
+            return;
+        }
+
+        printWindow.document.write(`
+            <html>
+            <head>
+                <title>Print Barcodes - ${variant.name || 'variant'}</title>
+                <style>
+                    body {
+                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                        margin: 0;
+                        padding: 30px;
+                        background: white;
+                        color: black;
+                        -webkit-print-color-adjust: exact;
+                    }
+                    .grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+                        gap: 20px;
+                    }
+                    .barcode-card {
+                        border: 1px solid #eaeaea;
+                        border-radius: 16px;
+                        padding: 20px;
+                        text-align: center;
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        page-break-inside: avoid;
+                        background: #fff;
+                    }
+                    .barcode-svg svg {
+                        width: 140px;
+                        height: auto;
+                    }
+                    .barcode-code {
+                        font-size: 11px;
+                        font-weight: 700;
+                        font-family: monospace;
+                        margin-top: 10px;
+                        letter-spacing: 1px;
+                        color: #333;
+                    }
+                    @media print {
+                        body {
+                            padding: 0;
+                        }
+                        .grid {
+                            grid-template-columns: repeat(3, 1fr);
+                            gap: 15px;
+                        }
+                        .barcode-card {
+                            border: 1px solid #ccc;
+                            box-shadow: none;
+                        }
+                    }
+                </style>
+            </head>
+            <body>
+                <h3 style="margin-top: 0; margin-bottom: 25px; text-transform: uppercase; font-size: 12px; font-weight: 900; letter-spacing: 2px; border-bottom: 2px solid #000; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Barcodes Batch - ${variant.name || 'variant'}</span>
+                    <span style="color: #666; font-size: 10px;">${codes.length} Units</span>
+                </h3>
+                <div class="grid">
+                    ${svgItemsHtml}
+                </div>
+                <script>
+                    // Add a tiny delay to ensure SVGs are completely rendered before print dialog opens
+                    setTimeout(() => {
+                        window.print();
+                    }, 500);
+                </script>
+            </body>
+            </html>
+        `);
+        printWindow.document.close();
     };
 
     const resolvedProductApi = productApi;
@@ -340,6 +433,29 @@ const SharedProductEditor = ({
         };
         loadPricing();
     }, []);
+
+    useEffect(() => {
+        if (editorMode === 'seller') {
+            api.get('/seller/profile/me')
+                .then(res => {
+                    const profile = res.data?.data?.seller || res.data?.seller;
+                    if (profile) setSellerProfile(profile);
+                })
+                .catch(err => console.error("Failed to load profile", err));
+        }
+    }, [editorMode]);
+
+    useEffect(() => {
+        if (editorMode === 'seller' && sellerProfile && !isEditMode && !isViewMode) {
+            const hasGold = !!sellerProfile.bisNumberGold;
+            const hasSilver = !!sellerProfile.bisNumberSilver;
+            if (!hasSilver && hasGold && formData.material === 'Silver') {
+                setFormData(prev => ({ ...prev, material: 'Gold' }));
+            } else if (!hasGold && hasSilver && formData.material === 'Gold') {
+                setFormData(prev => ({ ...prev, material: 'Silver' }));
+            }
+        }
+    }, [sellerProfile, editorMode, isEditMode, isViewMode, formData.material]);
 
     useEffect(() => {
         if (!expandedVariant && formData.variants?.[0]?.id) {
@@ -550,6 +666,7 @@ const SharedProductEditor = ({
             variants: [...prev.variants, { 
                 id: Date.now(), 
                 name: '', 
+                size: '', 
                 weight: prev.weight || '',
                 weightUnit: prev.weightUnit || 'Grams',
                 makingCharge: '0', 
@@ -747,7 +864,6 @@ const SharedProductEditor = ({
         } else if (!/^[a-zA-Z0-9 ]+$/.test(formData.name)) {
             newErrors.name = "Product Name must contain only alphanumeric characters and spaces";
         }
-        if (!formData.huid) newErrors.huid = "HUID is required";
         if (!formData.categories?.[0]?.category) newErrors.categories = "Category is required";
         
         const strippedDesc = (formData.description || '').replace(/<[^>]*>/g, '').trim();
@@ -806,6 +922,14 @@ const SharedProductEditor = ({
             
             // Clean payload
             const payload = { ...formData };
+            if (payload.logistics) {
+                payload.logistics = {
+                    ...payload.logistics,
+                    estimatedShippingDays: (payload.logistics.estimatedShippingDays === '' || payload.logistics.estimatedShippingDays === undefined || payload.logistics.estimatedShippingDays === null)
+                        ? 3
+                        : parseInt(payload.logistics.estimatedShippingDays)
+                };
+            }
             const cleanVariants = payload.variants.map(v => {
                 const { id: _, ...rest } = v;
                 return rest;
@@ -828,11 +952,12 @@ const SharedProductEditor = ({
             productForm.append('supplierInfo', payload.supplierInfo || '');
             productForm.append('stylingTips', payload.stylingTips || '');
             productForm.append('careTips', payload.careTips || '');
-            productForm.append('diamondType', payload.diamondType);
+            const primaryVariant = payload.variants[0] || {};
+            productForm.append('diamondType', primaryVariant.diamondType || 'none');
             productForm.append('categories', JSON.stringify(categoryIds));
             productForm.append('audience', JSON.stringify(payload.audience || ['unisex']));
-            productForm.append('weight', payload.weight || '');
-            productForm.append('weightUnit', payload.weightUnit || 'Grams');
+            productForm.append('weight', primaryVariant.weight || '');
+            productForm.append('weightUnit', primaryVariant.weightUnit || 'Grams');
             productForm.append('paymentGatewayChargeBearer', payload.paymentGatewayChargeBearer || 'seller');
             productForm.append('silverCategory', payload.silverCategory || '');
             productForm.append('goldCategory', payload.goldCategory || '');
@@ -873,7 +998,7 @@ const SharedProductEditor = ({
             if (response) {
                 toast.success(isEditMode ? "Product updated successfully" : "Product created successfully");
                 if (!isEditMode) {
-                    localStorage.removeItem('sands_seller_add_product_form');
+                    localStorage.removeItem(storageKey);
                 }
                 setCreatedProductData(response.data?.data || response.data || response);
                 setShowSuccessModal(true);
@@ -951,7 +1076,7 @@ const SharedProductEditor = ({
                         {!isViewMode && (
                             <button
                                 onClick={handleSubmit}
-                                disabled={isSaving}
+                                disabled={isSaving || (editorMode === 'seller' && sellerProfile && !sellerProfile.bisNumberGold && !sellerProfile.bisNumberSilver && !isEditMode && !isViewMode)}
                                 className="px-6 py-2.5 bg-gray-900 text-white rounded-lg text-sm font-medium shadow-sm hover:bg-black transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50"
                             >
                                 {isSaving ? <Loader2 size={16} className="animate-spin" /> : <SuccessIcon size={16} />}
@@ -964,84 +1089,107 @@ const SharedProductEditor = ({
 
             {/* Main Content Area */}
             <div className="max-w-[1400px] mx-auto px-4 md:px-8 mt-8">
-                <div className="grid grid-cols-1 gap-8">
-                    {/* Active Tab Component */}
-                    {activeTab === 'general' && (
-                        <ProductGeneralTab 
-                            formData={formData} 
-                            setFormData={setFormData} 
-                            errors={combinedErrors} 
-                            isViewMode={isViewMode} 
-                            categories={categories}
-                            handleCategoryChange={(val) => setFormData(prev => ({ ...prev, categories: [{ category: val }] }))}
-                            createdProductData={createdProductData}
-                        />
-                    )}
+                {editorMode === 'seller' && sellerProfile && !sellerProfile.bisNumberGold && !sellerProfile.bisNumberSilver && !isEditMode && !isViewMode ? (
+                    <div className="bg-white rounded-[2rem] border border-red-100 p-8 sm:p-12 text-center max-w-xl mx-auto shadow-sm space-y-6">
+                        <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
+                            <Info size={32} />
+                        </div>
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold text-gray-900 uppercase tracking-tight">BIS Credentials Required</h3>
+                            <p className="text-sm text-gray-500 leading-relaxed font-normal">
+                                You must update either your <strong>BIS Hallmark License Number for Gold</strong> or <strong>Silver</strong> in your profile settings before you can list products.
+                            </p>
+                        </div>
+                        <button
+                            type="button"
+                            onClick={() => navigate('/seller/profile')}
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-gray-900 hover:bg-black text-white text-xs font-bold uppercase tracking-widest rounded-xl transition-all shadow-sm active:scale-95"
+                        >
+                            Go to Profile Settings <ExternalLink size={14} />
+                        </button>
+                    </div>
+                ) : (
+                    <div className="grid grid-cols-1 gap-8">
+                        {/* Active Tab Component */}
+                        {activeTab === 'general' && (
+                            <ProductGeneralTab 
+                                formData={formData} 
+                                setFormData={setFormData} 
+                                errors={combinedErrors} 
+                                isViewMode={isViewMode} 
+                                categories={categories}
+                                handleCategoryChange={(val) => setFormData(prev => ({ ...prev, categories: [{ category: val }] }))}
+                                createdProductData={createdProductData}
+                                sellerProfile={sellerProfile}
+                                editorMode={editorMode}
+                            />
+                        )}
 
-                    {activeTab === 'variants' && (
-                        <ProductVariantsTab 
-                            formData={formData} 
-                            setFormData={setFormData} 
-                            errors={combinedErrors} 
-                            isViewMode={isViewMode} 
-                            metalRates={metalRates} 
-                            gstRate={gstRate}
-                            handleVariantChange={handleVariantChange}
-                            handleDiamondSpecChange={handleDiamondSpecChange}
-                            addVariant={addVariant}
-                            removeVariant={removeVariant}
-                            updateVariantSerialQuantity={updateVariantSerialQuantity}
-                            handleDownloadAllSerialBarcodes={handleDownloadAllSerialBarcodes}
-                            handleDownloadSerialBarcode={handleDownloadSerialBarcode}
-                            setSerialBarcodeRef={setSerialBarcodeRef}
-                            handleVariantImageUpload={handleVariantImageUpload}
-                            handleRemoveVariantUpload={handleRemoveVariantUpload}
-                            variantImagePreviews={variantImagePreviews}
-                            handleRemoveSavedVariantImage={handleRemoveSavedVariantImage}
-                            addVariantFaq={addVariantFaq}
-                            removeVariantFaq={removeVariantFaq}
-                            handleVariantFaqChange={handleVariantFaqChange}
-                            clearVariantFaqOverride={clearVariantFaqOverride}
-                            expandedVariant={expandedVariant}
-                            setExpandedVariant={setExpandedVariant}
-                        />
-                    )}
+                        {activeTab === 'variants' && (
+                            <ProductVariantsTab 
+                                formData={formData} 
+                                setFormData={setFormData} 
+                                errors={combinedErrors} 
+                                isViewMode={isViewMode} 
+                                metalRates={metalRates} 
+                                gstRate={gstRate}
+                                handleVariantChange={handleVariantChange}
+                                handleDiamondSpecChange={handleDiamondSpecChange}
+                                addVariant={addVariant}
+                                removeVariant={removeVariant}
+                                updateVariantSerialQuantity={updateVariantSerialQuantity}
+                                handleDownloadAllSerialBarcodes={handleDownloadAllSerialBarcodes}
+                                handleDownloadSerialBarcode={handleDownloadSerialBarcode}
+                                setSerialBarcodeRef={setSerialBarcodeRef}
+                                handleVariantImageUpload={handleVariantImageUpload}
+                                handleRemoveVariantUpload={handleRemoveVariantUpload}
+                                variantImagePreviews={variantImagePreviews}
+                                handleRemoveSavedVariantImage={handleRemoveSavedVariantImage}
+                                addVariantFaq={addVariantFaq}
+                                removeVariantFaq={removeVariantFaq}
+                                handleVariantFaqChange={handleVariantFaqChange}
+                                clearVariantFaqOverride={clearVariantFaqOverride}
+                                expandedVariant={expandedVariant}
+                                setExpandedVariant={setExpandedVariant}
+                            />
+                        )}
 
-                    {activeTab === 'media' && (
-                        <ProductMediaTab 
-                            formData={formData} 
-                            setFormData={setFormData} 
-                            isViewMode={isViewMode} 
-                            previewImages={previewImages}
-                            handleImageUpload={handleImageUpload}
-                            handleHoverImageUpload={handleHoverImageUpload}
-                            handleRemoveImage={handleRemoveImage}
-                            handleVideoUpload={handleVideoUpload}
-                            handleRemoveVideo={handleRemoveVideo}
-                            resolvedVideoPreview={resolvedVideoPreview}
-                            isImageVideoPreview={isImageVideoPreview}
-                            removeVideo={removeVideo}
-                            enhancingIndex={enhancingIndex}
-                            setEnhancingIndex={setEnhancingIndex}
-                            showEnhanceModal={showEnhanceModal}
-                            setShowEnhanceModal={setShowEnhanceModal}
-                            enhancedIndices={enhancedIndices}
-                            handleEnhancedUpload={handleEnhancedUpload}
-                        />
-                    )}
+                        {activeTab === 'media' && (
+                            <ProductMediaTab 
+                                formData={formData} 
+                                setFormData={setFormData} 
+                                isViewMode={isViewMode} 
+                                previewImages={previewImages}
+                                handleImageUpload={handleImageUpload}
+                                handleHoverImageUpload={handleHoverImageUpload}
+                                handleRemoveImage={handleRemoveImage}
+                                handleVideoUpload={handleVideoUpload}
+                                handleRemoveVideo={handleRemoveVideo}
+                                resolvedVideoPreview={resolvedVideoPreview}
+                                isImageVideoPreview={isImageVideoPreview}
+                                removeVideo={removeVideo}
+                                enhancingIndex={enhancingIndex}
+                                setEnhancingIndex={setEnhancingIndex}
+                                showEnhanceModal={showEnhanceModal}
+                                setShowEnhanceModal={setShowEnhanceModal}
+                                enhancedIndices={enhancedIndices}
+                                handleEnhancedUpload={handleEnhancedUpload}
+                            />
+                        )}
 
-                    {activeTab === 'advanced' && (
-                        <ProductAdvancedTab 
-                            formData={formData} 
-                            setFormData={setFormData} 
-                            errors={combinedErrors}
-                            isViewMode={isViewMode} 
-                            addFaq={addFaq} 
-                            removeFaq={removeFaq} 
-                            handleFaqChange={handleFaqChange} 
-                        />
-                    )}
-                </div>
+                        {activeTab === 'advanced' && (
+                            <ProductAdvancedTab 
+                                formData={formData} 
+                                setFormData={setFormData} 
+                                errors={combinedErrors}
+                                isViewMode={isViewMode} 
+                                addFaq={addFaq} 
+                                removeFaq={removeFaq} 
+                                handleFaqChange={handleFaqChange} 
+                            />
+                        )}
+                    </div>
+                )}
             </div>
 
             {/* Success Modal */}

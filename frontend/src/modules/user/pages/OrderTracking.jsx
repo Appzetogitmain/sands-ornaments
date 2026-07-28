@@ -135,6 +135,7 @@ const OrderTracking = () => {
 
     // --- VIEW LOGIC ---
     const isReturnView = view === 'return';
+    const backTarget = isReturnView ? `/order-tracking/${orderId}` : "/profile/orders";
     const activeTimelineSteps = isReturnView ? returnSteps : deliverySteps;
     const activeTitle = isReturnView ? (returnRequest?.type === 'exchange' ? 'Exchange Status' : 'Return Status') : 'Tracking Details';
     const activeStatusObj = isReturnView ? currentReturnStatus : currentDeliveryStatus;
@@ -174,7 +175,7 @@ const OrderTracking = () => {
     return (
         <div className="min-h-screen bg-white font-sans pt-0 md:pt-12 pb-12 selection:bg-[#D39A9F] selection:text-white">
             <div className="md:hidden bg-white shadow-sm p-4 sticky top-0 z-20 flex items-center gap-4">
-                <Link to="/profile/orders" className="p-2 -ml-2 text-black">
+                <Link to={backTarget} className="p-2 -ml-2 text-black">
                     <ArrowLeft className="w-5 h-5" />
                 </Link>
                 <h1 className="text-lg font-bold font-display text-black">Order #{(order.displayId || order.orderId || order.id || '').toString().replace('ORD-', '')}</h1>
@@ -182,9 +183,9 @@ const OrderTracking = () => {
 
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-0">
                 <div className="hidden md:block mb-6">
-                    <Link to="/profile/orders" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-black transition-colors group uppercase tracking-widest font-bold text-[10px]">
+                    <Link to={backTarget} className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-black transition-colors group uppercase tracking-widest font-bold text-[10px]">
                         <ArrowLeft className="w-4 h-4 mr-2 group-hover:-translate-x-1 transition-transform" />
-                        Back to Orders
+                        {isReturnView ? 'Back to Order Journey' : 'Back to Orders'}
                     </Link>
                 </div>
 

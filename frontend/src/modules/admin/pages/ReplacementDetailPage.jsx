@@ -31,13 +31,24 @@ const STATUS_STYLES = {
     Closed: 'text-gray-700 bg-gray-100 border-gray-200'
 };
 
-const ALLOWED_TRANSITIONS = {
+const ALLOWED_TRANSITIONS_AFTER_PICKUP = {
     Pending: ['Approved', 'Rejected'],
-    Approved: ['Pickup Scheduled', 'Pickup Completed', 'Replacement Shipped', 'Closed'],
+    Approved: ['Pickup Scheduled', 'Pickup Completed', 'Closed'],
     Rejected: [],
     'Pickup Scheduled': ['Pickup Completed'],
     'Pickup Completed': ['Replacement Shipped', 'Closed'],
     'Replacement Shipped': ['Delivered', 'Closed'],
+    Delivered: ['Closed'],
+    Closed: []
+};
+
+const ALLOWED_TRANSITIONS_IMMEDIATE = {
+    Pending: ['Approved', 'Rejected'],
+    Approved: ['Replacement Shipped', 'Closed'],
+    Rejected: [],
+    'Replacement Shipped': ['Pickup Scheduled', 'Pickup Completed', 'Delivered', 'Closed'],
+    'Pickup Scheduled': ['Pickup Completed'],
+    'Pickup Completed': ['Delivered', 'Closed'],
     Delivered: ['Closed'],
     Closed: []
 };
@@ -174,7 +185,13 @@ const ReplacementDetailPage = () => {
         }];
     }, [replacement]);
 
-    const allowedTransitions = replacement ? (ALLOWED_TRANSITIONS[replacement.status] || []) : [];
+    const allowedTransitions = useMemo(() => {
+        if (!replacement) return [];
+        const transitions = replacement.replacementMode === 'immediate'
+            ? ALLOWED_TRANSITIONS_IMMEDIATE
+            : ALLOWED_TRANSITIONS_AFTER_PICKUP;
+        return transitions[replacement.status] || [];
+    }, [replacement]);
 
     const handleAction = async (status) => {
         if (status === 'Pickup Completed') {

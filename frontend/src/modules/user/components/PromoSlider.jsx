@@ -39,7 +39,7 @@ const SLIDES = [
     }
 ];
 
-const PromoSlider = () => {
+const PromoSlider = ({ externalSlides, autoplayInterval }) => {
     const { data: homepageSections = {} } = useHomepageCms();
     const sectionData = homepageSections?.['hero-banners'];
     const dynamicSlides = Array.isArray(sectionData?.items)
@@ -48,6 +48,7 @@ const PromoSlider = () => {
             .map((item, index) => ({
                 id: item.itemId || item.id || `hero-slide-${index + 1}`,
                 image: item.image,
+                mobileImage: item.mobileImage || null,
                 title: item.label,
                 subtitle: item.subtitle || '',
                 tag: item.tag || item.name || '',
@@ -55,8 +56,8 @@ const PromoSlider = () => {
                 ctaLabel: item.ctaLabel || 'Shop Collection'
             }))
         : [];
-    const slides = dynamicSlides.length > 0 ? dynamicSlides : SLIDES;
-    const autoplayMs = Number(sectionData?.settings?.autoplayMs) || 4000;
+    const slides = (externalSlides && externalSlides.length > 0) ? externalSlides : (dynamicSlides.length > 0 ? dynamicSlides : SLIDES);
+    const autoplayMs = autoplayInterval || Number(sectionData?.settings?.autoplayMs) || 4000;
     const extendedSlides = [slides[slides.length - 1], ...slides, slides[0]];
     const [currentIndex, setCurrentIndex] = useState(1);
     const [isTransitioning, setIsTransitioning] = useState(false);
@@ -100,16 +101,16 @@ const PromoSlider = () => {
     }, [slides.length]);
 
     return (
-        <section 
-            className="w-full bg-white pt-0 pb-0 overflow-hidden select-none"
+        <section
+            className="w-full bg-white pt-4 md:pt-6 pb-6 md:pb-8 overflow-hidden select-none"
             onMouseEnter={() => setIsSuspended(true)}
             onMouseLeave={() => setIsSuspended(false)}
         >
-            <div className="relative w-full h-[200px] sm:h-[220px] md:h-[350px]">
+            <div className={`relative w-full overflow-hidden group transition-all duration-300 ${extendedSlides[currentIndex]?.mobileImage ? 'aspect-[2/1] md:aspect-[3.5/1] md:min-h-[350px]' : 'aspect-[4/1] md:aspect-[3.5/1] md:min-h-[350px]'}`}>
                 <motion.div
-                    className="flex h-full w-full gap-[1.5%] touch-pan-y"
-                    animate={{ 
-                        x: `calc(4.25% - ${currentIndex * 90}% - ${currentIndex * 1.5}%)` 
+                    className="absolute inset-0 flex h-full w-full"
+                    animate={{
+                        x: `-${currentIndex * 100}%`
                     }}
                     transition={{
                         type: "spring",
@@ -118,68 +119,67 @@ const PromoSlider = () => {
                         mass: 0.8
                     }}
                     onAnimationComplete={handleTransitionEnd}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.1}
-                    onDragEnd={(e, { offset, velocity }) => {
-                        const swipe = offset.x;
-                        if (swipe < -50) {
-                            nextSlide();
-                        } else if (swipe > 50) {
-                            prevSlide();
-                        }
-                    }}
                 >
                     {extendedSlides.map((slide, idx) => (
-                        <div 
+                        <div
                             key={`${idx}-${slide.id}`}
-                            className="relative flex-shrink-0 w-[90%] h-full rounded-lg md:rounded-2xl overflow-hidden shadow-2xl bg-gray-50 group"
+                            className="relative flex-shrink-0 w-full h-full overflow-hidden bg-gray-50 group"
                         >
                             {/* Professional Gradient Overlay for Text Readability */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/30 to-transparent pointer-events-none z-[5]" />
-                            
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent pointer-events-none z-[5]" />
+
+                            {slide.mobileImage && (
+                                <img
+                                    src={slide.mobileImage}
+                                    alt={`${slide.title} Mobile`}
+                                    loading={idx === 1 ? 'eager' : 'lazy'}
+                                    fetchPriority={idx === 1 ? 'high' : 'low'}
+                                    decoding={idx === 1 ? 'sync' : 'async'}
+                                    className="absolute inset-0 w-full h-full object-cover pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms] ease-out block md:hidden"
+                                />
+                            )}
                             <img
                                 src={slide.image}
                                 alt={slide.title}
                                 loading={idx === 1 ? 'eager' : 'lazy'}
                                 fetchPriority={idx === 1 ? 'high' : 'low'}
                                 decoding={idx === 1 ? 'sync' : 'async'}
-                                className="absolute inset-0 w-full h-full object-cover pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms] ease-out"
+                                className={`absolute inset-0 w-full h-full object-cover pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms] ease-out ${slide.mobileImage ? 'hidden md:block' : 'block'}`}
                             />
-                            
+
                             {/* Subtle Brand Watermark */}
-                            <div className="absolute top-3 left-4 md:top-8 md:left-12 z-20">
-                                <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[8px] md:text-[10px] font-bold uppercase tracking-[0.3em] px-3 py-1.5 rounded-sm">
+                            <div className="absolute top-1 left-2 md:top-8 md:left-12 z-20">
+                                <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[4px] sm:text-[6px] md:text-[10px] font-bold uppercase tracking-[0.3em] px-1 py-0.5 md:px-3 md:py-1.5 rounded-sm">
                                     A SANDS PRODUCT
                                 </span>
                             </div>
 
                             {/* Refined Content Overlay - Left-aligned for high-end professional look */}
-                            <div className="absolute inset-y-0 left-0 w-full md:w-[65%] flex flex-col justify-center px-5 md:px-20 z-10">
+                            <div className="absolute inset-y-0 left-0 w-full md:w-[65%] flex flex-col justify-center px-6 md:px-20 z-10 text-white text-left">
                                 <motion.div
                                     initial={{ opacity: 0, x: -30 }}
                                     animate={currentIndex === idx ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
                                     transition={{ duration: 0.8, delay: 0.2 }}
-                                    className="text-white flex flex-col items-start"
+                                    className="text-white flex flex-col items-start text-left"
                                 >
-                                    <div className="flex items-center gap-3 mb-2 md:mb-4">
-                                        <div className="w-8 h-[2px] bg-[#9C5B61]"></div>
-                                        <span className="text-[10px] md:text-sm text-[#9C5B61] font-bold uppercase tracking-[0.4em]">
+                                    <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-4">
+                                        <div className="w-4 md:w-8 h-[1px] md:h-[2px] bg-[#9C5B61]"></div>
+                                        <span className="text-[8px] sm:text-[10px] md:text-sm text-[#9C5B61] font-bold uppercase tracking-[0.3em]">
                                             {slide.tag}
                                         </span>
                                     </div>
-                                    
-                                    <h2 className="font-serif text-2xl md:text-5xl font-bold leading-tight mb-1 md:mb-3 drop-shadow-lg max-w-[90%] md:max-w-xl">
+
+                                    <h2 className="font-serif text-sm sm:text-2xl md:text-5xl font-bold leading-normal md:leading-tight mb-1 md:mb-3 drop-shadow-lg max-w-[95%] md:max-w-xl text-left">
                                         {slide.title}
                                     </h2>
 
-                                    <p className="text-white/80 text-[10px] md:text-base font-light leading-relaxed mb-3 md:mb-6 max-w-md tracking-wide line-clamp-2 md:line-clamp-none">
+                                    <p className="text-white/80 text-[8px] sm:text-xs md:text-base font-light leading-relaxed mb-2 md:mb-6 max-w-[90%] md:max-w-md tracking-wide line-clamp-2 md:line-clamp-none text-left">
                                         {slide.subtitle}
                                     </p>
-                                    
+
                                     <Link
                                         to={slide.link}
-                                        className="relative group inline-flex items-center justify-center bg-[#9C5B61] text-white hover:bg-white hover:text-[#9C5B61] font-bold text-[10px] md:text-sm uppercase tracking-[0.2em] px-6 py-2.5 md:px-12 md:py-4 transition-all duration-300 overflow-hidden shadow-xl"
+                                        className="relative group inline-flex items-center justify-center bg-[#9C5B61] text-white hover:bg-white hover:text-[#9C5B61] font-bold text-[8px] sm:text-xs md:text-sm uppercase tracking-[0.2em] px-4 py-1.5 md:px-12 md:py-4 transition-all duration-300 overflow-hidden shadow-xl"
                                     >
                                         <span className="relative z-10">{slide.ctaLabel || 'Shop Collection'}</span>
                                     </Link>
@@ -189,21 +189,29 @@ const PromoSlider = () => {
                     ))}
                 </motion.div>
 
-                {/* Tanishq-style Diamond Indicators */}
-                <div className="absolute bottom-3 md:bottom-10 left-1/2 -translate-x-1/2 z-30 flex gap-4">
-                    {slides.map((_, i) => {
-                        const isActive = (currentIndex - 1 + slides.length) % slides.length === i;
-                        return (
-                            <button
-                                key={i}
-                                onClick={() => !isTransitioning && setCurrentIndex(i + 1)}
-                                className={`w-2 h-2 transition-all duration-500 transform rotate-45 border ${isActive ? 'bg-[#9C5B61] border-[#9C5B61] scale-125' : 'bg-transparent border-white/40'}`}
-                                aria-label={`Slide ${i + 1}`}
-                            />
-                        );
-                    })}
-                </div>
+                {/* Arrow Controls Removed */}
+
+                {/* Sliding Line Indicators - Inside Carousel Bottom Center */}
+                {slides.length > 0 && (
+                    <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center gap-2 md:gap-3 z-30">
+                        {slides.map((_, i) => {
+                            const isActive = (currentIndex - 1 + slides.length) % slides.length === i;
+                            return (
+                                <button
+                                    key={i}
+                                    onClick={() => !isTransitioning && setCurrentIndex(i + 1)}
+                                    className={`transition-all duration-500 rounded-full ${isActive
+                                            ? 'w-10 md:w-12 h-1 bg-white'
+                                            : 'w-4 md:w-5 h-1 bg-white/40 hover:bg-white/70'
+                                        }`}
+                                    aria-label={`Go to slide ${i + 1}`}
+                                />
+                            );
+                        })}
+                    </div>
+                )}
             </div>
+
         </section>
     );
 };

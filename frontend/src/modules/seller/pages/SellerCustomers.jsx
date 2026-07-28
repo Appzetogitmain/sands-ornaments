@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Search, Mail, ShoppingBag, IndianRupee, CalendarDays, ArrowRight } from 'lucide-react';
+import { Search, Mail, ShoppingBag, IndianRupee, CalendarDays, ArrowRight, Download } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import AdminTable from '../../admin/components/AdminTable';
 import { sellerCustomerService } from '../services/sellerCustomerService';
+import toast from 'react-hot-toast';
+import { exportToExcelCSV } from '../../../utils/exportUtils';
 
 const SellerCustomers = () => {
     const navigate = useNavigate();
@@ -11,6 +13,48 @@ const SellerCustomers = () => {
     const [loading, setLoading] = useState(false);
     const [page, setPage] = useState(1);
     const [pagination, setPagination] = useState(null);
+
+    const handleExport = async () => {
+        const loadingToast = toast.loading("Generating customer export...");
+        try {
+            const res = await sellerCustomerService.getCustomersPaged({
+                page: 1,
+                limit: Math.max(1000, pagination?.totalItems || 1000),
+                ...(searchQuery ? { search: searchQuery } : {})
+            });
+            const exportCustomers = res.customers || [];
+            if (exportCustomers.length === 0) {
+                toast.error("No customers to export", { id: loadingToast });
+                return;
+            }
+
+            const headers = [
+                'name',
+                'email',
+                'totalOrders',
+                'totalSpend',
+                'formattedLastOrderDate'
+            ];
+            const columnNames = [
+                'Customer Name',
+                'Email Address',
+                'Total Orders',
+                'Seller Revenue (INR)',
+                'Last Order Date'
+            ];
+
+            const formattedCustomers = exportCustomers.map(c => ({
+                ...c,
+                formattedLastOrderDate: c.lastOrderDate ? new Date(c.lastOrderDate).toISOString().split('T')[0] : 'N/A'
+            }));
+
+            exportToExcelCSV(formattedCustomers, headers, columnNames, 'Seller_Customers_Report');
+            toast.success("Customers report exported successfully", { id: loadingToast });
+        } catch (err) {
+            console.error("Export seller customers failed:", err);
+            toast.error("Failed to export customers", { id: loadingToast });
+        }
+    };
 
     useEffect(() => {
         let active = true;
@@ -106,6 +150,13 @@ const SellerCustomers = () => {
                 </div>
 
                 <div className="flex items-center gap-4">
+                    <button
+                        onClick={handleExport}
+                        className="flex items-center gap-1.5 px-4 py-3 bg-gray-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap"
+                        title="Export Customers as Excel/CSV"
+                    >
+                        <Download size={14} /> Export Excel
+                    </button>
                     <div className="relative group">
                         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 group-focus-within:text-[#3E2723] transition-colors" />
                         <input

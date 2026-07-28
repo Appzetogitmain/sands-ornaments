@@ -57,6 +57,7 @@ const normalizeVariantFields = (variants = [], fallback = {}) => {
   const fallbackWeightUnit = fallback.weightUnit || "Grams";
   return variants.map((variant) => ({
     ...variant,
+    size: variant.size || "",
     variantCode: variant.variantCode || "",
     diamondType: normalizeDiamondType(variant.diamondType),
     variantImages: Array.isArray(variant.variantImages)

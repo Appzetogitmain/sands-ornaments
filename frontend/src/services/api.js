@@ -10,8 +10,18 @@ const api = axios.create({
 });
 
 const clearStoredSession = () => {
-  localStorage.removeItem('sands_token');
-  localStorage.removeItem('sands_current_user');
+  const path = window.location.pathname;
+  if (path.startsWith('/admin')) {
+    localStorage.removeItem('sands_admin_token');
+    localStorage.removeItem('sands_admin_user');
+  } else if (path.startsWith('/seller')) {
+    localStorage.removeItem('sands_seller_token');
+    localStorage.removeItem('sands_seller_user');
+  } else {
+    localStorage.removeItem('sands_token');
+    localStorage.removeItem('sands_current_user');
+  }
+  // Clean up legacy keys
   localStorage.removeItem('sellerToken');
   localStorage.removeItem('sellerAuth');
   localStorage.removeItem('currentSeller');
@@ -20,7 +30,15 @@ const clearStoredSession = () => {
 // Request interceptor to add JWT token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('sands_token') || localStorage.getItem('sellerToken');
+    const path = window.location.pathname;
+    let tokenKey = 'sands_token';
+    if (path.startsWith('/admin')) {
+      tokenKey = 'sands_admin_token';
+    } else if (path.startsWith('/seller')) {
+      tokenKey = 'sands_seller_token';
+    }
+
+    const token = localStorage.getItem(tokenKey);
     if (token && token !== 'undefined' && token !== 'null') {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -40,12 +58,13 @@ api.interceptors.response.use(
     // Handle 401 Unauthorized (Expired token, etc.)
     if (error.response && error.response.status === 401 && !error.config?.skipUnauthorizedLogout) {
       clearStoredSession();
-      // Optional: Optional: Redirect to login or refresh page
-      // window.location.href = '/login';
+      const isAdminPath = window.location.pathname.startsWith('/admin');
+      window.location.href = isAdminPath ? '/admin/login' : '/login';
     }
 
     if (error.response && error.response.status === 403 && error.response?.data?.error === 'ACCOUNT_BLOCKED') {
       clearStoredSession();
+      window.location.href = '/login';
     }
 
     return Promise.reject(error);

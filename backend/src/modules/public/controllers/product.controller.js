@@ -102,7 +102,7 @@ exports.getProducts = async (req, res) => {
           $or: [{ slug: category }, { name: new RegExp(`^${category}$`, "i") }],
           isActive: true
         }).select("_id");
-        categoryId = resolved?._id || category;
+        categoryId = resolved?._id || new mongoose.Types.ObjectId("000000000000000000000000");
       }
       query.categories = categoryId;
     }

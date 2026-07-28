@@ -12,6 +12,7 @@ import Pagination from '../components/Pagination';
 import AdminStatsCard from '../components/AdminStatsCard';
 import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
+import { exportToExcelCSV } from '../../../utils/exportUtils';
 
 const OrderListPage = () => {
     const navigate = useNavigate();
@@ -79,38 +80,45 @@ const OrderListPage = () => {
                 return;
             }
             
-            const headers = ['Order ID', 'Date', 'Customer Name', 'Email', 'Phone', 'Payment Method', 'Payment Status', 'Items Count', 'Total Value (INR)', 'Order Status', 'Shipping Carrier', 'Tracking ID'];
-            const csvRows = [headers.join(',')];
-            
-            exportData.forEach(order => {
-                const row = [
-                    order.orderId || '',
-                    order.createdAt ? new Date(order.createdAt).toLocaleDateString() : '',
-                    `"${(order.customerName || '').replace(/"/g, '""')}"`,
-                    `"${(order.customerEmail || '').replace(/"/g, '""')}"`,
-                    `"${(order.customerPhone || '').replace(/"/g, '""')}"`,
-                    order.paymentMethod || '',
-                    order.paymentStatus || '',
-                    order.itemCount || 0,
-                    order.totalAmount || 0,
-                    order.orderStatus || '',
-                    order.shippingCarrier || '',
-                    order.trackingId || ''
-                ];
-                csvRows.push(row.join(','));
-            });
-            
-            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.setAttribute('download', `Orders_Export_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
+            const headers = [
+                'orderId',
+                'formattedDate',
+                'customerName',
+                'customerEmail',
+                'formattedPhone',
+                'paymentMethod',
+                'paymentStatus',
+                'itemCount',
+                'totalAmount',
+                'orderStatus',
+                'shippingCarrier',
+                'trackingId'
+            ];
+            const columnNames = [
+                'Order ID',
+                'Date',
+                'Customer Name',
+                'Email',
+                'Phone',
+                'Payment Method',
+                'Payment Status',
+                'Items Count',
+                'Total Value (INR)',
+                'Order Status',
+                'Shipping Carrier',
+                'Tracking ID'
+            ];
+
+            const formattedOrders = exportData.map(order => ({
+                ...order,
+                formattedDate: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : '',
+                formattedPhone: order.customerPhone ? `\t${order.customerPhone}` : ''
+            }));
+
+            exportToExcelCSV(formattedOrders, headers, columnNames, 'Orders_Export');
             toast.success('Export downloaded successfully', { id: loadingToast });
         } catch (err) {
+            console.error("Export orders failed:", err);
             toast.error('Failed to export orders', { id: loadingToast });
         }
     };

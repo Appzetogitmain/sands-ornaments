@@ -160,7 +160,19 @@ exports.processReturn = async (req, res) => {
     await returnReq.save();
 
     if (returnReq.orderId) {
-      const nextOrderStatus = status === "Rejected" ? "Delivered" : "Return Requested";
+      let nextOrderStatus = status === "Rejected" ? "Delivered" : "Return Requested";
+      if (nextOrderStatus === "Delivered") {
+        const { hasOtherActiveClaims } = require("../../../utils/activeClaimsHelper");
+        const otherActive = await hasOtherActiveClaims(returnReq.orderId, returnReq._id);
+        if (otherActive) {
+          nextOrderStatus = "Return Requested";
+        } else {
+          const completedReturns = await Return.find({ orderId: returnReq.orderId, status: "Refunded" });
+          if (completedReturns.length > 0) {
+            nextOrderStatus = "Partially Returned";
+          }
+        }
+      }
       await Order.updateOne(
         { _id: returnReq.orderId },
         {

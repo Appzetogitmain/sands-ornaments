@@ -122,7 +122,20 @@ exports.processReplacement = async (req, res) => {
     await replacementReq.save();
 
     if (replacementReq.orderId) {
-      const nextOrderStatus = status === "Rejected" ? "Delivered" : "Return Requested";
+      let nextOrderStatus = status === "Rejected" ? "Delivered" : "Return Requested";
+      if (nextOrderStatus === "Delivered") {
+        const { hasOtherActiveClaims } = require("../../../utils/activeClaimsHelper");
+        const otherActive = await hasOtherActiveClaims(replacementReq.orderId, replacementReq._id);
+        if (otherActive) {
+          nextOrderStatus = "Return Requested";
+        } else {
+          const ReturnModel = require("../../../models/Return");
+          const completedReturns = await ReturnModel.find({ orderId: replacementReq.orderId, status: "Refunded" });
+          if (completedReturns.length > 0) {
+            nextOrderStatus = "Partially Returned";
+          }
+        }
+      }
       await Order.updateOne(
         { _id: replacementReq.orderId },
         {

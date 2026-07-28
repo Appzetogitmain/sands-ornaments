@@ -3,6 +3,7 @@ import { Image as ImageIcon, Plus, Save, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminService } from '../../services/adminService';
 import { Input } from '../common/FormControls';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const createInitialItems = (sectionData, defaultSection) => {
     const sourceItems = Array.isArray(sectionData?.items) && sectionData.items.length > 0
@@ -59,8 +60,8 @@ const MenLuxurySectionEditor = ({ sectionData, onSave, defaultSection = {} }) =>
         [defaultSection, sectionData]
     );
 
-    const [settings, setSettings] = useState(initialSettings);
-    const [items, setItems] = useState(initialItems);
+    const [settings, setSettings] = useDraftState(`draft_settings_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialSettings);
+    const [items, setItems] = useDraftState(`draft_items_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialItems);
     const [categories, setCategories] = useState([]);
     const [saving, setSaving] = useState(false);
 
@@ -68,9 +69,7 @@ const MenLuxurySectionEditor = ({ sectionData, onSave, defaultSection = {} }) =>
         setSettings(initialSettings);
     }, [initialSettings]);
 
-    useEffect(() => {
-        setItems(initialItems);
-    }, [initialItems]);
+    
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -305,7 +304,13 @@ const MenLuxurySectionEditor = ({ sectionData, onSave, defaultSection = {} }) =>
                                         <ImageIcon size={14} />
                                         Change Image
                                         <input type="file" accept="image/*" className="hidden" onChange={(event) => handleImageUpload(item.id, event.target.files?.[0])} />
+                                        <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1080x1080px (1:1 Ratio)</p>
                                     </label>
+                                        <div className="text-center mt-2 w-full">
+                                            <p className="text-[9px] text-amber-600 font-bold uppercase tracking-wider bg-amber-50 px-2 py-1 rounded border border-amber-200 inline-block w-full">
+                                                ✨ Recommended: 1920x1080px (16:9)
+                                            </p>
+                                        </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">

@@ -287,6 +287,7 @@ const sanitizeSectionPayload = (identity, payload = {}) => {
       line2: item.line2,
       description: item.description,
       image: item.image,
+      mobileImage: item.mobileImage,
       hoverImage: item.hoverImage,
       relationKey: item.relationKey || undefined,
       recipient: item.recipient || undefined,

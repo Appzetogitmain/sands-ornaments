@@ -8,6 +8,8 @@ const itemSchema = Joi.object({
   personalization: Joi.any().optional(),
   price: Joi.number().optional(),
   name: Joi.string().optional(),
+  giftWrap: Joi.boolean().optional(),
+  giftMessage: Joi.string().allow("").optional(),
 });
 
 const placeOrderSchema = Joi.object({
@@ -15,7 +17,7 @@ const placeOrderSchema = Joi.object({
   shippingAddress: Joi.object({
     firstName: Joi.string().required(),
     lastName: Joi.string().required(),
-    email: Joi.string().email().required(),
+    email: Joi.string().email().allow("").optional(),
     phone: Joi.string().pattern(/^[6-9]\d{9}$/).required(),
     flatNo: Joi.string().required(),
     area: Joi.string().required(),

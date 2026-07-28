@@ -36,7 +36,7 @@ const AddressesTab = ({
                         <div className="space-y-3">
                             <div>
                                 <label className="text-[10px] font-bold text-[#8D6E63] uppercase tracking-widest mb-1 block">Full Name</label>
-                                <input value={newAddress.name} onChange={e => setNewAddress({ ...newAddress, name: e.target.value })} pattern="[a-zA-Z\s\-']+" title="Please use letters, spaces, hyphens, or apostrophes only" className="w-full bg-[#FAFAFA] border border-[#EFEBE9] p-2.5 rounded-lg text-sm font-medium text-[#3E2723] placeholder:text-gray-300 focus:outline-none focus:border-[#3E2723] transition-colors" placeholder="e.g. Aditi Sharma" required />
+                                <input value={newAddress.name} onChange={e => setNewAddress({ ...newAddress, name: e.target.value })} className="w-full bg-[#FAFAFA] border border-[#EFEBE9] p-2.5 rounded-lg text-sm font-medium text-[#3E2723] placeholder:text-gray-300 focus:outline-none focus:border-[#3E2723] transition-colors" placeholder="e.g. Aditi Sharma" required />
                             </div>
                             <div>
                                 <label className="text-[10px] font-bold text-[#8D6E63] uppercase tracking-widest mb-1 block">Phone Number</label>
@@ -53,11 +53,11 @@ const AddressesTab = ({
                             <div className="grid grid-cols-2 gap-2">
                                 <div>
                                     <label className="text-[10px] font-bold text-[#8D6E63] uppercase tracking-widest mb-1 block">City</label>
-                                    <input value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} pattern="[a-zA-Z\s\-']+" title="Please use letters, spaces, hyphens, or apostrophes only" className="w-full bg-[#FAFAFA] border border-[#EFEBE9] p-2.5 rounded-lg text-sm font-medium text-[#3E2723] placeholder:text-gray-300 focus:outline-none focus:border-[#3E2723] transition-colors" placeholder="Mumbai" required />
+                                    <input value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} className="w-full bg-[#FAFAFA] border border-[#EFEBE9] p-2.5 rounded-lg text-sm font-medium text-[#3E2723] placeholder:text-gray-300 focus:outline-none focus:border-[#3E2723] transition-colors" placeholder="Mumbai" required />
                                 </div>
                                 <div>
                                     <label className="text-[10px] font-bold text-[#8D6E63] uppercase tracking-widest mb-1 block">State</label>
-                                    <input value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} pattern="[a-zA-Z\s\-']+" title="Please use letters, spaces, hyphens, or apostrophes only" className="w-full bg-[#FAFAFA] border border-[#EFEBE9] p-2.5 rounded-lg text-sm font-medium text-[#3E2723] placeholder:text-gray-300 focus:outline-none focus:border-[#3E2723] transition-colors" placeholder="Maharashtra" required />
+                                    <input value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} className="w-full bg-[#FAFAFA] border border-[#EFEBE9] p-2.5 rounded-lg text-sm font-medium text-[#3E2723] placeholder:text-gray-300 focus:outline-none focus:border-[#3E2723] transition-colors" placeholder="Maharashtra" required />
                                 </div>
                             </div>
                             <div>
@@ -75,12 +75,12 @@ const AddressesTab = ({
             {/* Desktop Add Address Form - With Validation */}
             {showAddressForm && (
                 <form onSubmit={handleAddAddress} className="hidden md:grid bg-white p-8 rounded-2xl shadow-sm grid-cols-2 gap-4 border border-[#EBCDD0] animate-in fade-in duration-300">
-                    <input placeholder="Name" value={newAddress.name} onChange={e => setNewAddress({ ...newAddress, name: e.target.value })} pattern="[a-zA-Z\s\-']+" title="Letters, spaces, hyphens, apostrophes only" className="w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
+                    <input placeholder="Name" value={newAddress.name} onChange={e => setNewAddress({ ...newAddress, name: e.target.value })} className="w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
                     <input placeholder="Phone" value={newAddress.phone} onChange={e => setNewAddress({ ...newAddress, phone: e.target.value })} className="w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
                     <input placeholder="Flat, House no., Building, Company, Apartment" value={newAddress.flatNo} onChange={e => setNewAddress({ ...newAddress, flatNo: e.target.value })} className="col-span-2 w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
                     <input placeholder="Area, Street, Sector, Village" value={newAddress.area} onChange={e => setNewAddress({ ...newAddress, area: e.target.value })} className="col-span-2 w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
-                    <input placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} pattern="[a-zA-Z\s\-']+" title="Letters, spaces, hyphens, apostrophes only" className="w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
-                    <input placeholder="State" value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} pattern="[a-zA-Z\s\-']+" title="Letters, spaces, hyphens, apostrophes only" className="w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
+                    <input placeholder="City" value={newAddress.city} onChange={e => setNewAddress({ ...newAddress, city: e.target.value })} className="w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
+                    <input placeholder="State" value={newAddress.state} onChange={e => setNewAddress({ ...newAddress, state: e.target.value })} className="w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
                     <input placeholder="Pincode" value={newAddress.pincode} onChange={e => setNewAddress({ ...newAddress, pincode: e.target.value })} className="col-span-2 w-full bg-gray-50 border border-gray-100 p-3 rounded-lg text-sm focus:outline-none focus:border-black transition-colors" required />
                     <button type="submit" className="col-span-2 bg-[#3E2723] text-white py-3 rounded-lg text-sm font-bold tracking-widest uppercase hover:bg-black transition-colors mt-2">Save Address</button>
                 </form>

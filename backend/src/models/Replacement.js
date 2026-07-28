@@ -27,7 +27,9 @@ const replacementSchema = new mongoose.Schema({
   inventory: {
     processedAt: Date,
     processedByStatus: String,
-    actionApplied: String
+    actionApplied: String,
+    shippedProcessedAt: Date,
+    shippedProcessedStatus: String
   },
   adminComment: String,
   timeline: [{ status: String, date: { type: Date, default: Date.now }, note: String }],

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 const AdminTable = ({ columns, data, onRowClick, emptyMessage = "No Data Available", pagination, minWidth = '1000px' }) => {
@@ -10,10 +10,54 @@ const AdminTable = ({ columns, data, onRowClick, emptyMessage = "No Data Availab
     const startIndex = (page - 1) * limit;
     const showingTo = Math.min(startIndex + data.length, totalItems);
 
+    const topScrollRef = useRef(null);
+    const tableScrollRef = useRef(null);
+    const tableRef = useRef(null);
+    const [tableWidth, setTableWidth] = useState(minWidth);
+
+    useEffect(() => {
+        if (!tableRef.current) return;
+        const updateWidth = () => {
+            if (tableRef.current) {
+                setTableWidth(`${tableRef.current.offsetWidth}px`);
+            }
+        };
+        updateWidth();
+        const resizeObserver = new ResizeObserver(updateWidth);
+        resizeObserver.observe(tableRef.current);
+        return () => resizeObserver.disconnect();
+    }, [data, columns]);
+
+    const handleTopScroll = () => {
+        if (tableScrollRef.current && topScrollRef.current) {
+            tableScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+        }
+    };
+
+    const handleTableScroll = () => {
+        if (topScrollRef.current && tableScrollRef.current) {
+            topScrollRef.current.scrollLeft = tableScrollRef.current.scrollLeft;
+        }
+    };
+
     return (
         <div>
-            <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse" style={{ minWidth }}>
+            {/* Dummy Top Scrollbar */}
+            <div 
+                ref={topScrollRef}
+                onScroll={handleTopScroll}
+                className="overflow-x-auto overflow-y-hidden"
+            >
+                <div style={{ width: tableWidth, height: '1px' }}></div>
+            </div>
+
+            {/* Actual Table */}
+            <div 
+                ref={tableScrollRef}
+                onScroll={handleTableScroll}
+                className="overflow-x-auto"
+            >
+                <table ref={tableRef} className="w-full text-left border-collapse" style={{ minWidth }}>
                     <thead className="bg-white border-b border-gray-200">
                         <tr>
                             {columns.map((col, idx) => (
@@ -55,7 +99,6 @@ const AdminTable = ({ columns, data, onRowClick, emptyMessage = "No Data Availab
                     </tbody>
                 </table>
             </div>
-
             {isPaged && totalItems > 0 && (
                 <div className="px-4 md:px-6 py-3 border-t border-gray-100 flex items-center justify-between text-xs md:text-sm text-gray-500">
                     <span>Showing {startIndex + 1} to {showingTo} of {totalItems} entries</span>

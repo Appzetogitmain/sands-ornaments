@@ -116,18 +116,18 @@ const StockHistoryPage = () => {
     };
 
     return (
-        <div className="space-y-8 font-sans animate-in fade-in duration-500">
+        <div className="space-y-6 font-sans animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-gray-900 uppercase tracking-tight">Stock History</h1>
-                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-widest mt-1">Audit trail of all inventory movements</p>
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Stock History</h1>
+                    <p className="text-xs md:text-sm font-medium text-gray-500 mt-1">Audit trail of all inventory movements.</p>
                 </div>
                 <button
                     onClick={exportCsv}
-                    className="px-4 py-2 bg-[#1a1a1a] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all shadow-lg active:scale-95 flex items-center gap-2"
+                    className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-black transition-all shadow-sm active:scale-95 flex items-center gap-2"
                 >
-                    <Download size={14} /> Export CSV
+                    <Download size={16} /> Export CSV
                 </button>
             </div>
 

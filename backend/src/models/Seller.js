@@ -9,20 +9,34 @@ const sellerSchema = new mongoose.Schema({
   gstNumber: { type: String },
   panNumber: { type: String },
   bisNumber: { type: String },
+  bisNumberGold: { type: String },
+  bisNumberSilver: { type: String },
+  dob: { type: Date },
+  district: { type: String },
   shopAddress: String,
   city: String,
   state: String,
   pincode: String,
   bankAccount: {
     accountNumber: { type: String },
-    ifscCode: { type: String }
+    ifscCode: { type: String },
+    bankName: { type: String },
+    branchName: { type: String }
   },
   documents: {
     aadharUrl: String,
     shopLicenseUrl: String,
-    certificateUrl: String
+    certificateUrl: String,
+    partnershipDeedUrl: String,
+    panUrl: String,
+    gstUrl: String,
+    visitingCardUrl: String,
+    diamondCertificateUrl: String
   },
-  status: { type: String, enum: ["PENDING", "APPROVED", "REJECTED"], default: "PENDING", index: true },
+  firmType: { type: String, enum: ["sole proprietorship", "Partnership", "Pvt Ltd", "LLP"] },
+  cin: { type: String },
+  llpin: { type: String },
+  status: { type: String, enum: ["PENDING_PROFILE", "PENDING", "APPROVED", "REJECTED"], default: "PENDING_PROFILE", index: true },
   rejectionReason: String,
   registrationDate: { type: Date, default: Date.now },
   totalOrders: { type: Number, default: 0 },

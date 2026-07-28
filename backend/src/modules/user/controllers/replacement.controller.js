@@ -4,6 +4,8 @@ const Order = require("../../../models/Order");
 const { generateReplacementId } = require("../../../utils/generateId");
 const { success, error } = require("../../../utils/apiResponse");
 const { createSellerNotification } = require("../../../services/sellerNotificationService");
+const { enqueueEmail } = require("../../../services/emailService");
+const emailTemplates = require("../../../services/emailTemplates");
 
 exports.requestReplacement = async (req, res) => {
   try {
@@ -65,6 +67,37 @@ exports.requestReplacement = async (req, res) => {
         type: "REPLACEMENT",
         priority: "High",
         link: `/seller/replacement-details/${replacement._id}`
+      });
+
+      const Seller = require("../../../models/Seller");
+      const seller = await Seller.findById(item.sellerId);
+      if (seller && seller.email) {
+        enqueueEmail({
+          to: seller.email,
+          subject: `Replacement Request - Order ${order.orderId || order._id} | Sands Jewels`,
+          html: emailTemplates.sellerReplacementNotif({
+            order,
+            sellerName: seller.name,
+            item,
+            replacementId: replacement.replacementId
+          }),
+          type: "seller_replacement_notification"
+        });
+      }
+    }
+
+    // Email customer
+    const reqUser = await require("../../../models/User").findById(userId).select("email name");
+    if (reqUser && reqUser.email) {
+      enqueueEmail({
+        to: reqUser.email,
+        subject: `Replacement Request Received - ${replacement.replacementId} | Sands Jewels`,
+        html: emailTemplates.replacementRequested({
+          replacementReq: replacement,
+          userName: reqUser.name,
+          order
+        }),
+        type: "replacement_requested"
       });
     }
 

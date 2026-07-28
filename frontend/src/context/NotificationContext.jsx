@@ -38,7 +38,7 @@ export const NotificationProvider = ({ children }) => {
 
     // ── fetchNotifications ───────────────────────────────────────────────────
     const fetchNotifications = useCallback(async () => {
-        if (!user || !hasAuthToken()) return;
+        if (!user || !hasAuthToken() || user.role === 'seller') return;
         try {
             const res = await api.get('user/notifications');
             if (res.data.success) {
@@ -54,14 +54,14 @@ export const NotificationProvider = ({ children }) => {
 
     // Fetch on mount/login
     useEffect(() => {
-        if (user) {
+        if (user && user.role !== 'seller') {
             fetchNotifications();
         }
     }, [user, fetchNotifications]);
 
     // ── deleteUserNotification (hide/delete notification) ──────────────────────
     const deleteUserNotification = useCallback(async (id) => {
-        if (!user || !hasAuthToken()) return;
+        if (!user || !hasAuthToken() || user.role === 'seller') return;
         try {
             await api.delete(`user/notifications/${id}`);
             await fetchNotifications();
@@ -74,7 +74,7 @@ export const NotificationProvider = ({ children }) => {
 
     // ── markNotificationRead ──────────────────────────────────────────────────
     const markNotificationRead = useCallback(async (id) => {
-        if (!user || !hasAuthToken()) return;
+        if (!user || !hasAuthToken() || user.role === 'seller') return;
         try {
             await api.patch(`user/notifications/${id}/read`);
             await fetchNotifications();

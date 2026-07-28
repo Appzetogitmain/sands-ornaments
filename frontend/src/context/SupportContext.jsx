@@ -29,7 +29,7 @@ export const SupportProvider = ({ children }) => {
     }
   }, [user]);
 
-  const createNewTicket = async (subject, category, message, orderId = '') => {
+  const createNewTicket = async (subject, category, message, orderId = '', attachments = []) => {
     try {
       const res = await api.post('user/support', {
         subject,
@@ -37,7 +37,8 @@ export const SupportProvider = ({ children }) => {
         message,
         orderId,
         userName: user?.name,
-        userEmail: user?.email
+        userEmail: user?.email,
+        attachments
       });
       if (res.data.success) {
         const newTicket = res.data.data?.ticket || res.data.ticket;
@@ -52,9 +53,9 @@ export const SupportProvider = ({ children }) => {
     return null;
   };
 
-  const sendReply = async (ticketId, text) => {
+  const sendReply = async (ticketId, text, attachments = []) => {
     try {
-      const res = await api.post(`user/support/${ticketId}/reply`, { message: text });
+      const res = await api.post(`user/support/${ticketId}/reply`, { message: text, attachments });
       if (res.data.success) {
         const updatedTicket = res.data.data?.ticket || res.data.ticket;
         setTickets(prev => prev.map(t => t._id === ticketId ? updatedTicket : t));

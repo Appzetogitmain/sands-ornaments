@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Edit2, Trash2, Eye, TrendingUp, ScanLine } from 'lucide-react';
+import { Edit2, Trash2, Eye, TrendingUp, ScanLine, Download } from 'lucide-react';
 import PageHeader from '../../admin/components/common/PageHeader';
 import DataTable from '../../admin/components/common/DataTable';
 import { sellerProductService } from '../services/sellerProductService';
 import toast from 'react-hot-toast';
 import api from '../../../services/api';
+import { exportToExcelCSV } from '../../../utils/exportUtils';
 
 const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString()}`;
 
@@ -21,6 +22,67 @@ const SellerProducts = () => {
     const [pagination, setPagination] = useState({ page: 1, limit: 10, totalItems: 0, totalPages: 1 });
 
     const [debouncedSearch, setDebouncedSearch] = useState('');
+
+    const handleExport = async () => {
+        const loadingToast = toast.loading("Generating product export...");
+        try {
+            const params = {
+                page: 1,
+                limit: Math.max(1000, pagination?.totalItems || 1000)
+            };
+            if (debouncedSearch) params.search = debouncedSearch;
+            if (selectedCategory !== 'all') params.category = selectedCategory;
+
+            const result = await sellerProductService.getSellerProductsPaged(params);
+            const exportProducts = result.products || [];
+            if (exportProducts.length === 0) {
+                toast.error("No products to export", { id: loadingToast });
+                return;
+            }
+
+            const headers = [
+                'name',
+                'sku',
+                'price',
+                'stock',
+                'categoryName',
+                'status',
+                'createdAt'
+            ];
+            const columnNames = [
+                'Product Name',
+                'SKU',
+                'Price (INR)',
+                'Stock Units',
+                'Category',
+                'Status',
+                'Created At'
+            ];
+
+            const formattedProducts = exportProducts.map(p => {
+                const primaryCat = p.categories && p.categories[0];
+                const price = p.variants?.[0]?.price || p.price || 0;
+                const stock = (p.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0);
+                const sku = p.variants?.[0]?.sku || p.sku || 'N/A';
+                
+                return {
+                    ...p,
+                    sku,
+                    price,
+                    stock,
+                    categoryName: primaryCat?.name || primaryCat?.category || 'Uncategorized',
+                    status: p.active === false ? 'INACTIVE' : 'ACTIVE',
+                    createdAt: p.createdAt ? new Date(p.createdAt).toISOString().split('T')[0] : ''
+                };
+            });
+
+            exportToExcelCSV(formattedProducts, headers, columnNames, 'Seller_Products_Report');
+            toast.success("Products report exported successfully", { id: loadingToast });
+        } catch (err) {
+            console.error("Export seller products failed:", err);
+            toast.error("Failed to export products", { id: loadingToast });
+        }
+    };
 
     useEffect(() => {
         const t = setTimeout(() => setDebouncedSearch(searchTerm), 300);
@@ -269,6 +331,14 @@ const SellerProducts = () => {
                 }}
             >
                 <div className="flex gap-2 items-center">
+                    <button
+                        onClick={handleExport}
+                        className="h-10 bg-white border border-gray-200 rounded-full px-4 text-xs font-semibold text-gray-700 hover:bg-[#3E2723] hover:text-white hover:border-[#3E2723] transition-all flex items-center gap-2 shrink-0 shadow-sm"
+                        title="Export Products as Excel/CSV"
+                    >
+                        <Download size={14} />
+                        <span>Export</span>
+                    </button>
                     <button
                         onClick={() => navigate('/seller/inventory/adjust')}
                         className="h-10 bg-white border border-gray-200 rounded-full px-4 text-xs font-semibold text-gray-700 hover:bg-[#3E2723] hover:text-white hover:border-[#3E2723] transition-all flex items-center gap-2 shrink-0 shadow-sm"

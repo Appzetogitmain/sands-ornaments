@@ -1,10 +1,10 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Heart, ShoppingCart, User, Menu, X, ChevronDown, ChevronRight, Bell } from 'lucide-react';
+import { Search, Heart, ShoppingCart, User, Users, BookOpen, Menu, X, ChevronDown, ChevronRight, Bell, Sparkles, Coins, Gem, Droplet, LifeBuoy, Sun, Hexagon, Gift, MoreHorizontal, ShoppingBag } from 'lucide-react';
 import { useShop } from '../../../context/ShopContext';
 import { useNotification } from '../../../context/NotificationContext';
-import logo from '@assets/SANDS JEWELS PINK (1).png';
+import logo from '@assets/logooo.jpg';
 import api from '../../../services/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getProductPrice, formatCurrency } from '../utils/price';
@@ -146,11 +146,14 @@ const Navbar = () => {
     };
 
     return (
-        <nav className={`w-full bg-[#FFF0F4] transition-all duration-300 font-lato ${isScrolled ? 'border-b border-pink-100' : 'border-b border-pink-100'}`}>
-    
+        <nav
+            className={`w-full transition-all duration-300 ${isScrolled ? 'shadow-[0_2px_20px_rgba(0,0,0,0.07)] border-b border-gray-100' : 'border-b border-gray-100'}`}
+            style={{ background: '#FFFFFF', fontFamily: "'Inter', 'Lato', sans-serif" }}
+        >
+
             {/* Desktop Header */}
             <div className="hidden lg:block">
-                <div className="container mx-auto px-4 lg:px-12 py-1.5 flex items-center justify-between gap-10">
+                <div className="container mx-auto px-4 lg:px-12 py-2 flex items-center justify-between gap-10">
 
                     {/* Left Section: Logo & Delivery Box */}
                     <div className="flex items-center gap-6 flex-shrink-0">
@@ -158,29 +161,35 @@ const Navbar = () => {
                             <img
                                 src={logo}
                                 alt="Sands Jewels"
-                                className="h-14 w-auto object-contain"
+                                className="h-[75px] w-auto object-contain transform scale-[1.25] origin-left -translate-x-3"
                             />
                         </Link>
 
                         <div
                             onClick={() => setIsPincodeModalOpen(true)}
-                            className="flex items-center gap-3 px-3 py-2 border border-pink-100 rounded-lg cursor-pointer bg-white hover:border-pink-200 transition-all"
+                            className="flex items-center gap-2.5 px-3.5 h-[48px] rounded-xl cursor-pointer transition-all duration-200 group"
+                            style={{ background: 'rgba(0,0,0,0.03)', border: '1px solid #EBEBEB' }}
+                            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(156,61,80,0.05)'; e.currentTarget.style.borderColor = 'rgba(156,61,80,0.2)'; }}
+                            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.03)'; e.currentTarget.style.borderColor = '#EBEBEB'; }}
                         >
-                            <div className="flex-shrink-0">
-                                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-pink-400">
-                                    <path d="M1 3H16V17H1V3Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    <path d="M16 8L20 8L23 11V17H16V8Z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                                    <circle cx="5.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
-                                    <circle cx="18.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.5" />
+                            <div
+                                className="flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center"
+                                style={{ background: 'linear-gradient(135deg, #9C3D50 0%, #C05B72 100%)' }}
+                            >
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className="text-white">
+                                    <path d="M1 3H16V17H1V3Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                    <path d="M16 8L20 8L23 11V17H16V8Z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                    <circle cx="5.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
+                                    <circle cx="18.5" cy="18.5" r="2.5" stroke="currentColor" strokeWidth="1.8" />
                                 </svg>
                             </div>
                             <div className="flex flex-col">
-                                <span className="text-[11px] font-bold text-black leading-tight uppercase tracking-tight">Where to Deliver?</span>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                    <span className="text-[12px] text-gray-900 font-semibold">
+                                <span style={{ fontSize: 10, fontWeight: 600, color: '#9C3D50', textTransform: 'uppercase', letterSpacing: '0.06em', lineHeight: 1.2 }}>Where to Deliver?</span>
+                                <div className="flex items-center gap-1 mt-0.5">
+                                    <span style={{ fontSize: 12, fontWeight: 700, color: '#1A1A1A', fontFamily: "'Inter', sans-serif" }}>
                                         {pincode ? `Deliver to ${pincode}` : 'Enter Pincode'}
                                     </span>
-                                    <ChevronDown className="w-3.5 h-3.5 text-gray-700" />
+                                    <ChevronDown className="w-3 h-3" style={{ color: '#9C3D50' }} />
                                 </div>
                             </div>
                         </div>
@@ -188,25 +197,43 @@ const Navbar = () => {
 
                     {/* Middle Section: Wide Search Bar with Dropdown */}
                     <div className="flex-1 max-w-3xl relative">
-                        <input
-                            type="text"
-                            placeholder={placeholders[placeholderIdx]}
-                            value={searchTerm}
-                            onChange={(e) => {
-                                setSearchTerm(e.target.value);
-                                setShowResults(true);
-                            }}
-                            onKeyDown={handleSearchKeyDown}
-                            onBlur={() => setTimeout(() => setShowResults(false), 200)}
-                            onFocus={() => setShowResults(true)}
-                            className="w-full bg-white border border-gray-300 rounded-md py-3 px-6 pr-12 text-[15px] focus:outline-none focus:border-gray-400 transition-all text-gray-950 placeholder-gray-600 font-medium"
-                        />
-                        <button
-                            onClick={submitSearch}
-                            className="absolute right-6 top-1/2 -translate-y-1/2 text-gray-600 hover:text-black transition-colors"
-                        >
-                            <Search className="w-5 h-5 stroke-[2]" />
-                        </button>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder={placeholders[placeholderIdx]}
+                                value={searchTerm}
+                                onChange={(e) => {
+                                    setSearchTerm(e.target.value);
+                                    setShowResults(true);
+                                }}
+                                onKeyDown={handleSearchKeyDown}
+                                onBlur={() => setTimeout(() => setShowResults(false), 200)}
+                                onFocus={() => setShowResults(true)}
+                                style={{
+                                    width: '100%',
+                                    background: '#F8F8F8',
+                                    border: '1.5px solid #E5E5E5',
+                                    borderRadius: 12,
+                                    padding: '8px 50px 8px 20px',
+                                    fontSize: 14,
+                                    fontFamily: "'Inter', sans-serif",
+                                    fontWeight: 400,
+                                    color: '#1A1A1A',
+                                    outline: 'none',
+                                    transition: 'border-color 0.2s, box-shadow 0.2s',
+                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                }}
+                                onFocusCapture={e => { e.target.style.borderColor = '#9C3D50'; e.target.style.background = '#FFFFFF'; e.target.style.boxShadow = '0 0 0 3px rgba(156,61,80,0.08)'; }}
+                                onBlurCapture={e => { e.target.style.borderColor = '#E5E5E5'; e.target.style.background = '#F8F8F8'; e.target.style.boxShadow = '0 1px 3px rgba(0,0,0,0.05)'; }}
+                            />
+                            <button
+                                onClick={submitSearch}
+                                className="absolute right-4 top-1/2 -translate-y-1/2 transition-colors"
+                                style={{ color: '#9C3D50' }}
+                            >
+                                <Search className="w-[18px] h-[18px]" strokeWidth={2.2} />
+                            </button>
+                        </div>
 
                         {/* Search Results Dropdown */}
                         <AnimatePresence>
@@ -239,10 +266,10 @@ const Navbar = () => {
                                                         className="flex items-center gap-4 p-3 hover:bg-pink-50/50 rounded-lg cursor-pointer transition-colors group"
                                                     >
                                                         <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-50 flex-shrink-0">
-                                                            <img 
-                                                                src={getSearchThumbUrl(product.images?.[0] || product.primaryImage)} 
-                                                                alt={product.name} 
-                                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" 
+                                                            <img
+                                                                src={getSearchThumbUrl(product.images?.[0] || product.primaryImage)}
+                                                                alt={product.name}
+                                                                className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                                                             />
                                                         </div>
                                                         <div className="flex-1">
@@ -272,98 +299,329 @@ const Navbar = () => {
                         </AnimatePresence>
                     </div>
 
-                    {/* Right Section: Icons */}
-                    <div className="flex items-center gap-10 flex-shrink-0">
-                        <Link to={user ? "/profile" : "/login"} className={`flex flex-col items-center gap-1.5 group ${(location.pathname.startsWith('/profile') || location.pathname === '/login') ? 'text-[#D39A9F]' : ''}`}>
-                            <User className={`w-7 h-7 ${(location.pathname.startsWith('/profile') || location.pathname === '/login') ? 'text-[#D39A9F]' : 'text-gray-950'}`} strokeWidth={1.5} />
-                            <span className={`text-[11px] font-bold tracking-wider ${(location.pathname.startsWith('/profile') || location.pathname === '/login') ? 'text-[#D39A9F]' : 'text-black'}`}>ACCOUNT</span>
-                        </Link>
+                    {/* Right Section: Animated Icons */}
+                    <div className="flex items-center gap-5 flex-shrink-0">
 
-                        <Link to="/wishlist" className={`flex flex-col items-center gap-1.5 group relative ${location.pathname === '/wishlist' ? 'text-[#D39A9F]' : ''}`}>
-                            <Heart className={`w-7 h-7 ${location.pathname === '/wishlist' ? 'text-[#D39A9F]' : 'text-gray-950'}`} strokeWidth={1.5} />
-                            {wishlist?.length > 0 && (
-                                <span className="absolute -top-1 right-0 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-                                    {wishlist.length}
-                                </span>
-                            )}
-                            <span className={`text-[11px] font-bold tracking-wider ${location.pathname === '/wishlist' ? 'text-[#D39A9F]' : 'text-black'}`}>WISHLIST</span>
-                        </Link>
+                        {/* ── Account ── */}
+                        {(() => {
+                            const isActive = location.pathname.startsWith('/profile') || location.pathname === '/login';
+                            return (
+                                <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.92 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}>
+                                    <Link to={user ? "/profile" : "/login"} className="flex flex-col items-center justify-center gap-0.5 px-3 rounded-2xl group relative"
+                                        style={{ minWidth: 58, height: 48 }}
+                                    >
+                                        {/* Hover glow bg */}
+                                        <motion.div
+                                            className="absolute inset-0 rounded-2xl"
+                                            initial={{ opacity: 0 }}
+                                            whileHover={{ opacity: 1 }}
+                                            style={{ background: 'linear-gradient(135deg,rgba(156,61,80,0.06) 0%,rgba(192,91,114,0.06) 100%)' }}
+                                        />
+                                        {/* Icon chip */}
+                                        <motion.div
+                                            className="w-7.5 h-7.5 rounded-xl flex items-center justify-center relative z-10"
+                                            style={{ background: isActive ? 'linear-gradient(135deg,#9C3D50,#C05B72)' : 'rgba(0,0,0,0.045)' }}
+                                            whileHover={!isActive ? { background: 'linear-gradient(135deg,#9C3D50,#C05B72)', scale: 1.08 } : {}}
+                                            transition={{ duration: 0.22 }}
+                                        >
+                                            <motion.div
+                                                animate={isActive ? { rotate: [0, -8, 8, 0] } : {}}
+                                                transition={{ duration: 0.5, delay: 0.1 }}
+                                                whileHover={{ rotate: [0, -10, 10, -6, 0] }}
+                                            >
+                                                <User className="w-[17px] h-[17px]" style={{ color: isActive ? '#fff' : '#4B4B4B' }} strokeWidth={2.1} />
+                                            </motion.div>
+                                        </motion.div>
+                                        {/* Label */}
+                                        <motion.span
+                                            style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", color: isActive ? '#9C3D50' : '#888', position: 'relative', zIndex: 10 }}
+                                            whileHover={{ color: '#9C3D50' }}
+                                        >ACCOUNT</motion.span>
+                                        {/* Active dot */}
+                                        {isActive && (
+                                            <motion.div
+                                                initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                                                style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: 16, height: 2.5, borderRadius: 4, background: 'linear-gradient(90deg,#9C3D50,#C05B72)', zIndex: 10 }}
+                                            />
+                                        )}
+                                    </Link>
+                                </motion.div>
+                            );
+                        })()}
 
-                        <Link to="/notifications" className={`flex flex-col items-center gap-1.5 group relative ${location.pathname === '/notifications' ? 'text-[#D39A9F]' : ''}`}>
-                            <Bell className={`w-7 h-7 ${location.pathname === '/notifications' ? 'text-[#D39A9F]' : 'text-gray-950'}`} strokeWidth={1.5} />
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1 right-0 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full animate-pulse">
-                                    {unreadCount}
-                                </span>
-                            )}
-                            <span className={`text-[11px] font-bold tracking-wider ${location.pathname === '/notifications' ? 'text-[#D39A9F]' : 'text-black'}`}>INBOX</span>
-                        </Link>
+                        {/* ── Wishlist ── */}
+                        {(() => {
+                            const isActive = location.pathname === '/wishlist';
+                            return (
+                                <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.92 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}>
+                                    <Link to="/wishlist" className="flex flex-col items-center justify-center gap-0.5 px-3 rounded-2xl group relative"
+                                        style={{ minWidth: 64, height: 48 }}
+                                    >
+                                        <motion.div className="absolute inset-0 rounded-2xl" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}
+                                            style={{ background: 'linear-gradient(135deg,rgba(232,67,147,0.06) 0%,rgba(156,61,80,0.06) 100%)' }}
+                                        />
+                                        <motion.div
+                                            className="w-7.5 h-7.5 rounded-xl flex items-center justify-center relative z-10"
+                                            style={{ background: isActive ? 'linear-gradient(135deg,#9C3D50,#C05B72)' : 'rgba(0,0,0,0.045)' }}
+                                            whileHover={!isActive ? { background: 'linear-gradient(135deg,#E84393,#C0184C)', scale: 1.08 } : {}}
+                                            transition={{ duration: 0.22 }}
+                                        >
+                                            {/* Badge */}
+                                            {wishlist?.length > 0 && (
+                                                <motion.span
+                                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                                    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                                                    className="absolute -top-1.5 -right-1.5 text-white flex items-center justify-center rounded-full z-20"
+                                                    style={{ width: 15, height: 15, fontSize: 8, fontWeight: 800, background: 'linear-gradient(135deg,#E84393,#C0184C)', boxShadow: '0 2px 6px rgba(232,67,147,0.5)' }}
+                                                >{wishlist.length}</motion.span>
+                                            )}
+                                            <motion.div
+                                                whileHover={{ scale: [1, 1.35, 1.15, 1.25, 1] }}
+                                                transition={{ duration: 0.45, ease: 'easeInOut' }}
+                                            >
+                                                <Heart
+                                                    className="w-[17px] h-[17px]"
+                                                    style={{ color: isActive ? '#fff' : '#4B4B4B' }}
+                                                    strokeWidth={2.1}
+                                                />
+                                            </motion.div>
+                                        </motion.div>
+                                        <motion.span
+                                            style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", color: isActive ? '#9C3D50' : '#888', position: 'relative', zIndex: 10 }}
+                                            whileHover={{ color: '#E84393' }}
+                                        >WISHLIST</motion.span>
+                                        {isActive && (
+                                            <motion.div initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                                                style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: 20, height: 2.5, borderRadius: 4, background: 'linear-gradient(90deg,#E84393,#C0184C)', zIndex: 10 }}
+                                            />
+                                        )}
+                                    </Link>
+                                </motion.div>
+                            );
+                        })()}
 
-                        <Link to="/cart" className={`flex flex-col items-center gap-1.5 group relative ${location.pathname === '/cart' ? 'text-[#D39A9F]' : ''}`}>
-                            <ShoppingCart className={`w-7 h-7 ${location.pathname === '/cart' ? 'text-[#D39A9F]' : 'text-gray-950'}`} strokeWidth={1.5} />
-                            {cart?.length > 0 && (
-                                <span className="absolute -top-1 right-0 bg-pink-500 text-white text-[9px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-                                    {cart.length}
-                                </span>
-                            )}
-                            <span className={`text-[11px] font-bold tracking-wider ${location.pathname === '/cart' ? 'text-[#D39A9F]' : 'text-black'}`}>CART</span>
-                        </Link>
+                        {/* ── Inbox / Bell ── */}
+                        {(() => {
+                            const isActive = location.pathname === '/notifications';
+                            return (
+                                <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.92 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}>
+                                    <Link to="/notifications" className="flex flex-col items-center justify-center gap-0.5 px-3 rounded-2xl group relative"
+                                        style={{ minWidth: 58, height: 48 }}
+                                    >
+                                        <motion.div className="absolute inset-0 rounded-2xl" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}
+                                            style={{ background: 'linear-gradient(135deg,rgba(156,61,80,0.06) 0%,rgba(192,91,114,0.06) 100%)' }}
+                                        />
+                                        <motion.div
+                                            className="w-7.5 h-7.5 rounded-xl flex items-center justify-center relative z-10"
+                                            style={{ background: isActive ? 'linear-gradient(135deg,#9C3D50,#C05B72)' : 'rgba(0,0,0,0.045)' }}
+                                            whileHover={!isActive ? { background: 'linear-gradient(135deg,#9C3D50,#C05B72)', scale: 1.08 } : {}}
+                                            transition={{ duration: 0.22 }}
+                                        >
+                                            {/* Unread badge */}
+                                            {unreadCount > 0 && (
+                                                <motion.span
+                                                    initial={{ scale: 0 }} animate={{ scale: [1, 1.2, 1] }}
+                                                    transition={{ repeat: Infinity, repeatDelay: 3, duration: 0.4 }}
+                                                    className="absolute -top-1.5 -right-1.5 text-white flex items-center justify-center rounded-full z-20"
+                                                    style={{ width: 15, height: 15, fontSize: 8, fontWeight: 800, background: 'linear-gradient(135deg,#E84393,#C0184C)', boxShadow: '0 2px 6px rgba(232,67,147,0.5)' }}
+                                                >{unreadCount}</motion.span>
+                                            )}
+                                            {/* Bell shake on hover */}
+                                            <motion.div
+                                                whileHover={{ rotate: [0, -18, 18, -12, 12, -6, 6, 0], transformOrigin: 'top center' }}
+                                                transition={{ duration: 0.55, ease: 'easeInOut' }}
+                                            >
+                                                <Bell className="w-[17px] h-[17px]" style={{ color: isActive ? '#fff' : '#4B4B4B' }} strokeWidth={2.1} />
+                                            </motion.div>
+                                        </motion.div>
+                                        <motion.span
+                                            style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", color: isActive ? '#9C3D50' : '#888', position: 'relative', zIndex: 10 }}
+                                            whileHover={{ color: '#9C3D50' }}
+                                        >INBOX</motion.span>
+                                        {isActive && (
+                                            <motion.div initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                                                style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: 14, height: 2.5, borderRadius: 4, background: 'linear-gradient(90deg,#9C3D50,#C05B72)', zIndex: 10 }}
+                                            />
+                                        )}
+                                    </Link>
+                                </motion.div>
+                            );
+                        })()}
+
+                        {/* ── Cart ── */}
+                        {(() => {
+                            const isActive = location.pathname === '/cart';
+                            return (
+                                <motion.div whileHover={{ y: -2 }} whileTap={{ scale: 0.92 }} transition={{ type: 'spring', stiffness: 400, damping: 18 }}>
+                                    <Link to="/cart" className="flex flex-col items-center justify-center gap-0.5 px-3 rounded-2xl group relative"
+                                        style={{ minWidth: 58, height: 48 }}
+                                    >
+                                        <motion.div className="absolute inset-0 rounded-2xl" initial={{ opacity: 0 }} whileHover={{ opacity: 1 }}
+                                            style={{ background: 'linear-gradient(135deg,rgba(156,61,80,0.06) 0%,rgba(192,91,114,0.06) 100%)' }}
+                                        />
+                                        <motion.div
+                                            className="w-7.5 h-7.5 rounded-xl flex items-center justify-center relative z-10"
+                                            style={{ background: isActive ? 'linear-gradient(135deg,#9C3D50,#C05B72)' : 'rgba(0,0,0,0.045)' }}
+                                            whileHover={!isActive ? { background: 'linear-gradient(135deg,#9C3D50,#C05B72)', scale: 1.08 } : {}}
+                                            transition={{ duration: 0.22 }}
+                                        >
+                                            {cart?.length > 0 && (
+                                                <motion.span
+                                                    initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                                    transition={{ type: 'spring', stiffness: 500, damping: 20 }}
+                                                    className="absolute -top-1.5 -right-1.5 text-white flex items-center justify-center rounded-full z-20"
+                                                    style={{ width: 15, height: 15, fontSize: 8, fontWeight: 800, background: 'linear-gradient(135deg,#E84393,#C0184C)', boxShadow: '0 2px 6px rgba(232,67,147,0.5)' }}
+                                                >{cart.length}</motion.span>
+                                            )}
+                                            {/* Cart bounce on hover */}
+                                            <motion.div
+                                                whileHover={{ x: [0, -3, 3, -2, 2, 0], y: [0, -2, 0] }}
+                                                transition={{ duration: 0.45, ease: 'easeInOut' }}
+                                            >
+                                                <ShoppingCart className="w-[17px] h-[17px]" style={{ color: isActive ? '#fff' : '#4B4B4B' }} strokeWidth={2.1} />
+                                            </motion.div>
+                                        </motion.div>
+                                        <motion.span
+                                            style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.12em', textTransform: 'uppercase', fontFamily: "'Inter',sans-serif", color: isActive ? '#9C3D50' : '#888', position: 'relative', zIndex: 10 }}
+                                            whileHover={{ color: '#9C3D50' }}
+                                        >CART</motion.span>
+                                        {isActive && (
+                                            <motion.div initial={{ scaleX: 0 }} animate={{ scaleX: 1 }}
+                                                style={{ position: 'absolute', bottom: 4, left: '50%', transform: 'translateX(-50%)', width: 14, height: 2.5, borderRadius: 4, background: 'linear-gradient(90deg,#9C3D50,#C05B72)', zIndex: 10 }}
+                                            />
+                                        )}
+                                    </Link>
+                                </motion.div>
+                            );
+                        })()}
+
                     </div>
                 </div>
             </div>
 
             {/* Mobile Header */}
             <div className="lg:hidden flex flex-col w-full relative">
-                <div className="flex items-center justify-between px-4 py-1.5 border-b border-pink-100">
-                    <Link to="/" className="block">
-                        <img src={logo} alt="Sands Jewels" className="h-[72px] w-auto object-contain transform scale-[1.35] origin-left" />
-                    </Link>
-                    <div className="flex items-center gap-4 sm:gap-5">
-                        <button onClick={() => setShowMobileSearch(!showMobileSearch)} className="relative p-1">
-                            <Search className="w-6 h-6 text-gray-800" />
-                        </button>
-                        <Link to={user ? "/profile" : "/login"} className="relative">
-                            <User className="w-6 h-6 text-gray-800" />
+                <div
+                    className="flex items-center justify-between px-4 py-3"
+                    style={{
+                        background: '#FFFFFF',
+                        borderBottom: '1px solid #F0F0F0',
+                        boxShadow: isScrolled ? '0 2px 12px rgba(0,0,0,0.06)' : 'none',
+                        transition: 'box-shadow 0.3s ease',
+                    }}
+                >
+                    {/* Logo with entrance animation */}
+                    <motion.div
+                        initial={{ opacity: 0, x: -18 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.45, ease: 'easeOut' }}
+                    >
+                        <Link to="/" className="block">
+                            <img
+                                src={logo}
+                                alt="Sands Jewels"
+                                className="h-[52px] w-auto object-contain transform scale-[1.6] origin-left"
+                            />
                         </Link>
-                        <Link to="/wishlist" className="relative hidden sm:block">
-                            <Heart className="w-6 h-6 text-gray-800" />
-                        </Link>
-                        <Link to="/notifications" className="relative">
-                            <Bell className="w-6 h-6 text-gray-800" />
-                            {unreadCount > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full">
-                                    {unreadCount}
-                                </span>
-                            )}
-                        </Link>
-                        <Link to="/cart" className="relative">
-                            <ShoppingCart className="w-6 h-6 text-gray-800" />
-                            {cart?.length > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-pink-500 text-white text-[8px] font-bold w-3.5 h-3.5 flex items-center justify-center rounded-full">
-                                    {cart.length}
-                                </span>
-                            )}
-                        </Link>
-                        <button onClick={() => setIsMenuOpen(true)} className="p-1">
-                            <Menu className="w-7 h-7 text-gray-800" />
-                        </button>
-                    </div>
+                    </motion.div>
+
+                    {/* Right Icons */}
+                    <motion.div
+                        className="flex items-center gap-2"
+                        initial={{ opacity: 0, x: 18 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.45, ease: 'easeOut', delay: 0.08 }}
+                    >
+                        {/* Search */}
+                        <motion.button
+                            whileTap={{ scale: 0.82 }}
+                            onClick={() => setShowMobileSearch(!showMobileSearch)}
+                            className="relative p-1.5 rounded-lg transition-colors"
+                            style={{
+                                background: showMobileSearch ? 'rgba(156,61,80,0.08)' : 'rgba(0,0,0,0.04)',
+                            }}
+                        >
+                            <motion.div
+                                animate={{ rotate: showMobileSearch ? 90 : 0 }}
+                                transition={{ duration: 0.25 }}
+                            >
+                                {showMobileSearch
+                                    ? <X className="w-4.5 h-4.5" style={{ color: '#9C3D50' }} strokeWidth={2.2} />
+                                    : <Search className="w-4.5 h-4.5" style={{ color: '#2C2C2C' }} strokeWidth={2} />}
+                            </motion.div>
+                        </motion.button>
+
+                        {/* Wishlist (tablet+) */}
+                        <motion.div whileTap={{ scale: 0.82 }} className="hidden sm:block">
+                            <Link to="/wishlist" className="relative p-1.5 rounded-lg block" style={{ background: 'rgba(0,0,0,0.04)' }}>
+                                <Heart className="w-4.5 h-4.5" style={{ color: '#2C2C2C' }} strokeWidth={2} />
+                            </Link>
+                        </motion.div>
+
+                        {/* Bell */}
+                        <motion.div whileTap={{ scale: 0.82 }} className="relative">
+                            <Link to="/notifications" className="relative p-1.5 rounded-lg block" style={{ background: 'rgba(0,0,0,0.04)' }}>
+                                <Bell className="w-4.5 h-4.5" style={{ color: '#2C2C2C' }} strokeWidth={2} />
+                                {unreadCount > 0 && (
+                                    <span
+                                        className="absolute -top-0.5 -right-0.5 text-white flex items-center justify-center rounded-full animate-pulse"
+                                        style={{ width: 13, height: 13, fontSize: 7, fontWeight: 800, background: 'linear-gradient(135deg,#E84393,#C0184C)' }}
+                                    >
+                                        {unreadCount}
+                                    </span>
+                                )}
+                            </Link>
+                        </motion.div>
+
+                        {/* Cart */}
+                        <motion.div whileTap={{ scale: 0.82 }} className="relative">
+                            <Link to="/cart" className="relative p-1.5 rounded-lg block" style={{ background: 'rgba(0,0,0,0.04)' }}>
+                                <ShoppingCart className="w-4.5 h-4.5" style={{ color: '#2C2C2C' }} strokeWidth={2} />
+                                {cart?.length > 0 && (
+                                    <span
+                                        className="absolute -top-0.5 -right-0.5 text-white flex items-center justify-center rounded-full"
+                                        style={{ width: 13, height: 13, fontSize: 7, fontWeight: 800, background: 'linear-gradient(135deg,#E84393,#C0184C)' }}
+                                    >
+                                        {cart.length}
+                                    </span>
+                                )}
+                            </Link>
+                        </motion.div>
+
+                        {/* Hamburger */}
+                        <motion.button
+                            whileTap={{ scale: 0.82 }}
+                            onClick={() => setIsMenuOpen(true)}
+                            className="p-1.5 rounded-lg"
+                            style={{ background: 'rgba(0,0,0,0.04)' }}
+                        >
+                            <Menu className="w-4.5 h-4.5" style={{ color: '#2C2C2C' }} strokeWidth={2} />
+                        </motion.button>
+                    </motion.div>
                 </div>
-                
-                {/* Mobile Search Bar */}
+
+                {/* Mobile Search Bar — animated slide-down */}
                 <AnimatePresence>
                     {showMobileSearch && (
                         <motion.div
-                            initial={{ height: 0, opacity: 0 }}
-                            animate={{ height: 'auto', opacity: 1 }}
-                            exit={{ height: 0, opacity: 0 }}
-                            className="w-full bg-white border-b border-pink-50 px-4 py-2 absolute top-full left-0 z-50 shadow-md"
+                            key="mobile-search"
+                            initial={{ height: 0, opacity: 0, y: -8 }}
+                            animate={{ height: 'auto', opacity: 1, y: 0 }}
+                            exit={{ height: 0, opacity: 0, y: -8 }}
+                            transition={{ duration: 0.28, ease: 'easeOut' }}
+                            className="w-full overflow-hidden"
+                            style={{
+                                background: '#FFFFFF',
+                                borderBottom: '1px solid #F0F0F0',
+                                boxShadow: '0 4px 16px rgba(0,0,0,0.07)',
+                            }}
                         >
-                            <div className="relative">
+                            <div className="px-4 py-3 relative">
                                 <input
                                     type="text"
                                     placeholder={placeholders[placeholderIdx]}
                                     value={searchTerm}
+                                    autoFocus
                                     onChange={(e) => {
                                         setSearchTerm(e.target.value);
                                         setShowResults(true);
@@ -371,13 +629,25 @@ const Navbar = () => {
                                     onKeyDown={handleSearchKeyDown}
                                     onBlur={() => setTimeout(() => setShowResults(false), 200)}
                                     onFocus={() => setShowResults(true)}
-                                    className="w-full bg-gray-50 border border-gray-200 rounded-lg py-2.5 px-4 pr-10 text-[14px] focus:outline-none focus:border-pink-300 transition-all"
+                                    style={{
+                                        width: '100%',
+                                        background: '#F7F7F7',
+                                        border: '1.5px solid #E8D5DA',
+                                        borderRadius: 12,
+                                        padding: '10px 44px 10px 16px',
+                                        fontSize: 14,
+                                        fontFamily: "'Inter', sans-serif",
+                                        fontWeight: 400,
+                                        color: '#1A1A1A',
+                                        outline: 'none',
+                                    }}
                                 />
                                 <button
                                     onClick={submitSearch}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                                    className="absolute right-7 top-1/2 -translate-y-1/2"
+                                    style={{ color: '#9C3D50' }}
                                 >
-                                    <Search className="w-5 h-5" />
+                                    <Search className="w-[17px] h-[17px]" strokeWidth={2.2} />
                                 </button>
                             </div>
                         </motion.div>
@@ -398,141 +668,79 @@ const Navbar = () => {
                             <motion.div
                                 initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
                                 transition={{ type: 'tween', duration: 0.3 }}
-                                className="fixed top-0 left-0 h-full w-[280px] bg-white z-[9999] p-6 shadow-2xl flex flex-col"
+                                className="fixed top-0 left-0 h-full w-full bg-[#FDF5F6] z-[9999] flex flex-col"
                             >
-                                <div className="flex justify-between items-center mb-8 border-b pb-4">
-                                    <span className="text-lg tracking-wide uppercase">Menu</span>
+                                {/* Top Header */}
+                                <div className="flex justify-end items-center px-6 pt-6 pb-4">
                                     <button onClick={() => setIsMenuOpen(false)} className="p-1 hover:bg-gray-100 rounded-full transition-colors">
-                                        <X className="w-7 h-7 text-gray-500" />
+                                        <X className="w-5 h-5 text-gray-900 font-bold" strokeWidth={2.5} />
                                     </button>
                                 </div>
 
-                                <div className="flex bg-gray-100 p-1 rounded-full mb-6">
-                                    <button
-                                        onClick={() => {
-                                            updateActiveMetal('silver');
-                                            navigate('/');
-                                            setIsMenuOpen(false);
-                                        }}
-                                        className={`flex-1 py-2 px-4 rounded-full text-sm transition-all duration-300 ${activeMetal === 'silver' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        Silver
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            updateActiveMetal('gold');
-                                            navigate('/gold-collection');
-                                            setIsMenuOpen(false);
-                                        }}
-                                        className={`flex-1 py-2 px-4 rounded-full text-sm transition-all duration-300 ${activeMetal === 'gold' ? 'bg-white text-[#C9A24D] shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}
-                                    >
-                                        Gold
-                                    </button>
+                                {/* Banner/Coupon */}
+                                <div className="px-5 mb-6 mt-2">
+                                    <div className="relative bg-white border border-[#EBCDD0] rounded-lg p-5 flex items-center justify-between shadow-sm">
+                                        {/* Ticket Cutouts */}
+                                        <div className="absolute left-[-8px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#FDF5F6] rounded-full border-r border-[#EBCDD0]"></div>
+                                        <div className="absolute right-[-8px] top-1/2 -translate-y-1/2 w-4 h-4 bg-[#FDF5F6] rounded-full border-l border-[#EBCDD0]"></div>
+
+                                        <div className="flex items-center gap-5 w-full">
+                                            <div className="flex-shrink-0 relative">
+                                                <ShoppingBag className="w-10 h-10 text-[#8E2B45] opacity-80" strokeWidth={1.2} />
+                                                <ShoppingBag className="w-7 h-7 text-[#8E2B45] absolute -bottom-1 -right-2 bg-white" strokeWidth={1.5} />
+                                            </div>
+                                            <div className="flex-1">
+                                                <h3 className="text-[17px] font-serif font-bold text-[#8E2B45] leading-tight mb-2 tracking-wide">Welcome to Sands Jewels</h3>
+                                                <div className="flex items-center gap-2">
+                                                    <Link to="/login" className="text-[11px] font-bold text-[#8E2B45] hover:underline uppercase tracking-wider" onClick={() => setIsMenuOpen(false)}>LOGIN</Link>
+                                                    <span className="text-gray-300">|</span>
+                                                    <Link to="/login" className="text-[11px] font-bold text-[#8E2B45] hover:underline uppercase tracking-wider" onClick={() => setIsMenuOpen(false)}>SIGN UP</Link>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
 
-                                <nav className="flex flex-col gap-1 overflow-y-auto pb-8 no-scrollbar">
-                                    <Link to="/" className="text-gray-900 text-base py-3 px-2 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all" onClick={() => setIsMenuOpen(false)}>Home</Link>
-                                    <Link to="/shop" className="text-gray-900 text-base py-3 px-2 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all" onClick={() => setIsMenuOpen(false)}>Shop All</Link>
-
-                                    <div className="my-2 border-t border-gray-200" />
-
-                                    <button
-                                        onClick={() => toggleSection('allType')}
-                                        className="flex items-center justify-between py-3 px-2 text-gray-900 text-base hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all"
-                                    >
-                                        ALL TYPE
-                                        <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedSections.allType ? 'rotate-90' : ''}`} />
-                                    </button>
-                                    {expandedSections.allType && (
-                                        <div className="pl-4 flex flex-col gap-1 py-2 bg-gray-50 rounded-lg my-1">
-                                            {/* Gold Section */}
-                                            <button
-                                                onClick={() => toggleSection('allTypeGold')}
-                                                className="flex items-center justify-between py-2 px-2 text-gray-800 text-sm font-semibold hover:text-pink-500 rounded transition-all"
-                                            >
-                                                Gold Collection
-                                                <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-300 ${expandedSections.allTypeGold ? 'rotate-90' : ''}`} />
-                                            </button>
-                                            {expandedSections.allTypeGold && (
-                                                <div className="pl-4 flex flex-col gap-1.5 pb-2">
-                                                    <Link to="/shop?metal=gold&karat=24" className="text-gray-600 text-sm py-1.5 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>24K Gold</Link>
-                                                    <Link to="/shop?metal=gold&karat=22" className="text-gray-600 text-sm py-1.5 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>22K Gold</Link>
-                                                    <Link to="/shop?metal=gold&karat=18" className="text-gray-600 text-sm py-1.5 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>18K Gold</Link>
-                                                    <Link to="/shop?metal=gold&karat=14" className="text-gray-600 text-sm py-1.5 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>14K Gold</Link>
-                                                </div>
-                                            )}
-
-                                            {/* Silver Section */}
-                                            <button
-                                                onClick={() => toggleSection('allTypeSilver')}
-                                                className="flex items-center justify-between py-2 px-2 text-gray-800 text-sm font-semibold hover:text-pink-500 rounded transition-all"
-                                            >
-                                                Silver Collection
-                                                <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-300 ${expandedSections.allTypeSilver ? 'rotate-90' : ''}`} />
-                                            </button>
-                                            {expandedSections.allTypeSilver && (
-                                                <div className="pl-4 flex flex-col gap-1.5 pb-2">
-                                                    <Link to="/shop?metal=silver&silver_type=sterling" className="text-gray-600 text-sm py-1.5 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>925 Sterling Silver</Link>
-                                                    <Link to="/shop?metal=silver&silver_type=fine" className="text-gray-600 text-sm py-1.5 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Fine Silver</Link>
-                                                </div>
-                                            )}
-                                        </div>
-                                    )}
-
-                                    <button
-                                        onClick={() => toggleSection('categories')}
-                                        className="flex items-center justify-between py-3 px-2 text-gray-900 text-base hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all"
-                                    >
-                                        Shop by Category
-                                        <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedSections.categories ? 'rotate-90' : ''}`} />
-                                    </button>
-                                    {expandedSections.categories && (
-                                        <div className="pl-4 flex flex-col gap-2 py-2 bg-gray-50 rounded-lg my-1">
-                                            <Link to="/collections" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>All Categories</Link>
-                                            <Link to="/category/men" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Men's Collection</Link>
-                                            <Link to="/category/women" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Women's Collection</Link>
-                                            <Link to="/category/family" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Family Collection</Link>
-                                        </div>
-                                    )}
-
-                                    <button
-                                        onClick={() => toggleSection('collections')}
-                                        className="flex items-center justify-between py-3 px-2 text-gray-900 text-base hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all"
-                                    >
-                                        Collections & Gifts
-                                        <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedSections.collections ? 'rotate-90' : ''}`} />
-                                    </button>
-                                    {expandedSections.collections && (
-                                        <div className="pl-4 flex flex-col gap-2 py-2 bg-gray-50 rounded-lg my-1">
-                                            <Link to="/category/men" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Gifts for Him</Link>
-                                            <Link to="/category/women" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Gifts for Her</Link>
-                                            <Link to="/category/family" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Gifts for Family</Link>
-                                            <Link to="/shop?search=exclusive" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Exclusive Collections</Link>
-                                        </div>
-                                    )}
-
-                                    <Link
-                                        to="/blogs"
-                                        className="text-gray-900 text-base py-3 px-2 hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all block"
-                                        onClick={() => setIsMenuOpen(false)}
-                                    >
-                                        📖 Blogs
-                                    </Link>
-
-                                    <button
-                                        onClick={() => toggleSection('more')}
-                                        className="flex items-center justify-between py-3 px-2 text-gray-900 text-base hover:text-pink-500 hover:bg-pink-50 rounded-lg transition-all"
-                                    >
-                                        More at Sands
-                                        <ChevronRight className={`w-4 h-4 transition-transform duration-300 ${expandedSections.more ? 'rotate-90' : ''}`} />
-                                    </button>
-                                    {expandedSections.more && (
-                                        <div className="pl-4 flex flex-col gap-2 py-2 bg-gray-50 rounded-lg my-1">
-                                            <Link to="/gift-cards" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Gift Cards</Link>
-                                            <Link to="/blogs" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>Blogs</Link>
-                                            <Link to="/about" className="text-gray-700 text-sm py-2 px-2 hover:text-pink-500 hover:bg-white rounded transition-all" onClick={() => setIsMenuOpen(false)}>About Us</Link>
-                                        </div>
-                                    )}
+                                {/* Navigation Links */}
+                                <nav className="flex-1 flex flex-col overflow-y-auto no-scrollbar px-3 pb-8">
+                                    {[
+                                        { label: 'All Jewellery', path: '/shop', icon: Sparkles },
+                                        { label: 'Gold', path: '/gold-collection', icon: Coins },
+                                        { label: 'Silver', path: '/', icon: Gem },
+                                        { label: 'Rings', path: '/shop?category=rings', icon: LifeBuoy },
+                                        { label: 'Daily Wear', path: '/shop?category=daily-wear', icon: Sun },
+                                        { label: 'Wedding', path: '/shop?category=wedding', icon: Heart },
+                                        { label: 'Gifts for Him', path: '/category/men', icon: Gift },
+                                        { label: 'Gifts for Her', path: '/category/women', icon: Gift },
+                                        { label: 'Gifts for Family', path: '/category/family', icon: Users },
+                                        { label: 'Blogs', path: '/blogs', icon: BookOpen },
+                                        { label: 'More', path: '/shop', icon: MoreHorizontal }
+                                    ].map((item, index) => (
+                                        <Link
+                                            key={index}
+                                            to={item.path}
+                                            onClick={() => setIsMenuOpen(false)}
+                                            className={`flex items-center justify-between py-4 px-4 hover:shadow-sm rounded-xl transition-all group border-b border-[#F0DFE2] last:border-0 relative overflow-hidden ${
+                                                item.label === 'Gold' ? 'bg-gradient-to-r from-amber-50 to-white hover:from-amber-100 border-amber-200' :
+                                                item.label === 'Silver' ? 'bg-gradient-to-r from-slate-50 to-white hover:from-slate-100 border-slate-200' :
+                                                'text-gray-800 hover:bg-white hover:text-[#8E2B45]'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-5 relative z-10">
+                                                <item.icon className={`w-5 h-5 transition-colors ${
+                                                    item.label === 'Gold' ? 'text-amber-500 group-hover:text-amber-600 animate-pulse' :
+                                                    item.label === 'Silver' ? 'text-slate-400 group-hover:text-slate-600 animate-pulse' :
+                                                    'text-gray-600 group-hover:text-[#8E2B45]'
+                                                }`} strokeWidth={1.5} />
+                                                <span className={`text-[15px] tracking-wide ${
+                                                    item.label === 'Gold' ? 'text-amber-700 font-bold group-hover:text-amber-800' :
+                                                    item.label === 'Silver' ? 'text-slate-600 font-bold group-hover:text-slate-800' :
+                                                    'font-medium text-gray-800 group-hover:font-semibold group-hover:text-[#8E2B45]'
+                                                }`}>{item.label}</span>
+                                            </div>
+                                            <ChevronRight className="w-4 h-4 text-gray-900 group-hover:text-[#8E2B45] transition-colors relative z-10" strokeWidth={2.5} />
+                                        </Link>
+                                    ))}
                                 </nav>
                             </motion.div>
                         </>

@@ -4,8 +4,10 @@ import { useShop } from '../../../context/ShopContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Heart, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useResetScroll } from '../../../hooks/useResetScroll';
 
 const Wishlist = () => {
+    useResetScroll();
     const { wishlist } = useShop();
     const safeWishlist = Array.isArray(wishlist) ? wishlist : [];
     const navigate = useNavigate();
@@ -72,18 +74,16 @@ const Wishlist = () => {
             </div>
 
             {/* Aesthetic Footer Note */}
-            {
-                safeWishlist.length > 0 && (
-                    <div className="container mx-auto px-4 pb-20">
-                        <div className="text-center pt-12 border-t border-gray-100">
-                            <p className="text-[#D39A9F] text-xs font-semibold uppercase tracking-widest opacity-60">
-                                Sands Jewels • Handcrafted Elegance
-                            </p>
-                        </div>
+            {safeWishlist.length > 0 && (
+                <div className="container mx-auto px-4 pb-20">
+                    <div className="text-center pt-12 border-t border-gray-100">
+                        <p className="text-[#D39A9F] text-xs font-semibold uppercase tracking-widest opacity-60">
+                            Sands Jewels • Handcrafted Elegance
+                        </p>
                     </div>
-                )
-            }
-        </div >
+                </div>
+            )}
+        </div>
     );
 };
 

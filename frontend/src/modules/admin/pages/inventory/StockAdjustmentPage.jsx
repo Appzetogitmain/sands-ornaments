@@ -89,25 +89,25 @@ const StockAdjustmentPage = () => {
     const pendingCount = Object.keys(adjustments).length;
 
     return (
-        <div className="space-y-8 font-sans pb-24 animate-in fade-in duration-500">
+        <div className="space-y-6 font-sans pb-24 animate-in fade-in duration-500">
             {/* Header */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 md:mb-6 gap-4">
                 <div>
-                    <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Stock Adjustment</h1>
-                    <p className="text-xs font-bold text-gray-500 uppercase tracking-widest mt-1">Manually update product inventory</p>
+                    <h1 className="text-xl md:text-2xl font-bold text-gray-900 tracking-tight">Stock Adjustment</h1>
+                    <p className="text-xs md:text-sm font-medium text-gray-500 mt-1">Manually update product inventory.</p>
                 </div>
                 <div className="flex gap-3">
                     <button
                         onClick={resetAdjustments}
                         disabled={pendingCount === 0 || saving}
-                        className="px-4 py-2 border border-gray-200 bg-white text-gray-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                        className="px-4 py-2 border border-gray-200 bg-white text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                     >
-                        <RotateCcw size={14} /> Reset
+                        <RotateCcw size={16} /> Reset
                     </button>
                     <button
                         onClick={handleSave}
                         disabled={pendingCount === 0 || saving}
-                        className="px-6 py-2 bg-[#0f172a] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-black shadow-lg shadow-gray-200 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+                        className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-black shadow-sm disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
                     >
                         {saving ? (
                             <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />

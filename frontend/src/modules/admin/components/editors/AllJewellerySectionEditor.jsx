@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Input } from '../common/FormControls';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const AllJewellerySectionEditor = ({ sectionData, onSave, defaultSection = {} }) => {
     const initialSettings = useMemo(() => {
@@ -15,7 +16,7 @@ const AllJewellerySectionEditor = ({ sectionData, onSave, defaultSection = {} })
         };
     }, [defaultSection?.settings, sectionData?.settings]);
 
-    const [settings, setSettings] = useState(initialSettings);
+    const [settings, setSettings] = useDraftState(`draft_settings_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialSettings);
 
     const updateSetting = (field, value) => {
         setSettings((prev) => ({ ...prev, [field]: value }));

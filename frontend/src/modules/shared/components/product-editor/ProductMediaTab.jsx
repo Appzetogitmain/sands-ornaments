@@ -1,16 +1,16 @@
 import React from 'react';
-import { 
-    Upload, X, Trash2, Sparkles, ImagePlus, ExternalLink, 
+import {
+    Upload, X, Trash2, Sparkles, ImagePlus, ExternalLink,
     FileText, CheckCircle2, Download, Info, Loader2, Copy
 } from 'lucide-react';
 import { FormSection } from '../../../admin/components/common/FormControls';
 import { ENHANCEMENT_PROMPT } from '../../utils/productEditorUtils';
 import toast from 'react-hot-toast';
 
-const ProductMediaTab = ({ 
-    formData, 
-    setFormData, 
-    isViewMode, 
+const ProductMediaTab = ({
+    formData,
+    setFormData,
+    isViewMode,
     previewImages,
     handleImageUpload,
     handleHoverImageUpload,
@@ -50,7 +50,7 @@ const ProductMediaTab = ({
                                 {previewImages.map((img, idx) => (
                                     <div key={idx} className="group relative aspect-square rounded-[1.5rem] overflow-hidden border-2 border-white shadow-md ring-1 ring-black/5 hover:ring-amber-200 transition-all">
                                         <img src={img} alt="" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
-                                        
+
                                         {/* Badge Labels */}
                                         <div className="absolute bottom-3 left-3 flex gap-1.5">
                                             {idx === 0 && (
@@ -106,10 +106,15 @@ const ProductMediaTab = ({
                                     </label>
                                 )}
                             </div>
+                            <div className="mt-3 inline-block">
+                                <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200">
+                                    ✨ Recommended Size: 1080x1080px (1:1 Ratio)
+                                </p>
+                            </div>
 
                             {!isViewMode && previewImages.length > 0 && (
                                 <div className="flex gap-2">
-                                    <button 
+                                    <button
                                         type="button"
                                         onClick={() => {
                                             setEnhancingIndex(0);
@@ -193,7 +198,7 @@ const ProductMediaTab = ({
                                 <h2 className="text-3xl font-black uppercase tracking-tight">Vision Engine</h2>
                             </div>
                             <p className="text-[10px] font-black text-amber-400/80 uppercase tracking-[0.3em] ml-1">Powered by Gemini Visual Intelligence</p>
-                            <button 
+                            <button
                                 onClick={() => setShowEnhanceModal(false)}
                                 className="absolute top-10 right-10 p-2 hover:bg-white/10 rounded-2xl transition-all text-white/60"
                             >
@@ -235,7 +240,7 @@ const ProductMediaTab = ({
                             <div className="space-y-4 bg-[#FDFBF7] p-8 rounded-[2rem] border border-amber-100/50 shadow-inner group">
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[9px] font-black text-amber-700 uppercase tracking-[0.25em]">Master Prompt</span>
-                                    <button 
+                                    <button
                                         onClick={() => {
                                             navigator.clipboard.writeText(ENHANCEMENT_PROMPT);
                                             toast.success("Intelligence prompt copied");
@@ -254,21 +259,21 @@ const ProductMediaTab = ({
                         </div>
 
                         <div className="p-10 pt-4 flex flex-col gap-4">
-                            <a 
-                                href="https://gemini.google.com/" 
-                                target="_blank" 
+                            <a
+                                href="https://gemini.google.com/"
+                                target="_blank"
                                 rel="noreferrer"
                                 className="w-full py-5 bg-[#3E2723] text-white rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.25em] shadow-[0_20px_40px_-10px_rgba(62,39,35,0.3)] hover:bg-black transition-all flex items-center justify-center gap-3 group active:scale-[0.98]"
                             >
                                 1. Initialize Gemini Studio <ExternalLink size={16} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                             </a>
-                            
+
                             <label className="w-full py-5 bg-white border-2 border-dashed border-gray-200 text-gray-500 rounded-[1.5rem] text-[10px] font-black uppercase tracking-[0.25em] hover:border-amber-600 hover:text-amber-600 cursor-pointer transition-all flex items-center justify-center gap-3 group active:scale-[0.98]">
                                 <ImagePlus size={16} className="group-hover:scale-125 transition-transform" /> 2. Commit Enhanced Asset
                                 <input type="file" className="hidden" onChange={handleEnhancedUpload} accept="image/*" />
                             </label>
-                            
-                            <button 
+
+                            <button
                                 onClick={() => setShowEnhanceModal(false)}
                                 className="w-full py-2 text-[10px] font-black uppercase tracking-widest text-gray-300 hover:text-gray-500 transition-colors"
                             >

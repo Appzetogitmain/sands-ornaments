@@ -104,8 +104,6 @@ const CheckoutAddresses = ({
                         name="firstName"
                         value={formData.firstName}
                         onChange={handleInputChange}
-                        pattern="[a-zA-Z\s\-']+"
-                        title="Please use letters, spaces, hyphens, or apostrophes only"
                         className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all text-sm bg-white"
                     />
                 </div>
@@ -117,8 +115,6 @@ const CheckoutAddresses = ({
                         name="lastName"
                         value={formData.lastName}
                         onChange={handleInputChange}
-                        pattern="[a-zA-Z\s\-']+"
-                        title="Please use letters, spaces, hyphens, or apostrophes only"
                         className="w-full border border-gray-200 rounded-lg px-4 py-3 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all text-sm bg-white"
                     />
                 </div>

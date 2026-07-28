@@ -61,7 +61,8 @@ const MenHeroCarousel = ({ sectionData }) => {
                 rightTitle: item.subtitle || '',
                 cta: item.ctaLabel || 'SHOP NOW',
                 link: item.path || buildMenShopPath(),
-                image: resolveLegacyCmsAsset(item.image, defaultSlides[index]?.image || heroMenBold)
+                image: resolveLegacyCmsAsset(item.image, defaultSlides[index]?.image || heroMenBold),
+                mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, defaultSlides[index]?.image || heroMenBold) : null
             }))
             .filter((item) => item.mainTitle && item.image);
 
@@ -81,8 +82,11 @@ const MenHeroCarousel = ({ sectionData }) => {
         }
     }, [current, resolvedSlides.length]);
 
+    const activeSlide = resolvedSlides[current];
+    const sliderAspect = activeSlide?.mobileImage ? 'aspect-[2/1] md:aspect-[4/1]' : 'aspect-[4/1]';
+
     return (
-        <section className="relative w-full h-[220px] sm:h-[260px] md:h-[65vh] overflow-hidden bg-[#111111]">
+        <section className={`relative w-full overflow-hidden bg-[#111111] transition-all duration-300 ${sliderAspect}`}>
             <AnimatePresence mode="wait">
                 <motion.div
                     key={current}
@@ -93,10 +97,17 @@ const MenHeroCarousel = ({ sectionData }) => {
                     className="absolute inset-0"
                 >
                     {/* Full-width Background Image */}
+                    {resolvedSlides[current].mobileImage && (
+                        <img
+                            src={resolvedSlides[current].mobileImage}
+                            alt="Men Jewelry Model"
+                            className="absolute inset-0 w-full h-full object-cover object-center block md:hidden"
+                        />
+                    )}
                     <img
                         src={resolvedSlides[current].image}
                         alt="Men Jewelry Model"
-                        className="w-full h-full object-cover object-center"
+                        className={`absolute inset-0 w-full h-full object-cover object-center ${resolvedSlides[current].mobileImage ? 'hidden md:block' : 'block'}`}
                     />
 
                     {/* Dark gradient overlays for text legibility */}
@@ -107,7 +118,7 @@ const MenHeroCarousel = ({ sectionData }) => {
 
             {/* Text Content */}
             <div className="absolute inset-0 z-10 flex items-center">
-                <div className="w-full max-w-[1400px] mx-auto px-4 sm:px-10 md:px-16 grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4 items-center">
+                <div className="w-full max-w-[1400px] mx-auto px-2 sm:px-6 md:px-16 grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4 items-center">
 
                     {/* Left: Brand & Main Title */}
                     <div className="text-white flex flex-col justify-center">
@@ -116,7 +127,7 @@ const MenHeroCarousel = ({ sectionData }) => {
                             initial={{ opacity: 0, x: -30 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.3, duration: 0.6 }}
-                            className="text-[8px] md:text-[11px] font-medium tracking-[0.4em] uppercase mb-1 md:mb-4 opacity-70"
+                            className="text-[5px] sm:text-[6px] md:text-[11px] font-medium tracking-[0.4em] uppercase mb-0 md:mb-4 opacity-70"
                         >
                             {resolvedSlides[current].brandTitle}
                         </motion.p>
@@ -127,7 +138,7 @@ const MenHeroCarousel = ({ sectionData }) => {
                                 initial={{ opacity: 0, x: -30 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.5, duration: 0.6 }}
-                                className="text-4xl sm:text-7xl md:text-9xl font-black tracking-tighter"
+                                className="text-xl sm:text-3xl md:text-9xl font-black tracking-tighter"
                             >
                                 {resolvedSlides[current].mainTitle}
                             </motion.h1>
@@ -137,7 +148,7 @@ const MenHeroCarousel = ({ sectionData }) => {
                                     initial={{ opacity: 0 }}
                                     animate={{ opacity: 1 }}
                                     transition={{ delay: 0.7 }}
-                                    className="text-xs md:text-xl font-light uppercase tracking-widest"
+                                    className="text-[6px] sm:text-[8px] md:text-xl font-light uppercase tracking-widest"
                                 >
                                     IN
                                 </motion.span>
@@ -146,7 +157,7 @@ const MenHeroCarousel = ({ sectionData }) => {
                                     initial={{ opacity: 0, y: 10 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     transition={{ delay: 0.8, type: "spring" }}
-                                    className="text-2xl sm:text-5xl md:text-7xl italic font-serif"
+                                    className="text-lg sm:text-2xl md:text-7xl italic font-serif"
                                     style={{ fontFamily: "'Dancing Script', 'Playball', cursive" }}
                                 >
                                     {resolvedSlides[current].scriptTitle}
@@ -165,7 +176,7 @@ const MenHeroCarousel = ({ sectionData }) => {
                             initial={{ opacity: 0, x: 30 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.6, duration: 0.6 }}
-                            className="text-[12px] sm:text-2xl md:text-4xl font-medium mb-2 md:mb-8 leading-[1.25] max-w-[240px] md:max-w-[300px] whitespace-pre-line"
+                            className="text-[6px] sm:text-[10px] md:text-4xl font-medium mb-0.5 md:mb-8 leading-[1.2] md:leading-[1.25] max-w-[240px] md:max-w-[300px] whitespace-pre-line"
                         >
                             {resolvedSlides[current].rightTitle}
                         </motion.h2>
@@ -178,7 +189,7 @@ const MenHeroCarousel = ({ sectionData }) => {
                         >
                             <Link
                                 to={resolvedSlides[current].link}
-                                className="px-4 py-1.5 md:px-12 md:py-3 bg-white text-black text-[9px] md:text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors inline-block"
+                                className="px-2 py-0.5 md:px-12 md:py-3 bg-white text-black text-[5px] md:text-xs font-bold uppercase tracking-[0.2em] hover:bg-gray-100 transition-colors inline-block"
                             >
                                 {resolvedSlides[current].cta}
                             </Link>

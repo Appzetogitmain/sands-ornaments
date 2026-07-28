@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Input } from '../common/FormControls';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const createBlankFaq = () => ({
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -30,7 +31,7 @@ const FAQSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
         return [createBlankFaq()];
     }, [defaultItems, sectionData?.items]);
 
-    const [items, setItems] = useState(initialItems);
+    const [items, setItems] = useDraftState(`draft_items_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialItems);
 
     const updateItem = (id, field, value) => {
         setItems((prev) => prev.map((item) => (

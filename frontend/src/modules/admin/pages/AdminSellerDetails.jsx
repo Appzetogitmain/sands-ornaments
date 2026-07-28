@@ -77,7 +77,7 @@ const AdminSellerDetails = () => {
                     >
                         View Products
                     </button>
-                    {seller.status === 'PENDING' ? (
+                    {seller.status === 'PENDING' && (
                         <>
                             <button 
                                 onClick={() => setShowRejectModal(true)}
@@ -92,16 +92,68 @@ const AdminSellerDetails = () => {
                                 <CheckCircle size={18} /> Approve Application
                             </button>
                         </>
-                    ) : (
-                        <div className={`px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest border flex items-center gap-2 ${
-                            seller.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-red-50 text-red-600 border-red-100'
-                        }`}>
-                            {seller.status === 'APPROVED' ? <CheckCircle size={18} /> : <XCircle size={18} />}
-                            Status: {seller.status}
-                        </div>
+                    )}
+                    {seller.status === 'REJECTED' && (
+                        <>
+                            <div className="px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest border flex items-center gap-2 bg-red-50 text-red-600 border-red-100">
+                                <XCircle size={18} />
+                                Status: {seller.status}
+                            </div>
+                            <button 
+                                onClick={() => handleAction('APPROVED')}
+                                className="bg-[#3E2723] text-white px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest shadow-xl shadow-[#3E2723]/20 hover:bg-[#2D1B18] transition-all flex items-center gap-2"
+                            >
+                                <CheckCircle size={18} /> Approve Application
+                            </button>
+                        </>
+                    )}
+                    {seller.status === 'APPROVED' && (
+                        <>
+                            <div className="px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest border flex items-center gap-2 bg-emerald-50 text-emerald-600 border-emerald-100">
+                                <CheckCircle size={18} />
+                                Status: {seller.status}
+                            </div>
+                            <button 
+                                onClick={() => {
+                                    setRejectReason('');
+                                    setShowRejectModal(true);
+                                }}
+                                className="bg-red-50 text-red-600 px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest border border-red-100 hover:bg-red-100 transition-all flex items-center gap-2"
+                            >
+                                <XCircle size={18} /> Reject / Suspend
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
+
+            {seller.duplicateMatches && seller.duplicateMatches.length > 0 && (
+                <div className="bg-rose-50 border border-rose-100 rounded-2xl p-6 flex flex-col gap-3">
+                    <h3 className="text-xs font-black text-rose-800 uppercase tracking-widest flex items-center gap-2">
+                        ⚠️ Duplicate Accounts Flagged
+                    </h3>
+                    <p className="text-xs text-rose-700 font-medium leading-relaxed">
+                        This seller account shares registration details (GST, PAN, or Bank Account) with the following registered seller(s):
+                    </p>
+                    <div className="space-y-2">
+                        {seller.duplicateMatches.map((other, idx) => (
+                            <div key={idx} className="bg-white/80 border border-rose-200/50 rounded-xl p-3 flex items-center justify-between text-xs">
+                                <div>
+                                    <p className="font-bold text-gray-900">{other.fullName} ({other.shopName})</p>
+                                    <p className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{other.email}</p>
+                                </div>
+                                <div className="flex gap-1 flex-wrap">
+                                    {other.reasons.map((r, i) => (
+                                        <span key={i} className="px-2 py-0.5 bg-rose-100 text-rose-800 rounded-full text-[9px] font-black uppercase tracking-wider">
+                                            {r}
+                                        </span>
+                                    ))}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            )}
 
             {/* Rejection Modal */}
             {showRejectModal && (
@@ -199,6 +251,10 @@ const AdminSellerDetails = () => {
                                 <p className={infoLabelClasses}>Email Address</p>
                                 <p className={infoValueClasses}>{seller.email}</p>
                             </div>
+                            <div>
+                                <p className={infoLabelClasses}>Date of Birth</p>
+                                <p className={infoValueClasses}>{seller.dob ? new Date(seller.dob).toLocaleDateString() : 'N/A'}</p>
+                            </div>
                         </div>
                     </div>
 
@@ -207,6 +263,14 @@ const AdminSellerDetails = () => {
                             <CreditCard size={14} className="text-[#3E2723]" /> Bank Details
                         </h3>
                         <div className="space-y-6">
+                            <div>
+                                <p className={infoLabelClasses}>Bank Name</p>
+                                <p className={infoValueClasses}>{seller.bankAccount?.bankName || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className={infoLabelClasses}>Branch Name</p>
+                                <p className={infoValueClasses}>{seller.bankAccount?.branchName || 'N/A'}</p>
+                            </div>
                             <div>
                                 <p className={infoLabelClasses}>Account Number</p>
                                 <p className={infoValueClasses}>{seller.bankAccount?.accountNumber || 'N/A'}</p>
@@ -237,7 +301,7 @@ const AdminSellerDetails = () => {
                                         <div className="mt-1">
                                             <p className="text-sm font-bold text-gray-900 uppercase leading-relaxed">
                                                 {seller.shopAddress || 'N/A'}<br />
-                                                {seller.city || 'N/A'}, {seller.state || 'N/A'}<br />
+                                                {seller.city || 'N/A'}{seller.district ? `, ${seller.district}` : ''}, {seller.state || 'N/A'}<br />
                                                 PIN: {seller.pincode || 'N/A'}
                                             </p>
                                         </div>
@@ -251,6 +315,22 @@ const AdminSellerDetails = () => {
                                 </h3>
                                 <div className="space-y-6">
                                     <div>
+                                        <p className={infoLabelClasses}>Firm Type</p>
+                                        <p className={infoValueClasses}>{seller.firmType || 'N/A'}</p>
+                                    </div>
+                                    {seller.firmType === 'Pvt Ltd' && (
+                                        <div>
+                                            <p className={infoLabelClasses}>CIN (Corporate Identification Number)</p>
+                                            <p className={infoValueClasses}>{seller.cin || 'N/A'}</p>
+                                        </div>
+                                    )}
+                                    {seller.firmType === 'LLP' && (
+                                        <div>
+                                            <p className={infoLabelClasses}>LLPIN (LLP Identification Number)</p>
+                                            <p className={infoValueClasses}>{seller.llpin || 'N/A'}</p>
+                                        </div>
+                                    )}
+                                    <div>
                                         <p className={infoLabelClasses}>GST Number</p>
                                         <p className={infoValueClasses}>{seller.gstNumber || 'N/A'}</p>
                                     </div>
@@ -258,10 +338,14 @@ const AdminSellerDetails = () => {
                                         <p className={infoLabelClasses}>PAN Number</p>
                                         <p className={infoValueClasses}>{seller.panNumber || 'N/A'}</p>
                                     </div>
-                                    <div>
-                                        <p className={infoLabelClasses}>BIS Hallmark License</p>
-                                        <p className={infoValueClasses}>{seller.bisNumber || 'N/A'}</p>
-                                    </div>
+                                     <div>
+                                         <p className={infoLabelClasses}>BIS Hallmark License (Gold)</p>
+                                         <p className={infoValueClasses}>{seller.bisNumberGold || 'N/A'}</p>
+                                     </div>
+                                     <div>
+                                         <p className={infoLabelClasses}>BIS Hallmark License (Silver)</p>
+                                         <p className={infoValueClasses}>{seller.bisNumberSilver || 'N/A'}</p>
+                                     </div>
                                 </div>
                             </div>
                         </div>
@@ -271,7 +355,7 @@ const AdminSellerDetails = () => {
                         <h3 className={sectionTitleClasses}>
                             <FileText size={14} className="text-[#3E2723]" /> Document Verification
                         </h3>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
                             <div className="space-y-3">
                                 <p className={infoLabelClasses}>Aadhar Card</p>
                                 {seller.documents?.aadharUrl ? (
@@ -315,6 +399,103 @@ const AdminSellerDetails = () => {
                                 {seller.documents?.certificateUrl ? (
                                     <a 
                                         href={seller.documents.certificateUrl} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center group overflow-hidden relative cursor-pointer hover:bg-gray-100/50 transition-all"
+                                    >
+                                        <FileText size={32} className="text-gray-300 group-hover:scale-110 transition-transform" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-400 uppercase tracking-widest underline decoration-dotted hover:text-[#3E2723]">View Full Document</span>
+                                    </a>
+                                ) : (
+                                    <div className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex items-center justify-center group overflow-hidden relative">
+                                        <FileText size={32} className="text-gray-300" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest">Not uploaded</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-3">
+                                <p className={infoLabelClasses}>PAN Card</p>
+                                {seller.documents?.panUrl ? (
+                                    <a 
+                                        href={seller.documents.panUrl} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center group overflow-hidden relative cursor-pointer hover:bg-gray-100/50 transition-all"
+                                    >
+                                        <FileText size={32} className="text-gray-300 group-hover:scale-110 transition-transform" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-400 uppercase tracking-widest underline decoration-dotted hover:text-[#3E2723]">View Full Document</span>
+                                    </a>
+                                ) : (
+                                    <div className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex items-center justify-center group overflow-hidden relative">
+                                        <FileText size={32} className="text-gray-300" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest">Not uploaded</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-3">
+                                <p className={infoLabelClasses}>GST Certificate</p>
+                                {seller.documents?.gstUrl ? (
+                                    <a 
+                                        href={seller.documents.gstUrl} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center group overflow-hidden relative cursor-pointer hover:bg-gray-100/50 transition-all"
+                                    >
+                                        <FileText size={32} className="text-gray-300 group-hover:scale-110 transition-transform" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-400 uppercase tracking-widest underline decoration-dotted hover:text-[#3E2723]">View Full Document</span>
+                                    </a>
+                                ) : (
+                                    <div className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex items-center justify-center group overflow-hidden relative">
+                                        <FileText size={32} className="text-gray-300" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest">Not uploaded</span>
+                                    </div>
+                                )}
+                            </div>
+                            {seller.firmType === 'Partnership' && (
+                                <div className="space-y-3">
+                                    <p className={infoLabelClasses}>Partnership Deed</p>
+                                    {seller.documents?.partnershipDeedUrl ? (
+                                        <a 
+                                            href={seller.documents.partnershipDeedUrl} 
+                                            target="_blank" 
+                                            rel="noreferrer" 
+                                            className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center group overflow-hidden relative cursor-pointer hover:bg-gray-100/50 transition-all"
+                                        >
+                                            <FileText size={32} className="text-gray-300 group-hover:scale-110 transition-transform" />
+                                            <span className="absolute bottom-4 text-[9px] font-bold text-gray-400 uppercase tracking-widest underline decoration-dotted hover:text-[#3E2723]">View Full Document</span>
+                                        </a>
+                                    ) : (
+                                        <div className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex items-center justify-center group overflow-hidden relative">
+                                            <FileText size={32} className="text-gray-300" />
+                                            <span className="absolute bottom-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest">Not uploaded</span>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                            <div className="space-y-3">
+                                <p className={infoLabelClasses}>Visiting Card</p>
+                                {seller.documents?.visitingCardUrl ? (
+                                    <a 
+                                        href={seller.documents.visitingCardUrl} 
+                                        target="_blank" 
+                                        rel="noreferrer" 
+                                        className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center group overflow-hidden relative cursor-pointer hover:bg-gray-100/50 transition-all"
+                                    >
+                                        <FileText size={32} className="text-gray-300 group-hover:scale-110 transition-transform" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-400 uppercase tracking-widest underline decoration-dotted hover:text-[#3E2723]">View Full Document</span>
+                                    </a>
+                                ) : (
+                                    <div className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex items-center justify-center group overflow-hidden relative">
+                                        <FileText size={32} className="text-gray-300" />
+                                        <span className="absolute bottom-4 text-[9px] font-bold text-gray-300 uppercase tracking-widest">Not uploaded</span>
+                                    </div>
+                                )}
+                            </div>
+                            <div className="space-y-3">
+                                <p className={infoLabelClasses}>Diamond Certificate</p>
+                                {seller.documents?.diamondCertificateUrl ? (
+                                    <a 
+                                        href={seller.documents.diamondCertificateUrl} 
                                         target="_blank" 
                                         rel="noreferrer" 
                                         className="aspect-video bg-gray-50 rounded-xl border border-dashed border-gray-200 flex flex-col items-center justify-center group overflow-hidden relative cursor-pointer hover:bg-gray-100/50 transition-all"

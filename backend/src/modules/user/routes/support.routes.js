@@ -5,6 +5,7 @@ const requireRole = require("../../../middlewares/requireRole");
 const requireActiveUser = require("../../../middlewares/requireActiveUser");
 
 router.use(authenticate, requireRole("user", "seller", "admin"), requireActiveUser);
+router.get("/upload-signature", supportController.getUploadSignature);
 router.get("/", supportController.getMyTickets);
 router.post("/", supportController.createTicket);
 router.post("/:id/reply", supportController.addReply);

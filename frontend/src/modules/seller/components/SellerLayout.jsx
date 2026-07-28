@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import SellerSidebar from './SellerSidebar';
 import SellerHeader from './SellerHeader';
+import SellerSupportChatWidget from './SellerSupportChatWidget';
 
 const SellerLayout = ({ children }) => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(window.innerWidth > 1024);
@@ -53,6 +54,7 @@ const SellerLayout = ({ children }) => {
                     </div>
                 </div>
             </main>
+            <SellerSupportChatWidget />
         </div>
     );
 };

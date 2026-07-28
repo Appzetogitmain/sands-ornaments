@@ -60,7 +60,7 @@ const Footer = () => {
       youtube: "#",
     },
     footerDeliveryText: "Safe & Insured Express Worldwide Delivery",
-    footerCopyrightText: "Sands Ornaments Pvt Ltd. All Rights Reserved.",
+    footerCopyrightText: "Sands Jewels Pvt Ltd. All Rights Reserved.",
   });
 
   useEffect(() => {
@@ -123,7 +123,7 @@ const Footer = () => {
               >
                 <img
                   src={logo}
-                  alt="Sands Ornaments"
+                  alt="Sands Jewels"
                   className="h-14 w-auto object-contain"
                 />
               </Link>
@@ -281,7 +281,7 @@ const Footer = () => {
                 FRAUD AWARENESS:
               </span>
               {settings.fraudWarning ||
-                "Sands Ornaments will NEVER ask for OTPs, passwords, or sensitive financial information via unsolicited calls, WhatsApp, or emails."}
+                "Sands Jewels will NEVER ask for OTPs, passwords, or sensitive financial information via unsolicited calls, WhatsApp, or emails."}
             </p>
           </div>
         </div>

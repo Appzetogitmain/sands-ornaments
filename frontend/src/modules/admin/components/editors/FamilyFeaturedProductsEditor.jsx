@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { Input } from '../common/FormControls';
 import { adminService } from '../../services/adminService';
 import ProductBrowserModal from './ProductBrowserModal';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const FAMILY_TABS = [
     { key: 'all', label: 'All Family Collections' },
@@ -74,7 +75,7 @@ const FamilyFeaturedProductsEditor = ({ sectionData, onSave, defaultSection = {}
         };
     }, [defaultSection?.settings, sectionData?.items, sectionData?.settings]);
 
-    const [settings, setSettings] = useState(initialSettings);
+    const [settings, setSettings] = useDraftState(`draft_settings_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialSettings);
 
     useEffect(() => {
         setSettings(initialSettings);

@@ -1,3 +1,4 @@
+const ContactInquiry = require("../../../models/ContactInquiry");
 const { sendEmail } = require("../../../services/emailService");
 const { success, error } = require("../../../utils/apiResponse");
 
@@ -21,6 +22,14 @@ exports.submitContactForm = async (req, res) => {
     if (message.length < 10) {
       return error(res, "Message should be at least 10 characters long.", 400, "MESSAGE_TOO_SHORT");
     }
+
+    // Save contact inquiry to the database
+    await ContactInquiry.create({
+      name,
+      email: emailAddress,
+      message,
+      source
+    });
 
     const recipient = process.env.SUPPORT_EMAIL || process.env.ADMIN_EMAIL;
     if (!recipient) {

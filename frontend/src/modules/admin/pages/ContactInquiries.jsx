@@ -1,64 +1,70 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Eye, Trash2, Mail, MessageSquare, Calendar, CheckCircle, Clock, Inbox, AlertCircle, CheckCircle2, X } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import DataTable from '../components/common/DataTable';
+import api from '../../../services/api';
+import toast from 'react-hot-toast';
 
 const ContactInquiries = () => {
-    // Mock Data mimicking submissions from the Homepage "ChitChat" form
-    const [inquiries, setInquiries] = useState([
-        {
-            id: 'INQ-1001',
-            name: 'Anjali Gupta',
-            email: 'anjali.g@example.com',
-            message: 'Hi, I saw your heritage collection on Instagram. Do you ship to Dubai? I am very interested in purchasing a set for my wedding.',
-            date: '2024-10-25T08:45:00',
-            status: 'Unread'
-        },
-        {
-            id: 'INQ-1002',
-            name: 'Rohan Mehta',
-            email: 'rohan.designs@example.com',
-            message: 'I am a jewelry designer looking for collaboration opportunities. Who can I contact?',
-            date: '2024-10-24T16:20:00',
-            status: 'Read'
-        },
-        {
-            id: 'INQ-1003',
-            name: 'Sarah Jenkins',
-            email: 'sarah.j@example.com',
-            message: 'Is the "Moonlight Pendant" available in gold polish?',
-            date: '2024-10-23T11:00:00',
-            status: 'Read'
-        },
-        {
-            id: 'INQ-1004',
-            name: 'Vikram Singh',
-            email: 'vikram.s@example.com',
-            message: 'Do you have a physical store I can visit in Mumbai?',
-            date: '2024-10-22T09:15:00',
-            status: 'Unread'
-        }
-    ]);
-
+    const [inquiries, setInquiries] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('All');
     const [selectedInquiry, setSelectedInquiry] = useState(null); // For Modal
     const [deleteConfirmId, setDeleteConfirmId] = useState(null);
 
-    const handleConfirmDelete = () => {
-        if (!deleteConfirmId) return;
-        setInquiries(prev => prev.filter(i => i.id !== deleteConfirmId));
-        setDeleteConfirmId(null);
+    const fetchInquiries = async () => {
+        setIsLoading(true);
+        try {
+            const res = await api.get('admin/support/inquiries');
+            if (res.data.success) {
+                setInquiries(res.data.data?.inquiries || res.data.inquiries || []);
+            }
+        } catch (err) {
+            console.error('Failed to fetch contact inquiries:', err);
+            toast.error('Failed to load inquiries');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleStatusChange = (id, newStatus) => {
-        setInquiries(prev => prev.map(i => i.id === id ? { ...i, status: newStatus } : i));
+    useEffect(() => {
+        fetchInquiries();
+    }, []);
+
+    const handleConfirmDelete = async () => {
+        if (!deleteConfirmId) return;
+        try {
+            const res = await api.delete(`admin/support/inquiries/${deleteConfirmId}`);
+            if (res.data.success) {
+                setInquiries(prev => prev.filter(i => (i._id || i.id) !== deleteConfirmId));
+                toast.success('Inquiry deleted successfully');
+            }
+        } catch (err) {
+            console.error('Failed to delete inquiry:', err);
+            toast.error('Failed to delete inquiry');
+        } finally {
+            setDeleteConfirmId(null);
+        }
+    };
+
+    const handleStatusChange = async (id, newStatus) => {
+        try {
+            const res = await api.put(`admin/support/inquiries/${id}`, { status: newStatus });
+            if (res.data.success) {
+                setInquiries(prev => prev.map(i => (i._id || i.id) === id ? { ...i, status: newStatus } : i));
+                toast.success(`Inquiry marked as ${newStatus}`);
+            }
+        } catch (err) {
+            console.error('Failed to update status:', err);
+            toast.error('Failed to update status');
+        }
     };
 
     const filteredInquiries = inquiries.filter(i => {
-        const matchesSearch = i.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            i.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            i.message.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesSearch = (i.name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (i.email || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (i.message || '').toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'All' || i.status === statusFilter;
         return matchesSearch && matchesStatus;
     });
@@ -75,7 +81,7 @@ const ContactInquiries = () => {
                 <div className="space-y-1">
                     <div className="flex items-center gap-2 text-black font-bold text-xs">
                         <Calendar className="w-3.5 h-3.5 text-[#3E2723]" />
-                        <span>{new Date(item.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+                        <span>{new Date(item.createdAt || item.date).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                     </div>
                 </div>
             )
@@ -96,7 +102,7 @@ const ContactInquiries = () => {
                 <select
                     value={item.status}
                     onClick={(e) => e.stopPropagation()}
-                    onChange={(e) => handleStatusChange(item.id, e.target.value)}
+                    onChange={(e) => handleStatusChange(item._id || item.id, e.target.value)}
                     className={`text-[10px] font-bold uppercase tracking-wider bg-transparent border-none focus:ring-0 cursor-pointer ${item.status === 'Unread' ? 'text-red-700' : 'text-green-700'
                         }`}
                 >
@@ -118,7 +124,7 @@ const ContactInquiries = () => {
                         <Eye className="w-4 h-4" />
                     </button>
                     <button
-                        onClick={() => setDeleteConfirmId(item.id)}
+                        onClick={() => setDeleteConfirmId(item._id || item.id)}
                         className="w-8 h-8 flex items-center justify-center text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                         title="Delete Inquiry"
                     >
@@ -246,7 +252,7 @@ const ContactInquiries = () => {
                             {/* Meta */}
                             <div className="flex items-center gap-2 text-xs font-bold text-gray-400 pt-2">
                                 <Clock className="w-3.5 h-3.5" />
-                                <span>Received on {new Date(selectedInquiry.date).toLocaleString()}</span>
+                                <span>Received on {new Date(selectedInquiry.createdAt || selectedInquiry.date).toLocaleString()}</span>
                             </div>
                         </div>
 

@@ -1,4 +1,4 @@
-import React, { lazy, Suspense, useEffect } from 'react';
+import React, { lazy, useEffect } from 'react';
 import { useShop } from '../../../context/ShopContext';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import Loader from '../../shared/components/Loader';
@@ -6,45 +6,37 @@ import { useResetScroll } from '../../../hooks/useResetScroll';
 import LazySection from '../../../components/LazySection';
 
 // ─── ABOVE-FOLD: eagerly imported — these are visible immediately on page load ───
-import PromoSlider from '../components/PromoSlider';
 import CategoryGrid from '../components/CategoryGrid';
+import DynamicPromoBanner from '../components/DynamicPromoBanner';
 import TrustMarkers from '../components/TrustMarkers';
 
 // ─── BELOW-FOLD: lazy loaded — downloaded only when user scrolls toward them ────
 // This moves ~70KB of JS out of the critical render path
-const ShopByPrice           = lazy(() => import('../components/ShopByPrice'));
-const PremiumCategoryCards  = lazy(() => import('../components/PremiumCategoryCards'));
-const BestStylesSection     = lazy(() => import('../components/BestStylesSection'));
-const AutoBannerSection     = lazy(() => import('../components/AutoBannerSection'));
-const SilverNewLaunchGrid   = lazy(() => import('../components/SilverNewLaunchGrid'));
-const ShopByColour          = lazy(() => import('../components/ShopByColour'));
-const PriceRangeShowcase    = lazy(() => import('../components/PriceRangeShowcase'));
-const PerfectGift           = lazy(() => import('../components/PerfectGift'));
-const NewLaunchSection      = lazy(() => import('../components/NewLaunchSection'));
-const StyleItYourWay        = lazy(() => import('../components/StyleItYourWay'));
-const OccasionalSpecial     = lazy(() => import('../components/OccasionalSpecial'));
-const AllJewellery          = lazy(() => import('../components/AllJewellery'));
-const SilverCollectionSection = lazy(() => import('../components/SilverCollectionSection'));
-const SilverCuratedShowcase = lazy(() => import('../components/SilverCuratedShowcase'));
-const ProposalBanner        = lazy(() => import('../components/ProposalBanner'));
-const Testimonials          = lazy(() => import('../components/Testimonials'));
-const BrandPromises         = lazy(() => import('../components/BrandPromises'));
-const ChitChatSection       = lazy(() => import('../components/ChitChatSection'));
-const FAQSection            = lazy(() => import('../components/FAQSection'));
+import ShopByPrice from '../components/ShopByPrice';
+import PremiumCategoryCards from '../components/PremiumCategoryCards';
+import BestStylesSection from '../components/BestStylesSection';
+import AutoBannerSection from '../components/AutoBannerSection';
+import SilverNewLaunchGrid from '../components/SilverNewLaunchGrid';
+import ShopByColour from '../components/ShopByColour';
+import PriceRangeShowcase from '../components/PriceRangeShowcase';
+import PerfectGift from '../components/PerfectGift';
+import NewLaunchSection from '../components/NewLaunchSection';
+import StyleItYourWay from '../components/StyleItYourWay';
+import OccasionalSpecial from '../components/OccasionalSpecial';
+import AllJewellery from '../components/AllJewellery';
+import SilverCollectionSection from '../components/SilverCollectionSection';
+import SilverCuratedShowcase from '../components/SilverCuratedShowcase';
+import ProposalBanner from '../components/ProposalBanner';
+import Testimonials from '../components/Testimonials';
+import BrandPromises from '../components/BrandPromises';
+import ChitChatSection from '../components/ChitChatSection';
+import FAQSection from '../components/FAQSection';
 
 // Lightweight fallback for lazy sections — invisible so layout doesn't shift
-const SectionFallback = () => (
-    <div style={{ minHeight: '200px' }} aria-hidden="true" />
-);
+
 
 // Wrap off-screen sections in LazySection with 500px rootMargin to load only when scrolling close
-const SectionShell = ({ children }) => (
-    <LazySection minHeight="250px">
-        <Suspense fallback={<SectionFallback />}>
-            {children}
-        </Suspense>
-    </LazySection>
-);
+
 
 const Home = () => {
     const { isLoading: isShopLoading } = useShop();
@@ -92,30 +84,30 @@ const Home = () => {
             )}
 
             {/* ── ABOVE FOLD: loaded eagerly (visible immediately) ── */}
-            <PromoSlider />
+            <DynamicPromoBanner />
             <CategoryGrid />
             <TrustMarkers />
 
             {/* ── BELOW FOLD: lazy loaded inside SectionShell ── */}
-            <SectionShell><ShopByPrice /></SectionShell>
-            <SectionShell><PremiumCategoryCards /></SectionShell>
-            <SectionShell><BestStylesSection /></SectionShell>
-            <SectionShell><AutoBannerSection /></SectionShell>
-            <SectionShell><SilverNewLaunchGrid /></SectionShell>
-            <SectionShell><ShopByColour /></SectionShell>
-            <SectionShell><PriceRangeShowcase /></SectionShell>
-            <SectionShell><PerfectGift /></SectionShell>
-            <SectionShell><NewLaunchSection /></SectionShell>
-            <SectionShell><StyleItYourWay /></SectionShell>
-            <SectionShell><OccasionalSpecial /></SectionShell>
-            <SectionShell><AllJewellery /></SectionShell>
-            <SectionShell><SilverCollectionSection /></SectionShell>
-            <SectionShell><SilverCuratedShowcase /></SectionShell>
-            <SectionShell><ProposalBanner /></SectionShell>
-            <SectionShell><Testimonials /></SectionShell>
-            <SectionShell><BrandPromises /></SectionShell>
-            <SectionShell><ChitChatSection /></SectionShell>
-            <SectionShell><FAQSection /></SectionShell>
+            <ShopByPrice />
+            <PremiumCategoryCards />
+            <BestStylesSection />
+            <AutoBannerSection />
+            <SilverNewLaunchGrid />
+            <ShopByColour />
+            <PriceRangeShowcase />
+            <PerfectGift />
+            <NewLaunchSection />
+            <StyleItYourWay />
+            <OccasionalSpecial />
+            <AllJewellery />
+            <SilverCollectionSection />
+            <SilverCuratedShowcase />
+            <ProposalBanner />
+            <Testimonials />
+            <BrandPromises />
+            <ChitChatSection />
+            <FAQSection />
         </div>
     );
 };

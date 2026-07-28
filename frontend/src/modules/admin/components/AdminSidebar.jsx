@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useLocation } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -43,11 +43,63 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
 import { useShop } from "../../../context/ShopContext";
 import logo from "@assets/logo.png";
+import { useSocket } from "../../../context/SocketContext";
+import api from "../../../services/api";
 
 const AdminSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { logout } = useAuth();
+  const { socket } = useSocket();
+  const [userOpenCount, setUserOpenCount] = useState(0);
+  const [sellerOpenCount, setSellerOpenCount] = useState(0);
+
+  const fetchSupportCounts = async () => {
+    try {
+      const userRes = await api.get('admin/support');
+      if (userRes.data.success) {
+        const t = userRes.data.data?.tickets || userRes.data.tickets || [];
+        const open = t.filter(x => x.status === 'Open' || x.status === 'In Progress').length;
+        setUserOpenCount(open);
+      }
+    } catch (err) {
+      console.error("Admin fetch support tickets failed:", err);
+    }
+    try {
+      const sellerRes = await api.get('admin/support/seller');
+      if (sellerRes.data.success) {
+        const t = sellerRes.data.data?.tickets || sellerRes.data.tickets || [];
+        const open = t.filter(x => x.status === 'Open' || x.status === 'In Progress').length;
+        setSellerOpenCount(open);
+      }
+    } catch (err) {
+      console.error("Admin fetch seller support tickets failed:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchSupportCounts();
+  }, []);
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      fetchSupportCounts();
+    };
+
+    socket.on('support_ticket_created', handleUpdate);
+    socket.on('seller_support_ticket_created', handleUpdate);
+    socket.on('support_message', handleUpdate);
+    socket.on('seller_support_message', handleUpdate);
+
+    return () => {
+      socket.off('support_ticket_created', handleUpdate);
+      socket.off('seller_support_ticket_created', handleUpdate);
+      socket.off('support_message', handleUpdate);
+      socket.off('seller_support_message', handleUpdate);
+    };
+  }, [socket]);
   const [combosExpanded, setCombosExpanded] = useState(
     location.pathname.startsWith("/admin/combo"),
   );
@@ -348,25 +400,37 @@ const AdminSidebar = () => {
           >
             <Headphones size={20} strokeWidth={isSupportActive ? 2.5 : 2} />
             <span className="font-bold text-sm flex-1 text-left">Support</span>
+            {(userOpenCount + sellerOpenCount) > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full mr-2">
+                {userOpenCount + sellerOpenCount}
+              </span>
+            )}
             <div
               className={`transition-transform duration-200 ${supportExpanded ? "rotate-180" : ""}`}
             >
               <ChevronDown size={16} />
             </div>
           </button>
-
+ 
           {supportExpanded && (
             <div className="mt-1 ml-4 pl-4 border-l border-white/10 space-y-1 animate-in slide-in-from-top-1 duration-200">
               <Link
                 to="/admin/support"
-                className={`flex items-center gap-3 px-4 py-2.5 rounded-lg transition-all text-sm ${
+                className={`flex items-center justify-between w-full px-4 py-2.5 rounded-lg transition-all text-sm ${
                   location.pathname === "/admin/support"
                     ? "bg-primary/20 text-white shadow-sm"
                     : "text-gray-400 hover:bg-white/5 hover:text-white"
                 }`}
               >
-                <Ticket size={16} />
-                <span className="font-semibold">Support Tickets</span>
+                <div className="flex items-center gap-3">
+                  <Ticket size={16} />
+                  <span className="font-semibold">Support Tickets</span>
+                </div>
+                {(userOpenCount + sellerOpenCount) > 0 && (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {userOpenCount + sellerOpenCount}
+                  </span>
+                )}
               </Link>
               <Link
                 to="/admin/support/inquiries"

@@ -1,5 +1,4 @@
-import React from 'react';
-import { Route, Routes, Navigate } from 'react-router-dom';
+import { Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import SellerLayout from '../components/SellerLayout';
 import SellerDashboard from '../pages/SellerDashboard';
 import SellerProducts from '../pages/SellerProducts';
@@ -39,7 +38,8 @@ import DynamicPage from '../../user/pages/DynamicPage';
 
 // Protected Route Component for Seller
 const SellerProtectedRoute = ({ children }) => {
-    const { user, loading, logout } = useAuth();
+    const { user, loading } = useAuth();
+    const location = useLocation();
 
     if (loading) return <div>Loading...</div>;
 
@@ -48,28 +48,11 @@ const SellerProtectedRoute = ({ children }) => {
     }
 
     if (user.status !== 'APPROVED') {
-        return (
-            <div className="min-h-screen bg-[#FDF5F6] flex items-center justify-center p-6 font-sans">
-                <div className="max-w-md w-full bg-white rounded-[2.5rem] p-12 shadow-2xl text-center space-y-6 border border-white">
-                    <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mx-auto border border-amber-100">
-                        <ShieldAlert className="w-10 h-10 text-amber-500" />
-                    </div>
-                    <h2 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Pending Authorization</h2>
-                    <p className="text-gray-500 text-sm leading-relaxed font-medium">
-                        Your merchant profile is currently under review by our administrative team. Access will be granted upon successful verification of your credentials.
-                    </p>
-                    <button 
-                        onClick={() => {
-                            logout();
-                            window.location.href = '/seller/login';
-                        }}
-                        className="w-full bg-[#3E2723] text-white py-4 rounded-xl font-black uppercase tracking-[0.2em] text-xs shadow-xl shadow-[#3E2723]/20 hover:bg-[#2D1B18] transition-all"
-                    >
-                        Return to Gateway
-                    </button>
-                </div>
-            </div>
-        );
+        // If unapproved, allow them to view / edit their profile
+        if (location.pathname === '/seller/profile') {
+            return children;
+        }
+        return <Navigate to="/seller/profile" replace />;
     }
 
     return children;

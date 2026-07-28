@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { MousePointer2, ChevronRight } from 'lucide-react';
 import heerCustomRing from '@assets/heer_custom_ring.png';
@@ -84,10 +85,12 @@ const HeerCustomisationBanner = () => {
                                 CHOOSE
                             </h3>
                             <div className="static md:absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full flex flex-col items-center lg:items-end mt-2 md:mt-0">
-                                <button className="group relative flex items-center gap-2 bg-[#D4AF37] hover:bg-white text-black px-5 py-2.5 rounded-full font-black uppercase tracking-[0.1em] text-[10px] transition-all duration-500 shadow-lg">
-                                    Customise Now
-                                    <ChevronRight className="w-3 h-3 transition-transform duration-300 group-hover:translate-x-1" />
-                                </button>
+                                <Link to="/customization" className="inline-block">
+                                    <button className="group relative flex items-center gap-2 bg-[#D4AF37] hover:bg-white text-black px-5 py-2.5 rounded-full font-black uppercase tracking-[0.1em] text-[10px] transition-all duration-500 shadow-lg cursor-pointer">
+                                        Customise Now
+                                        <ChevronRight className="w-3 h-3 transition-transform duration-300 group-hover:translate-x-1" />
+                                    </button>
+                                </Link>
                             </div>
                         </div>
 

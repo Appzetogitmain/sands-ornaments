@@ -154,6 +154,18 @@ const ProductVariantsTab = ({
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+                                                    <Tag size={10} className="text-amber-500" /> Size <span className="text-gray-300 font-normal">(Optional)</span>
+                                                </label>
+                                                <input 
+                                                    value={v.size || ''} 
+                                                    onChange={(e) => handleVariantChange(v.id, 'size', e.target.value)} 
+                                                    disabled={isViewMode} 
+                                                    className="w-full bg-white border border-gray-200 rounded-xl py-3.5 px-5 text-sm font-bold text-gray-800 outline-none focus:border-[#3E2723] focus:ring-4 focus:ring-[#3E2723]/5 transition-all shadow-sm"
+                                                    placeholder="e.g. 12, 2.4, 18 inches" 
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
                                                     <Sparkles size={10} className="text-amber-500" /> Diamond Type
                                                 </label>
                                                 <select
@@ -536,39 +548,25 @@ const ProductVariantsTab = ({
 
                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                                             <div className="space-y-4">
+                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Variant Signature</label>
+                                                <div className="w-full bg-[#FDFBF7] border border-amber-100/50 rounded-[1.5rem] p-6 flex flex-col items-center justify-center text-center shadow-inner h-[142px]">
+                                                    <span className="text-[10px] font-bold text-amber-700 uppercase tracking-widest mb-2">Reference Code</span>
+                                                    <span className="text-sm font-mono font-black text-gray-800 tracking-wide uppercase">{v.variantCode || 'PENDING ASSIGNMENT'}</span>
+                                                </div>
+                                            </div>
+                                            <div className="space-y-4">
                                                 <div className="flex items-center justify-between">
-                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Variant Signature</label>
-                                                    {v.variantCode && (
+                                                    <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Visual Identifier</label>
+                                                    {v.variantCode && v.serialCodes && v.serialCodes.length > 0 && (
                                                         <button 
                                                             type="button"
                                                             onClick={() => handleDownloadAllSerialBarcodes(v)}
-                                                            className="text-[8px] font-black text-blue-600 uppercase tracking-widest hover:underline flex items-center gap-1 cursor-pointer"
+                                                            className="text-[8px] font-black text-[#8E2B45] uppercase tracking-widest hover:underline flex items-center gap-1 cursor-pointer"
                                                         >
                                                             <Download size={10} /> Batch Export
                                                         </button>
                                                     )}
                                                 </div>
-                                                {v.variantCode ? (
-                                                    <div className="w-full bg-white border border-gray-100 rounded-[1.5rem] p-4 flex flex-col items-center gap-3 shadow-sm">
-                                                        <div className="bg-[#FDFBF7] p-3 rounded-xl border border-[#EFEBE9] w-full flex justify-center">
-                                                            <Barcode 
-                                                                value={v.variantCode} 
-                                                                width={1.2} 
-                                                                height={40} 
-                                                                fontSize={10}
-                                                                background="#FDFBF7"
-                                                            />
-                                                        </div>
-                                                        <span className="text-[10px] font-black text-gray-800 tracking-wider">{v.variantCode}</span>
-                                                    </div>
-                                                ) : (
-                                                    <div className="w-full bg-gray-50 border border-gray-100 rounded-2xl py-4 px-6 text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] shadow-inner">
-                                                        Pending Assignment
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className="space-y-4">
-                                                <label className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Visual Identifier</label>
                                                 {v.serialCodes && v.serialCodes.length > 0 ? (
                                                     <div className="grid grid-cols-1 gap-4 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                                         {v.serialCodes.map((codeObj, codeIdx) => {
@@ -686,9 +684,9 @@ const ProductVariantsTab = ({
                                                 <span className="text-[8px] font-bold text-gray-400 uppercase">Custom overrides</span>
                                             </div>
                                             <div className="bg-gray-50 rounded-3xl p-4 sm:p-6 border border-gray-100 space-y-4">
-                                                <div className="flex flex-wrap gap-3">
+                                                <div className="flex flex-col gap-3">
                                                     {!isViewMode && (
-                                                        <label className="px-5 py-3 bg-white border border-gray-200 rounded-2xl text-[9px] font-black uppercase tracking-widest text-gray-700 hover:border-[#3E2723] hover:text-[#3E2723] transition-all cursor-pointer shadow-sm">
+                                                        <label className="px-5 py-3 self-start bg-white border border-gray-200 rounded-2xl text-[9px] font-black uppercase tracking-widest text-gray-700 hover:border-[#3E2723] hover:text-[#3E2723] transition-all cursor-pointer shadow-sm">
                                                             <div className="flex items-center gap-2">
                                                                 <ImagePlus size={14} /> Upload Images
                                                             </div>
@@ -701,6 +699,9 @@ const ProductVariantsTab = ({
                                                             />
                                                         </label>
                                                     )}
+                                                    <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 w-fit">
+                                                        ✨ Recommended Size: 1080x1080px (1:1 Ratio)
+                                                    </p>
                                                 </div>
                                                 
                                                 <div className="grid grid-cols-3 gap-3">

@@ -26,6 +26,68 @@ const settingSchema = new mongoose.Schema(
     platingText: { type: String, default: "18k Gold Tone Plated" },
     purityText: { type: String, default: "925 Fine Silver" },
 
+    sandsPromise: {
+      type: [
+        {
+          title: String,
+          desc: String,
+          icon: String,
+        },
+      ],
+      default: [
+        {
+          title: "Authentic 925 Silver",
+          desc: "Certified 925 Sterling Silver with official hallmarking on every single piece.",
+          icon: "ShieldCheck",
+        },
+        {
+          title: "Skin Safe Luxury",
+          desc: "Hypoallergenic, Nickel and Lead-free materials designed for sensitive skin.",
+          icon: "Smile",
+        },
+        {
+          title: "Signature Packaging",
+          desc: "Arrives in our signature velvet-lined box, perfect for gifting and safekeeping.",
+          icon: "Gift",
+        },
+      ],
+    },
+    careGuide: {
+      type: [
+        {
+          title: String,
+          desc: String,
+          icon: String,
+        },
+      ],
+      default: [
+        {
+          title: "Stay Dry",
+          desc: "Remove before bathing or swimming to prevent tarnishing.",
+          icon: "Droplets",
+        },
+        {
+          title: "Last Step",
+          desc: "Avoid contact with perfumes, makeup, and hairsprays.",
+          icon: "Sparkles",
+        },
+        {
+          title: "Safe Haven",
+          desc: "Store in individual airtight bags to minimize oxidation.",
+          icon: "ShieldCheck",
+        },
+        {
+          title: "Gentle Clean",
+          desc: "Regularly wipe with a soft cloth to restore its natural glow.",
+          icon: "Smile",
+        },
+      ],
+    },
+    careGuideIntro: {
+      type: String,
+      default: "Our jewelry is crafted with pure 925 sterling silver and premium plating. Follow these simple steps to ensure your pieces remain as stunning as the day you first wore them.",
+    },
+
     // Announcement items
     announcementItems: {
       type: [

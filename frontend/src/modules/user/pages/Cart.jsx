@@ -13,6 +13,12 @@ const Cart = () => {
     const [couponSectionExpanded, setCouponSectionExpanded] = React.useState(true);
     const [showBreakdown, setShowBreakdown] = React.useState(false);
     const currencyText = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    const couponSaveText = (coupon) => {
+        const type = coupon.type || coupon.discountType;
+        const val = coupon.value || coupon.discountValue || 0;
+        if (type === 'free_shipping') return 'Free Shipping';
+        return `Save ${type === 'percentage' ? `${val}%` : currencyText(val)}`;
+    };
 
     useResetScroll();
 
@@ -23,7 +29,12 @@ const Cart = () => {
     const total = subtotal + giftWrapCharge + shipping - discount;
     const gstIncluded = cart.reduce((acc, item) => acc + ((Number(item.gst || item.selectedVariant?.gst || 0)) * (item.quantity || 1)), 0);
 
-    const variantLabel = (item) => item.selectedVariant?.name || item.selectedVariant?.variantName || '';
+    const variantLabel = (item) => {
+        const name = item.selectedVariant?.name || item.selectedVariant?.variantName || '';
+        const size = item.selectedVariant?.size ? `Size: ${item.selectedVariant.size}` : '';
+        if (name && size) return `${name} / ${size}`;
+        return name || size;
+    };
     const variantKey = (item) => item.variantId || item.packId || 'default';
     const availableCoupons = coupons ? coupons.filter(c => c.active !== false) : [];
 
@@ -129,31 +140,31 @@ const Cart = () => {
                                                 )}
                                             </div>
 
-                                            <div className="flex items-center justify-between gap-3">
-                                                <div className="flex items-center gap-2">
+                                            <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3 mt-1">
+                                                <div className="flex flex-wrap items-baseline gap-1.5 md:gap-2">
                                                     <span className="text-base md:text-lg font-semibold text-gray-900">{currencyText(item.price)}</span>
                                                     {item.originalPrice && (
-                                                        <span className="text-xs text-gray-400 line-through">{currencyText(item.originalPrice)}</span>
+                                                        <span className="text-[10px] md:text-xs text-gray-400 line-through">{currencyText(item.originalPrice)}</span>
                                                     )}
                                                 </div>
 
                                                 {/* Quantity Selector */}
-                                                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-1.5 py-1">
+                                                <div className="flex items-center gap-2 bg-white border border-gray-200 rounded-lg px-1.5 py-1 shrink-0 mt-1 md:mt-0">
                                                     <button
                                                         onClick={() => updateQuantity(item.id, -1, variantKey(item))}
                                                         disabled={item.quantity <= 1}
-                                                        className="w-6 h-6 flex items-center justify-center rounded border border-gray-200 text-gray-400 disabled:opacity-30 hover:bg-gray-50 transition-all"
+                                                        className="w-6 h-6 shrink-0 flex items-center justify-center rounded border border-gray-200 text-gray-500 disabled:opacity-30 hover:bg-gray-50 transition-all"
                                                     >
-                                                        <Minus className="w-3 h-3" />
+                                                        <Minus className="w-3 h-3" strokeWidth={2.5} />
                                                     </button>
-                                                    <span className="text-xs font-medium text-gray-900 min-w-[16px] text-center">
+                                                    <span className="text-xs font-medium text-gray-900 min-w-[20px] text-center">
                                                         {item.quantity || 1}
                                                     </span>
                                                     <button
                                                         onClick={() => updateQuantity(item.id, 1, variantKey(item))}
-                                                        className="w-6 h-6 flex items-center justify-center rounded bg-[#E77382] text-white hover:bg-[#8E2B45] transition-all"
+                                                        className="w-6 h-6 shrink-0 flex items-center justify-center rounded bg-[#8E2B45] text-white hover:bg-[#722237] shadow-sm transition-all"
                                                     >
-                                                        <Plus className="w-3 h-3" />
+                                                        <Plus className="w-3 h-3" strokeWidth={2.5} />
                                                     </button>
                                                 </div>
                                             </div>
@@ -323,7 +334,7 @@ const Cart = () => {
                                                     </div>
                                                     <div className="min-w-0">
                                                         <p className="text-[10px] font-medium text-gray-900 uppercase tracking-wide truncate">{coupon.code}</p>
-                                                        <p className="text-[8px] text-gray-400 truncate font-normal">{coupon.description || `Save ${coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : currencyText(coupon.discountValue)}`}</p>
+                                                        <p className="text-[8px] text-gray-400 truncate font-normal">{coupon.description || couponSaveText(coupon)}</p>
                                                     </div>
                                                 </div>
                                                 <ChevronDown className="w-3.5 h-3.5 text-gray-300 group-hover:text-[#E77382] transition-colors shrink-0" />

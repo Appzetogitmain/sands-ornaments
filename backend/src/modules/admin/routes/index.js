@@ -24,6 +24,7 @@ router.use("/gift-cards",    require("./giftCard.routes"));
 router.use("/commission",    require("./commission.routes"));
 router.use("/audit-logs",    require("./auditLog.routes"));
 router.use("/payout",        require("./payout.routes"));
+router.use("/direct-sales",  require("./directSale.routes"));
 
 module.exports = router;
 

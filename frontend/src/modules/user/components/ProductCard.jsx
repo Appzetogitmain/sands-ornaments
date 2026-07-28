@@ -167,19 +167,19 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
                     )}
 
                     {/* Dynamic Urgency Badges */}
-                    <div className="absolute top-0 left-0 flex flex-col gap-1 z-10">
+                    <div className="absolute top-0 left-0 flex flex-col gap-0.5 md:gap-1 z-10">
                         {(product.isTrending || product.tags?.isTrending) && (
-                            <div className="bg-[#E89BA8] text-white text-[9px] font-black px-2 py-1 uppercase tracking-widest shadow-sm">
+                            <div className="bg-[#E89BA8] text-white text-[7px] md:text-[9px] font-bold md:font-black px-1.5 md:px-2 py-0.5 md:py-1 uppercase tracking-widest shadow-sm">
                                 Bestseller
                             </div>
                         )}
                         {(product.tags?.isNewArrival || product.tags?.isNewLaunch) && (
-                            <div className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 uppercase tracking-widest shadow-sm">
+                            <div className="bg-emerald-500 text-white text-[7px] md:text-[9px] font-bold md:font-black px-1.5 md:px-2 py-0.5 md:py-1 uppercase tracking-widest shadow-sm">
                                 New Arrival
                             </div>
                         )}
                         {product.tags?.isMostGifted && (
-                            <div className="bg-[#3E2723] text-white text-[9px] font-black px-2 py-1 uppercase tracking-widest shadow-sm">
+                            <div className="bg-[#3E2723] text-white text-[7px] md:text-[9px] font-bold md:font-black px-1.5 md:px-2 py-0.5 md:py-1 uppercase tracking-widest shadow-sm">
                                 Most Gifted
                             </div>
                         )}
@@ -187,9 +187,18 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
 
                     <button
                         onClick={handleWishlist}
-                        className={`absolute top-2 right-2 z-20 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all transform hover:scale-110 ${isWishlisted ? 'text-[#8E2B45]' : 'text-gray-400 hover:text-rose-500'}`}
+                        className={`absolute top-1 md:top-2 right-1 md:right-2 z-20 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all transform hover:scale-110 ${isWishlisted ? 'text-[#8E2B45]' : 'text-gray-400 hover:text-rose-500'}`}
+                        title="Add to Wishlist"
                     >
-                        <Heart className={`w-4 h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                        <Heart className={`w-3.5 h-3.5 md:w-4 md:h-4 ${isWishlisted ? 'fill-current' : ''}`} />
+                    </button>
+
+                    <button
+                        onClick={handleAddToCart}
+                        className="absolute top-1 md:top-2 right-8 md:right-12 z-20 w-6 h-6 md:w-8 md:h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm transition-all transform hover:scale-110 text-gray-400 hover:text-[#8E2B45]"
+                        title="Add to Cart"
+                    >
+                        <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" />
                     </button>
 
                     <div className="absolute bottom-2 left-2 z-10 bg-white/95 px-1.5 py-0.5 rounded-sm flex items-center gap-1 shadow-sm border border-gray-100">
@@ -200,34 +209,34 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
                     </div>
                 </div>
 
-                <div className="flex flex-col items-center px-2 py-3">
-                    <div className="flex items-center justify-center gap-2 mb-1.5">
-                        <span className="text-[17px] font-extrabold text-gray-900 tracking-tight">
+                <div className="flex flex-col items-center px-1.5 py-1.5 md:px-2 md:py-2">
+                    <div className="flex items-center justify-center gap-1 md:gap-2 mb-0.5 md:mb-1">
+                        <span className="text-[14px] md:text-[17px] font-bold md:font-extrabold text-gray-900 tracking-tight font-sans">
                             {formatCurrency(effectivePrice)}
                         </span>
                         {effectiveOriginalPrice > effectivePrice && (
-                            <span className="text-[13px] text-gray-400 line-through font-medium opacity-70">
+                            <span className="text-[11px] md:text-[13px] text-gray-400 line-through font-normal md:font-medium opacity-70">
                                 {formatCurrency(effectiveOriginalPrice)}
                             </span>
                         )}
                     </div>
                     
-                    <h3 className="text-[11px] text-gray-500 line-clamp-1 h-[16px] group-hover/card:text-black transition-colors uppercase tracking-[0.08em] font-medium overflow-hidden mb-2 text-center">
+                    <h3 className="text-[9px] md:text-[11px] text-gray-500 line-clamp-1 group-hover/card:text-black transition-colors font-normal md:font-medium uppercase tracking-[0.05em] md:tracking-[0.08em] overflow-hidden mb-1.5 md:mb-2 text-center">
                         {product.name}
                     </h3>
 
-                    <div className="h-[22px] mb-3 flex items-center justify-center">
-                        {(product.priceDrop || (effectiveOriginalPrice > effectivePrice)) && (
-                            <span className="px-2.5 py-0.5 bg-blue-50 text-blue-600 text-[9px] font-black uppercase tracking-widest rounded-full border border-blue-100 shadow-sm">
+                    {(product.priceDrop || (effectiveOriginalPrice > effectivePrice)) && (
+                        <div className="mb-1.5 md:mb-2 flex items-center justify-center">
+                            <span className="px-1.5 md:px-2.5 py-0.5 bg-blue-50 text-blue-600 text-[8px] md:text-[9px] font-bold md:font-black uppercase tracking-widest rounded-full border border-blue-100 shadow-sm">
                                 PRICE DROP!
                             </span>
-                        )}
-                    </div>
+                        </div>
+                    )}
                     
-                    <div className="w-full">
+                    <div className="w-full mt-1 md:mt-2">
                         <button 
-                            onClick={handleAddToCart}
-                            className="w-full bg-[#1A1A1A] text-white font-bold text-[11px] py-3 rounded-none hover:bg-black transition-all duration-300 uppercase tracking-[0.15em] active:scale-[0.98]"
+                            onClick={handleProductOpen}
+                            className="w-full bg-[#8E2B45] text-white font-semibold md:font-bold text-[9px] md:text-[11px] py-1.5 md:py-2 rounded-none hover:bg-[#722237] transition-all duration-300 uppercase tracking-[0.1em] md:tracking-[0.15em] active:scale-[0.98] flex items-center justify-center gap-1 md:gap-2"
                         >
                             Shop Now
                         </button>

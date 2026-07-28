@@ -21,7 +21,7 @@ const PremiumCategoryCards = () => {
         {
             id: 'her',
             title: 'For Her',
-            image: womenImg,
+            image: '/Gemini_Generated_Image_42n9yj42n9yj42n9-removebg-preview.png',
             path: '/category/women',
             layout: 'right',
         }
@@ -30,7 +30,7 @@ const PremiumCategoryCards = () => {
     return (
         <section
             ref={containerRef}
-            className="pt-4 pb-2 md:pt-8 md:pb-6 bg-white overflow-visible"
+            className="mt-12 md:mt-20 pt-0 pb-2 md:pt-2 md:pb-6 bg-white overflow-visible"
         >
             <div className="container mx-auto px-4 max-w-[1100px]">
                 {/* Header */}
@@ -54,12 +54,12 @@ const PremiumCategoryCards = () => {
                             className="relative h-[115px] md:h-[180px] bg-[#FDF8F8] rounded-[24px] md:rounded-[48px] cursor-pointer group shadow-sm flex items-center border border-[#F3E0E2]/50"
                         >
                             {/* Maroon Inset Box - More Compact */}
-                            <div 
+                            <div
                                 className={`absolute top-[6%] bottom-[6%] w-[75%] bg-gradient-to-br from-[#8E2B45] via-[#5C1625] to-[#2D060F] rounded-[20px] md:rounded-[44px] flex items-center justify-center p-3 md:p-8 z-10 transition-all duration-500 group-hover:shadow-[0_15px_30px_rgba(74,16,21,0.2)] 
                                 ${item.layout === 'left' ? 'left-[2%]' : 'right-[2%]'}`}
                             >
                                 {/* Shop Now Button inside maroon box */}
-                                <div className={`flex items-center gap-3 md:gap-4 ${item.layout === 'right' ? 'flex-row-reverse' : ''}`}>
+                                <div className={`flex items-center gap-3 md:gap-4 ${item.layout === 'right' ? 'flex-row-reverse translate-x-[25px] md:translate-x-[50px]' : '-translate-x-[25px] md:-translate-x-[50px]'}`}>
                                     <span className="text-white text-[15px] md:text-[22px] font-semibold tracking-[0.1em] font-sans drop-shadow-[0_2px_8px_rgba(0,0,0,0.4)] group-hover:tracking-[0.15em] transition-all duration-700">
                                         {item.title}
                                     </span>
@@ -74,7 +74,7 @@ const PremiumCategoryCards = () => {
                             </div>
 
                             {/* Model Image - Scaled for Compactness */}
-                            <div className={`absolute bottom-0 h-[130%] md:h-[150%] z-30 pointer-events-none transition-all duration-1000 group-hover:scale-[1.03] ${item.layout === 'left' ? 'right-0' : 'left-0'}`}>
+                            <div className={`absolute ${item.layout === 'right' ? '-bottom-[28px] md:-bottom-[45px] h-[155%] md:h-[182%]' : 'bottom-0 h-[130%] md:h-[150%]'} z-30 pointer-events-none transition-all duration-1000 group-hover:scale-[1.03] ${item.layout === 'left' ? 'right-0' : 'left-0'}`}>
                                 <img
                                     src={item.image}
                                     alt={item.title}

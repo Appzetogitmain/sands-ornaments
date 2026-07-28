@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -43,6 +43,7 @@ const exploreCollections = [
 const MenExploreCollections = ({ sectionData }) => {
     const navigate = useNavigate();
     const scrollRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const resolvedTitle = sectionData?.settings?.title || 'Explore Collections';
     const resolvedCollections = useMemo(() => {
@@ -51,14 +52,23 @@ const MenExploreCollections = ({ sectionData }) => {
             .filter((item) => item?.image)
             .map((item, index) => {
                 const fallbackItem = exploreCollections[index];
+                const baseId = item.itemId || item.id || `men-explore-${index}`;
+                
+                // Force correct paths for predefined components, ignoring old CMS data
+                const forcedPaths = {
+                    'men-explore-edge': buildMenShopPath({ search: 'edge' }),
+                    'men-explore-the-classics': buildMenShopPath({ search: 'classic' }),
+                    'men-explore-iykyk': buildMenShopPath({ search: 'street' })
+                };
+
                 return {
-                    id: item.itemId || item.id || `men-explore-${index}`,
+                    id: baseId,
                     title: item.name || item.label || fallbackItem?.title || '',
                     description: item.subtitle || item.description || fallbackItem?.description || '',
                     image: resolveLegacyCmsAsset(item.image, fallbackItem?.image || ''),
-                    link: item.categoryId
+                    link: forcedPaths[baseId] || (item.categoryId
                         ? buildMenShopPath({ category: item.categoryId })
-                        : (item.path || fallbackItem?.link || buildMenShopPath()),
+                        : (item.path || fallbackItem?.link || buildMenShopPath())),
                     items: (() => {
                         const configuredThumbs = Array.isArray(item.extraImages) ? item.extraImages : [];
                         if (configuredThumbs.length > 0) {
@@ -75,15 +85,30 @@ const MenExploreCollections = ({ sectionData }) => {
         return normalizedConfigured.length > 0 ? normalizedConfigured : exploreCollections;
     }, [sectionData]);
 
-    const scroll = (direction) => {
+    const handleScroll = () => {
         if (scrollRef.current) {
-            const { current } = scrollRef;
-            const scrollAmount = window.innerWidth > 768 ? 650 : 300;
-            if (direction === 'left') {
-                current.scrollLeft -= scrollAmount;
-            } else {
-                current.scrollLeft += scrollAmount;
+            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            const maxScroll = scrollWidth - clientWidth;
+            if (maxScroll <= 0) {
+                setActiveIndex(0);
+                return;
             }
+            const percentage = scrollLeft / maxScroll;
+            const index = Math.round(percentage * (resolvedCollections.length - 1));
+            setActiveIndex(Math.min(index, resolvedCollections.length - 1));
+        }
+    };
+
+    const scrollToDot = (index) => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            const percentage = index / (resolvedCollections.length - 1 || 1);
+            container.scrollTo({
+                left: percentage * maxScroll,
+                behavior: 'smooth'
+            });
+            setActiveIndex(index);
         }
     };
 
@@ -102,21 +127,12 @@ const MenExploreCollections = ({ sectionData }) => {
                 <div className="relative group/main">
 
                     {/* Navigation Arrows */}
-                    <button
-                        onClick={() => scroll('left')}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover/main:opacity-100 transition-all hover:bg-white active:scale-90"
-                    >
-                        <ChevronLeft className="w-6 h-6 text-black" />
-                    </button>
-                    <button
-                        onClick={() => scroll('right')}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 z-40 w-12 h-12 bg-white/80 backdrop-blur-md rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover/main:opacity-100 transition-all hover:bg-white active:scale-90"
-                    >
-                        <ChevronRight className="w-6 h-6 text-black" />
-                    </button>
+                    
+                    
 
                     <div
                         ref={scrollRef}
+                        onScroll={handleScroll}
                         className="flex overflow-x-auto gap-4 md:gap-10 pb-10 md:pb-16 hide-scrollbar scroll-smooth snap-x snap-mandatory px-[7.5vw] md:px-12"
                     >
                         {resolvedCollections.map((col) => (
@@ -170,6 +186,24 @@ const MenExploreCollections = ({ sectionData }) => {
                             </div>
                         ))}
                     </div>
+
+                    {/* Carousel Dots */}
+                    {resolvedCollections.length > 1 && (
+                        <div className="flex justify-center items-center gap-2 pb-6 mt-4 md:mt-0">
+                            {resolvedCollections.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => scrollToDot(idx)}
+                                    className={`transition-all duration-300 rounded-full ${
+                                        activeIndex === idx 
+                                        ? "w-6 h-1.5 bg-black" 
+                                        : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400"
+                                    }`}
+                                    aria-label={`Go to item ${idx + 1}`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </section>

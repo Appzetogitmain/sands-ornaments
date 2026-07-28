@@ -14,6 +14,7 @@ import GoldExploreCollections from "../components/GoldExploreCollections";
 import BestStylesSection from "../components/BestStylesSection";
 import GoldCategoryGrid from "../components/GoldCategoryGrid";
 import GoldNewLaunchBanner from "../components/GoldNewLaunchBanner";
+import PromoSlider from "../components/PromoSlider";
 import GoldRingCarousel from "../components/GoldRingCarousel";
 import GoldTestimonials from "../components/GoldTestimonials";
 import CuratedForEveryBond from "../components/CuratedForEveryBond";
@@ -81,9 +82,14 @@ const GoldJewelleryPage = () => {
       : [];
     const slides = configuredItems
       .filter((item) => item?.label || item?.name || item?.image)
+      .filter((item) => {
+        const title = String(item?.label || item?.title || '').toLowerCase();
+        return !title.includes('unique story in golds') && !title.includes('unique story in gold');
+      })
       .map((item, index) => ({
         id: item.itemId || item.id || `gold-hero-${index + 1}`,
         image: resolveLegacyCmsAsset(item.image, heroGold),
+        mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, heroGold) : null,
         title:
           String(item?.label || item?.title || "Akshaya Tritiya").trim() ||
           "Akshaya Tritiya",
@@ -91,11 +97,11 @@ const GoldJewelleryPage = () => {
           String(
             item?.subtitle || item?.description || "On all gold jewellery",
           ).trim() || "On all gold jewellery",
-        eyebrow:
+        tag:
           String(item?.name || item?.tag || item?.eyebrow || "Shubh").trim() ||
           "Shubh",
         ctaLabel: String(item?.ctaLabel || "Shop Now").trim() || "Shop Now",
-        ctaPath: ensureGoldPath(item?.path || "/shop?metal=gold"),
+        link: ensureGoldPath(item?.path || "/shop?metal=gold"),
       }));
 
     if (slides.length > 0) return slides;
@@ -106,28 +112,16 @@ const GoldJewelleryPage = () => {
         image: heroGold,
         title: "Akshaya Tritiya",
         subtitle: "On all gold jewellery",
-        eyebrow: "Shubh",
+        tag: "Shubh",
         ctaLabel: "Shop Now",
-        ctaPath: "/shop?metal=gold",
+        link: "/shop?metal=gold",
       },
     ];
   }, [sectionMap]);
 
-  useEffect(() => {
-    setCurrentHeroIndex(0);
-  }, [heroSlides.length]);
+  const autoplayMs = Number(sectionMap["hero-banners-gold"]?.settings?.autoplayMs) || 3000;
 
-  useEffect(() => {
-    if (heroSlides.length <= 1) return undefined;
-    const autoplayMs =
-      Number(sectionMap["hero-banners-gold"]?.settings?.autoplayMs) || 3000;
-    const timer = setInterval(() => {
-      setCurrentHeroIndex((prev) => (prev + 1) % heroSlides.length);
-    }, autoplayMs);
-    return () => clearInterval(timer);
-  }, [heroSlides.length, sectionMap]);
-
-  const heroContent = heroSlides[currentHeroIndex] || heroSlides[0];
+  // PromoSlider handles its own state now
 
   const trustBadges = useMemo(() => {
     const trustSection = sectionMap["gold-trust-markers"];
@@ -195,46 +189,7 @@ const GoldJewelleryPage = () => {
 
   return (
     <div className="bg-white min-h-screen font-body">
-      <div className="w-full h-[160px] md:h-[240px] flex overflow-hidden">
-        <div className="relative w-[55%] md:w-[60%] h-full overflow-hidden bg-[#0D1C12]">
-          <img
-            src={heroContent.image}
-            alt="Sands Gold Collection"
-            className="w-full h-full object-cover object-center opacity-90"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-[#0D1C12]/30 via-transparent to-[#0D1C12]/60" />
-        </div>
-
-        <div
-          className="relative w-[45%] md:w-[40%] h-full flex flex-col items-center justify-center"
-          style={{
-            background:
-              "linear-gradient(135deg, #0A1A0E 0%, #1A2E18 50%, #0D1C12 100%)",
-          }}
-        >
-          <div className="text-center px-3 md:px-6">
-            <p className="text-[#D4AF37] font-serif italic text-[11px] md:text-[14px] mb-0.5">
-              {heroContent.eyebrow}
-            </p>
-            <h1
-              className="text-white font-serif font-bold leading-tight mb-3 md:mb-4"
-              style={{ fontSize: "clamp(16px, 4vw, 30px)" }}
-            >
-              {heroContent.title}
-            </h1>
-            <p className="text-white/70 text-[7px] md:text-[10px] mt-1 mb-2">
-              {heroContent.subtitle}
-            </p>
-            <Link
-              to={heroContent.ctaPath}
-              className="inline-flex items-center gap-1 bg-white text-[#0D1C12] text-[7px] md:text-[10px] font-black uppercase tracking-widest px-3 md:px-5 py-1 md:py-1.5 rounded-sm hover:bg-[#D4AF37] hover:text-white transition-all duration-300"
-            >
-              {heroContent.ctaLabel}
-              <ArrowRight className="w-2.5 h-2.5" />
-            </Link>
-          </div>
-        </div>
-      </div>
+      <PromoSlider externalSlides={heroSlides} autoplayInterval={autoplayMs} />
 
       <GoldCategoryGrid sectionData={sectionMap["gold-category-grid"]} />
       <HeerCustomisationBanner />

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { adminService } from '../../services/adminService';
 import { FormSection, Input } from '../common/FormControls';
 import { resolveLegacyCmsAsset } from '../../../user/utils/legacyCmsAssets';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const createBannerItem = () => ({
     id: `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
@@ -11,6 +12,7 @@ const createBannerItem = () => ({
     label: '',
     subtitle: '',
     image: '',
+    mobileImage: '',
     path: '/shop',
     tag: '',
     ctaLabel: 'Shop Collection',
@@ -27,11 +29,13 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
     const isGoldPageBanner = pageKey === 'gold-collection';
     const isSingleBannerSection = isWomenPersonalizedBanner || isFamilyPromoBanner;
 
-    const isLandscapeBanner = sectionKey === 'hero-banners' || sectionKey === 'auto-banner-section';
-    const bannerPreviewAspect = isLandscapeBanner ? 'aspect-[21/9] md:aspect-[3/1]' : 'aspect-[4/5]';
-    const recommendedBannerSize = isLandscapeBanner ? '1920 x 800 px' : '1200 x 1500 px';
-    const recommendedRatioText = isLandscapeBanner 
-        ? 'Recommended ratio: 21:9. Upload a wide landscape image to prevent cropping.'
+    const isLandscapeBanner = sectionKey === 'hero-banners' || sectionKey === 'auto-banner-section' || sectionKey === 'hero-banners-gold';
+    const isDynamicPromoBanner = sectionKey === 'dynamic-promo-banner';
+    
+    const bannerPreviewAspect = isDynamicPromoBanner ? 'aspect-[4/1]' : (isLandscapeBanner ? 'aspect-[4/1]' : 'aspect-[4/5]');
+    const recommendedBannerSize = isDynamicPromoBanner ? '1920 x 480 px (4:1)' : (isLandscapeBanner ? '1920 x 480 px (4:1)' : '1200 x 1500 px');
+    const recommendedRatioText = isDynamicPromoBanner || isLandscapeBanner
+        ? 'Required ratio: 4:1 (e.g. 1920x480). Images must be exactly this ratio.'
         : 'Recommended ratio: 4:5. Upload the same size for every banner so the layouts stay aligned.';
 
     const initialItems = useMemo(() => {
@@ -60,16 +64,14 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
         return [createBannerItem()];
     }, [defaultItems, isSingleBannerSection, sectionData?.items]);
 
-    const [items, setItems] = useState(initialItems);
+    const [items, setItems] = useDraftState(`draft_items_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialItems);
     const [settings, setSettings] = useState({
         autoplayMs: sectionData?.settings?.autoplayMs || 3000
     });
     const [saving, setSaving] = useState(false);
     const [categories, setCategories] = useState([]);
 
-    useEffect(() => {
-        setItems(initialItems);
-    }, [initialItems]);
+    
 
     useEffect(() => {
         setSettings({
@@ -104,14 +106,41 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
         )));
     };
 
-    const handleImageUpload = async (id, file) => {
+    const validateImageRatio = (file, expectedRatio, tolerance = 0.05) => {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => {
+                const ratio = img.width / img.height;
+                if (Math.abs(ratio - expectedRatio) > tolerance) {
+                    reject(new Error(`Invalid aspect ratio. Expected ${expectedRatio.toFixed(2)}:1, got ${ratio.toFixed(2)}:1. Please use exact ${expectedRatio.toFixed(2)}:1 ratio (e.g. 1920x480 for 4:1).`));
+                } else {
+                    resolve();
+                }
+            };
+            img.onerror = () => reject(new Error('Invalid image file.'));
+            img.src = URL.createObjectURL(file);
+        });
+    };
+
+    const handleImageUpload = async (id, file, isMobile = false) => {
         if (!file) return;
+
+        if (isDynamicPromoBanner || isLandscapeBanner) {
+            try {
+                const expectedRatio = isMobile ? 2 : 4;
+                await validateImageRatio(file, expectedRatio, 0.05);
+            } catch (err) {
+                toast.error(err.message);
+                return;
+            }
+        }
+
         const uploadedUrl = await adminService.uploadSectionImage(file);
         if (!uploadedUrl) {
             toast.error('Image upload failed. Please try again.');
             return;
         }
-        updateItem(id, 'image', uploadedUrl);
+        updateItem(id, isMobile ? 'mobileImage' : 'image', uploadedUrl);
     };
 
     const addBanner = () => {
@@ -134,9 +163,9 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
     };
 
     const handleSave = async () => {
-        const invalid = items.find((item) => !item.label?.trim() || !item.image?.trim());
+        const invalid = items.find((item) => !item.label?.trim() || !item.image?.trim() || !item.mobileImage?.trim());
         if (invalid) {
-            toast.error('Each banner needs at least a title and image before saving.');
+            toast.error('Each banner requires a title, a desktop image, and a mobile image before saving.');
             return;
         }
         if (isFamilyPromoBanner) {
@@ -163,6 +192,7 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                     itemId: item.itemId || item.id,
                     sortOrder: index,
                     subtitle: item.subtitle || '',
+                    mobileImage: item.mobileImage || '',
                     ctaLabel: item.ctaLabel || 'Shop Collection',
                     price: item.price || '',
                     categoryId: isFamilyPromoBanner ? (item.categoryId || null) : item.categoryId,
@@ -200,43 +230,90 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                         key={item.id}
                         title={`Banner ${index + 1}`}
                     >
-                        <div className="grid grid-cols-1 xl:grid-cols-[260px_minmax(0,1fr)] gap-6">
-                            <div className="space-y-3">
-                                <label className="block text-xs font-semibold text-gray-700 tracking-wide">
-                                    Banner Image
-                                    <span className="ml-2 text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400">
-                                        {recommendedBannerSize}
-                                    </span>
-                                </label>
-                                <div className={`relative ${bannerPreviewAspect} rounded-2xl border border-dashed border-gray-300 bg-[#F8F5F2] overflow-hidden`}>
-                                    {item.image ? (
-                                        <img
-                                            src={resolveLegacyCmsAsset(item.image, item.image)}
-                                            alt={item.label || `Banner ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400">
-                                            <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center">
-                                                <ImageIcon size={20} />
+                        <div className="grid grid-cols-1 xl:grid-cols-[540px_minmax(0,1fr)] gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-3">
+                                    <label className="block text-xs font-semibold text-gray-700 tracking-wide">
+                                        Desktop Image
+                                        <span className="ml-2 text-[10px] font-medium uppercase tracking-[0.2em] text-gray-400">
+                                            {recommendedBannerSize}
+                                        </span>
+                                    </label>
+                                    <div className={`relative ${bannerPreviewAspect} rounded-2xl border border-dashed border-gray-300 bg-[#F8F5F2] overflow-hidden`}>
+                                        {item.image ? (
+                                            <img
+                                                src={resolveLegacyCmsAsset(item.image, item.image)}
+                                                alt={item.label || `Desktop Banner ${index + 1}`}
+                                                className="w-full h-full object-contain"
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400">
+                                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                                    <ImageIcon size={20} />
+                                                </div>
+                                                <p className="text-[11px] font-bold uppercase tracking-widest">Upload</p>
                                             </div>
-                                            <p className="text-[11px] font-bold uppercase tracking-widest">Upload Banner</p>
+                                        )}
+                                    </div>
+                                    <div className="mt-2 flex flex-col gap-2">
+                                        <div className="inline-block">
+                                            <p className="inline-block text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200">
+                                                ✨ {recommendedRatioText}
+                                            </p>
                                         </div>
-                                    )}
+                                    </div>
+                                    <label className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E2723] px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#2D1B18] transition-all cursor-pointer">
+                                        <ImageIcon size={14} />
+                                        Change Desktop
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => handleImageUpload(item.id, e.target.files?.[0], false)}
+                                        />
+                                    </label>
                                 </div>
-                                <p className="text-[11px] leading-4 text-gray-500">
-                                    {recommendedRatioText}
-                                </p>
-                                <label className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E2723] px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#2D1B18] transition-all cursor-pointer">
-                                    <ImageIcon size={14} />
-                                    Change Image
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        className="hidden"
-                                        onChange={(e) => handleImageUpload(item.id, e.target.files?.[0])}
-                                    />
-                                </label>
+                                <div className="space-y-3">
+                                    <label className="block text-xs font-semibold text-gray-700 tracking-wide">
+                                        Mobile Image
+                                        <span className="ml-2 text-[10px] font-bold uppercase tracking-[0.2em] text-red-500">
+                                            * REQUIRED
+                                        </span>
+                                    </label>
+                                    <div className={`relative aspect-[4/5] rounded-2xl border border-dashed border-gray-300 bg-[#F8F5F2] overflow-hidden`}>
+                                        {item.mobileImage ? (
+                                            <img
+                                                src={resolveLegacyCmsAsset(item.mobileImage, item.mobileImage)}
+                                                alt={item.label || `Mobile Banner ${index + 1}`}
+                                                className="w-full h-full object-contain"
+                                            />
+                                        ) : (
+                                            <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-gray-400">
+                                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center">
+                                                    <ImageIcon size={20} />
+                                                </div>
+                                                <p className="text-[11px] font-bold uppercase tracking-widest">Upload</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="mt-2 flex flex-col gap-2">
+                                        <div className="inline-block">
+                                            <p className="inline-block text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200">
+                                                ✨ Recommended ratio: 2:1 (e.g. 1000x500 px).
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <label className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-[11px] mt-2 text-xs font-bold uppercase tracking-widest text-gray-700 hover:bg-gray-50 transition-all cursor-pointer">
+                                        <ImageIcon size={14} />
+                                        Change Mobile
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={(e) => handleImageUpload(item.id, e.target.files?.[0], true)}
+                                        />
+                                    </label>
+                                </div>
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

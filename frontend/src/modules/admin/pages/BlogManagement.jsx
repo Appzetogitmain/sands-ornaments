@@ -468,6 +468,7 @@ const BlogManagement = () => {
                       }));
                     }}
                   />
+                  <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1920x1080px (16:9 Ratio)</p>
                 </div>
               </div>
             </div>

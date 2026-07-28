@@ -3,8 +3,8 @@ import { useShop } from '../../../context/ShopContext';
 import { useAuth } from '../../../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
-import api from '../../../services/api';
 import { useResetScroll } from '../../../hooks/useResetScroll';
+import { useAnalytics } from '../../../hooks/useAnalytics';
 
 import CheckoutAuth from '../components/Checkout/CheckoutAuth';
 import CheckoutAddresses from '../components/Checkout/CheckoutAddresses';
@@ -16,6 +16,7 @@ const Checkout = () => {
     const { cart, placeOrder, addresses, addAddress, defaultAddressId, coupons, applyCoupon, appliedCoupon, couponDiscount, clearAppliedCoupon } = useShop();
     const { user, sendOtp, verifyOtp } = useAuth();
     const navigate = useNavigate();
+    const { track } = useAnalytics();
     const currencyText = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
     const cartItemKey = (item) => `${item.id}-${item.variantId || item.packId || 'default'}`;
     const couponSummary = (coupon) => coupon?.description || coupon?.desc || 'Offer available on eligible items';
@@ -77,6 +78,22 @@ const Checkout = () => {
             toast.error('Cash on Delivery is not available for orders containing Gift Cards.');
         }
     }, [hasGiftCard, paymentMethod]);
+
+    // Track checkout start
+    useEffect(() => {
+        if (cart.length > 0) {
+            track('checkout_start', {
+                cartCount: cart.length,
+                subtotal,
+                items: cart.map(item => ({
+                    id: item.id || item._id,
+                    variantId: item.variantId,
+                    quantity: item.quantity,
+                    price: item.price
+                }))
+            });
+        }
+    }, []);
 
     // Get active coupons from context
     const availableCoupons = coupons ? coupons.filter(c => c.active !== false) : [];

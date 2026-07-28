@@ -28,7 +28,7 @@ const orderSchema = new mongoose.Schema({
     state: String, pincode: String
   },
   paymentMethod: { type: String, enum: ["razorpay", "cod"] },
-  paymentStatus: { type: String, enum: ["pending", "paid", "failed", "refunded", "cod"], default: "pending" },
+  paymentStatus: { type: String, enum: ["pending", "paid", "failed", "refunded", "cod", "partially_refunded"], default: "pending" },
   razorpayOrderId: String,
   razorpayPaymentId: String,
   couponCode: String,
@@ -47,7 +47,7 @@ const orderSchema = new mongoose.Schema({
   }],
   status: {
     type: String,
-    enum: ["Pending", "Processing", "Confirmed", "Packed", "Partially Shipped", "Shipped", "Out for Delivery", "Delivered", "Cancelled", "Return Requested", "Returned"],
+    enum: ["Pending", "Processing", "Confirmed", "Packed", "Partially Shipped", "Shipped", "Out for Delivery", "Delivered", "Cancelled", "Return Requested", "Returned", "Partially Returned"],
     default: "Processing"
   },
   shippingInfo: { carrier: String, trackingId: String, trackingUrl: String, estimatedDelivery: Date },

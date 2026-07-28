@@ -13,11 +13,11 @@ import dailyWearImg from '@assets/glam/daily_wear.png';
 import officeWearImg from '@assets/glam/office_wear.png';
 
 const glamItems = [
-    { id: 1, title: 'Party Spark', image: partySparkImg, path: buildMenShopPath({ category: 'rings' }) },
-    { id: 2, title: 'Wedding Jewels', image: weddingJewelsImg, path: buildMenShopPath({ category: 'chains' }) },
-    { id: 3, title: 'Ritual Range', image: ritualRangeImg, path: buildMenShopPath({ category: 'pendants' }) },
-    { id: 4, title: 'Daily Wear', image: dailyWearImg, path: buildMenShopPath({ category: 'bracelets' }) },
-    { id: 5, title: 'Office Wear', image: officeWearImg, path: buildMenShopPath({ category: 'rings' }) },
+    { id: 1, title: 'Party Spark', image: partySparkImg, path: buildMenShopPath({ category: 'party-spark' }) },
+    { id: 2, title: 'Wedding Jewels', image: weddingJewelsImg, path: buildMenShopPath({ category: 'wedding-jewels' }) },
+    { id: 3, title: 'Ritual Range', image: ritualRangeImg, path: buildMenShopPath({ category: 'ritual-range' }) },
+    { id: 4, title: 'Daily Wear', image: dailyWearImg, path: buildMenShopPath({ category: 'daily-wear' }) },
+    { id: 5, title: 'Office Wear', image: officeWearImg, path: buildMenShopPath({ category: 'office-wear' }) },
 ];
 
 const MenPickYourGlam = ({ sectionData }) => {
@@ -38,13 +38,24 @@ const MenPickYourGlam = ({ sectionData }) => {
             .filter((item) => item?.image)
             .map((item, index) => {
                 const fallback = glamItems[index];
+                const baseId = item.itemId || item.id || `men-glam-${index}`;
+                
+                // Force correct paths for predefined components, ignoring old CMS data
+                const forcedPaths = {
+                    'men-glam-party-spark': buildMenShopPath({ category: 'party-spark' }),
+                    'men-glam-wedding-jewels': buildMenShopPath({ category: 'wedding-jewels' }),
+                    'men-glam-ritual-range': buildMenShopPath({ category: 'ritual-range' }),
+                    'men-glam-daily-wear': buildMenShopPath({ category: 'daily-wear' }),
+                    'men-glam-office-wear': buildMenShopPath({ category: 'office-wear' })
+                };
+
                 return {
-                    id: item.itemId || item.id || `men-glam-${index}`,
+                    id: baseId,
                     title: item.name || item.label || fallback?.title || '',
                     image: resolveLegacyCmsAsset(item.image, fallback?.image || ''),
-                    path: item.categoryId
+                    path: forcedPaths[baseId] || (item.categoryId
                         ? buildMenShopPath({ category: item.categoryId })
-                        : (item.path || fallback?.path || buildMenShopPath())
+                        : (item.path || fallback?.path || buildMenShopPath()))
                 };
             })
             .filter((item) => item.title && item.image && item.path);
@@ -81,19 +92,9 @@ const MenPickYourGlam = ({ sectionData }) => {
                 <div className="relative flex items-center justify-center">
 
                     {/* Navigation Arrows */}
-                    <button
-                        onClick={prev}
-                        className="absolute left-0 md:left-4 z-40 p-1.5 md:p-2 rounded-full bg-white/60 backdrop-blur-md hover:bg-white transition-all shadow-sm group"
-                    >
-                        <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-gray-400 group-hover:text-black" />
-                    </button>
+                    
 
-                    <button
-                        onClick={next}
-                        className="absolute right-0 md:right-4 z-40 p-1.5 md:p-2 rounded-full bg-white/60 backdrop-blur-md hover:bg-white transition-all shadow-sm group"
-                    >
-                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-gray-400 group-hover:text-black" />
-                    </button>
+                    
 
                     <div className="w-full flex justify-center">
                         <motion.div

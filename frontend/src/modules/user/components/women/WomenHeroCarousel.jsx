@@ -49,6 +49,7 @@ const WomenHeroCarousel = ({ sectionData }) => {
           titleItalic,
           subtitle: item.subtitle || defaultSlides[0].subtitle,
           image: resolveLegacyCmsAsset(item.image, defaultSlides[0].image),
+          mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, defaultSlides[0].image) : null,
           cta: item.ctaLabel || defaultSlides[0].cta,
           path: item.path || buildWomenShopPath({ category: "women" }),
           accent: defaultSlides[0].accent,
@@ -77,11 +78,22 @@ const WomenHeroCarousel = ({ sectionData }) => {
     ? defaultSlides[0].image
     : slide.image;
 
+  const sliderAspect = slide.mobileImage ? 'aspect-[2/1] md:aspect-[4/1]' : 'aspect-[4/1]';
+
   return (
-    <section className="relative w-full h-[200px] md:h-[400px] overflow-hidden select-none">
+    <section className={`relative w-full overflow-hidden select-none transition-all duration-300 ${sliderAspect}`}>
       <div className="absolute inset-0 w-full h-full">
+        {slide.mobileImage && (
+            <div
+              className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] hover:scale-105 block md:hidden"
+              style={{
+                backgroundImage: `url(${slide.mobileImage})`,
+                backgroundPosition: "center",
+              }}
+            />
+        )}
         <div
-          className="absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] hover:scale-105"
+          className={`absolute inset-0 bg-cover bg-center transition-transform duration-[10000ms] hover:scale-105 ${slide.mobileImage ? 'hidden md:block' : 'block'}`}
           style={{
             backgroundImage: `url(${activeImage})`,
             backgroundPosition: "center 35%",
@@ -97,7 +109,7 @@ const WomenHeroCarousel = ({ sectionData }) => {
         />
         <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/20 to-transparent" />
 
-        <div className="relative h-full container mx-auto px-6 md:px-20 flex flex-col justify-center items-end text-right">
+        <div className="relative h-full container mx-auto px-2 md:px-20 flex flex-col justify-center items-end text-right">
           <motion.div
             initial={{ opacity: 0, x: 50 }}
             whileInView={{ opacity: 1, x: 0 }}
@@ -105,18 +117,18 @@ const WomenHeroCarousel = ({ sectionData }) => {
             transition={{ duration: 0.8, delay: 0.3 }}
             className="max-w-xl"
           >
-            <span className="inline-block text-[8px] md:text-xs text-white/50 tracking-[0.3em] md:tracking-[0.5em] uppercase mb-2 md:mb-4 font-bold border-r-2 border-white/30 pr-2 md:pr-4">
+            <span className="inline-block text-[4px] sm:text-[6px] md:text-xs text-white/50 tracking-[0.3em] md:tracking-[0.5em] uppercase mb-0 md:mb-4 font-bold border-r-[1px] md:border-r-2 border-white/30 pr-1 md:pr-4">
               Sands Jewels Exclusive
             </span>
 
-            <h1 className="text-4xl md:text-8xl font-serif text-white tracking-tight font-light leading-[1] transition-all">
+            <h1 className="text-sm sm:text-2xl md:text-8xl font-serif text-white tracking-tight font-light leading-none md:leading-[1] transition-all">
               {slide.title}
               <span className="italic" style={{ color: slide.accent }}>
                 {slide.titleItalic}
               </span>
             </h1>
 
-            <p className="text-xs md:text-lg text-white/80 font-light mt-2 mb-4 md:mt-4 md:mb-8 tracking-wide italic">
+            <p className="text-[5px] sm:text-[8px] md:text-lg text-white/80 font-light mt-0 mb-1 md:mt-4 md:mb-8 tracking-wide italic">
               {slide.subtitle}
             </p>
 
@@ -125,9 +137,9 @@ const WomenHeroCarousel = ({ sectionData }) => {
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 onClick={() => navigate(slide.path)}
-                className="px-5 py-2 md:px-8 md:py-4 bg-white text-black text-[8px] md:text-xs font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] rounded-none hover:bg-black hover:text-white transition-all shadow-2xl flex items-center gap-2 md:gap-3 group"
+                className="px-1.5 py-0.5 md:px-8 md:py-4 bg-white text-black text-[4px] sm:text-[6px] md:text-xs font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] rounded-none hover:bg-black hover:text-white transition-all shadow-2xl flex items-center gap-1 md:gap-3 group"
               >
-                <ShoppingBag className="w-4 h-4" />
+                <ShoppingBag className="w-[6px] h-[6px] md:w-4 md:h-4" />
                 {slide.cta}
               </motion.button>
             </div>
@@ -136,6 +148,27 @@ const WomenHeroCarousel = ({ sectionData }) => {
 
         <div className="absolute inset-0 opacity-5 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/dust.png')]" />
       </div>
+
+      {/* Sliding Line Indicators */}
+      {slides.length > 1 && (
+        <div className="absolute bottom-3 md:bottom-10 left-1/2 -translate-x-1/2 flex gap-2 md:gap-3 z-30">
+          {slides.map((_, index) => {
+            const isActive = index === currentIndex;
+            return (
+              <button
+                key={index}
+                onClick={() => setCurrentIndex(index)}
+                className={`transition-all duration-500 rounded-full ${
+                  isActive
+                    ? "w-8 md:w-10 h-1 bg-white"
+                    : "w-3 md:w-4 h-1 bg-white/30 hover:bg-white/60"
+                }`}
+                aria-label={`Go to slide ${index + 1}`}
+              />
+            );
+          })}
+        </div>
+      )}
     </section>
   );
 };

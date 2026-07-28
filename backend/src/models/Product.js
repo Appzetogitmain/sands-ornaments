@@ -51,6 +51,7 @@ const productSchema = new mongoose.Schema({
   },
   variants: [{
     name: { type: String, required: true },
+    size: { type: String, trim: true },
     variantCode: { type: String, trim: true },
     weight: { type: Number, min: 0 },
     weightUnit: { type: String, enum: ["Grams", "Milligrams"], default: "Grams" },

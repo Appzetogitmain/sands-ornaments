@@ -571,6 +571,186 @@ const reverseCommissionsForOrder = async (
   }
 };
 
+/**
+ * Adjust commission ledger entries and adjust seller wallet balances for partial returns.
+ * If all items are returned, triggers full reversal.
+ */
+const adjustCommissionsForReturn = async (
+  orderId,
+  returnReq,
+  { session, safe = false } = {}
+) => {
+  const oid = _toObjectIdOrNull(orderId);
+  if (!oid) return _maybeThrow(safe, new Error("adjustCommissions: invalid order id"));
+
+  try {
+    const ReturnModel = require("../models/Return");
+    const order = await Order.findById(oid);
+    if (!order) return _maybeThrow(safe, new Error("adjustCommissions: order not found"));
+
+    // 1. Find all completed returns for this order (status "Refunded")
+    const completedReturns = await ReturnModel.find({ orderId: oid, status: "Refunded" });
+    
+    // Ensure we include the current returnReq's items if it is currently transitioning to Refunded
+    const allReturnedItems = [];
+    for (const ret of completedReturns) {
+      allReturnedItems.push(...(ret.items || []));
+    }
+    if (returnReq && !completedReturns.some(r => String(r._id) === String(returnReq._id))) {
+      allReturnedItems.push(...(returnReq.items || []));
+    }
+
+    // 2. Compute remaining active items in the order
+    const remainingItems = [];
+    const returnedVariantQtyMap = new Map();
+    for (const retItem of allReturnedItems) {
+      const key = String(retItem.variantId);
+      returnedVariantQtyMap.set(key, (returnedVariantQtyMap.get(key) || 0) + Number(retItem.qty || 0));
+    }
+
+    for (const item of order.items || []) {
+      const key = String(item.variantId);
+      const returnedQty = returnedVariantQtyMap.get(key) || 0;
+      const remainingQty = Math.max(0, Number(item.quantity || 0) - returnedQty);
+      if (remainingQty > 0) {
+        remainingItems.push({
+          ...item.toObject(),
+          quantity: remainingQty
+        });
+      }
+    }
+
+    // 3. If there are no remaining items (full return), do a full reversal!
+    if (remainingItems.length === 0) {
+      return reverseCommissionsForOrder(orderId, {
+        triggeredBy: "return_refunded",
+        reasonNote: `Full return refunded: Return ${returnReq?.returnId || returnReq?._id}`,
+        session,
+        safe
+      });
+    }
+
+    // 4. If there are remaining items (partial return):
+    const opts = session ? { session } : {};
+    
+    // a) Reverse the current open commission accruals (this debits the wallet for original earnings)
+    const openEntries = await Commission.find({
+      orderId: oid,
+      type: { $in: ["accrual", "backfill"] },
+      status: { $in: ["pending", "confirmed"] }
+    });
+
+    for (const original of openEntries) {
+      const reversalDoc = {
+        orderId: original.orderId,
+        orderNumber: original.orderNumber,
+        sellerId: original.sellerId,
+        sellerSubtotal: original.sellerSubtotal,
+        sellerDiscountShare: original.sellerDiscountShare,
+        sellerGiftCardShare: original.sellerGiftCardShare,
+        taxableAmount: original.taxableAmount,
+        commissionAmount: original.commissionAmount,
+        tierLabel: original.tierLabel,
+        tierSnapshot: original.tierSnapshot,
+        type: "reversal",
+        status: "confirmed",
+        triggeredBy: "return_refunded",
+        reversesEntryId: original._id,
+        reasonNote: `Partial return adjustment: Return ${returnReq?.returnId || returnReq?._id}`
+      };
+
+      const [insertedReversal] = await Commission.create([reversalDoc], opts);
+      
+      const wasConfirmed = original.status === "confirmed";
+      original.status = "reversed";
+      await original.save(opts);
+
+      if (wasConfirmed) {
+        const previousEarning = Math.round(original.taxableAmount - original.commissionAmount);
+        if (previousEarning > 0) {
+          try {
+            await _adjustWallet(
+              original.sellerId,
+              -previousEarning,
+              {
+                reason: "commission_reversed",
+                orderId: original.orderId,
+                commissionId: original._id,
+                description: `Partial return adjustment order ${original.orderNumber} — ₹${previousEarning} debited`
+              },
+              { session }
+            );
+          } catch (walletErr) {
+            console.error("[Commission] wallet debit failed for seller", original.sellerId, walletErr.message);
+          }
+        }
+      }
+    }
+
+    // b) Accrue the new remaining commission breakdown for remaining items!
+    const { tiers, enabled } = await getActiveTiers();
+    if (enabled) {
+      const breakdown = computeOrderCommissions(
+        {
+          items: remainingItems,
+          discount: order.discount,
+          giftCardDiscount: order.giftCardDiscount
+        },
+        tiers
+      );
+
+      for (const row of breakdown) {
+        const sellerOid = _toObjectIdOrNull(row.sellerId);
+        if (!sellerOid || row.commissionAmount <= 0) continue;
+
+        const doc = {
+          orderId: oid,
+          orderNumber: order.orderId || String(order._id),
+          sellerId: sellerOid,
+          sellerSubtotal: row.sellerSubtotal,
+          sellerDiscountShare: row.sellerDiscountShare,
+          sellerGiftCardShare: row.sellerGiftCardShare,
+          taxableAmount: row.taxableAmount,
+          commissionAmount: row.commissionAmount,
+          tierLabel: row.tierLabel,
+          tierSnapshot: row.tierSnapshot,
+          type: "accrual",
+          status: "confirmed", // Mark directly confirmed as order is already delivered!
+          triggeredBy: "return_refunded"
+        };
+
+        const [insertedAccrual] = await Commission.create([doc], opts);
+
+        // Credit the seller's wallet immediately for the new net earnings
+        const sellerEarning = Math.round(row.taxableAmount - row.commissionAmount);
+        if (sellerEarning > 0) {
+          try {
+            await _adjustWallet(
+              sellerOid,
+              sellerEarning,
+              {
+                reason: "commission_confirmed",
+                orderId: oid,
+                commissionId: insertedAccrual._id,
+                description: `Partial return adjustment order ${doc.orderNumber} — ₹${sellerEarning} credited`
+              },
+              { session }
+            );
+          } catch (walletErr) {
+            console.error("[Commission] wallet credit failed for seller", sellerOid, walletErr.message);
+          }
+        }
+      }
+    }
+
+    await recomputeOrderSummary(oid, { session });
+    return { ok: true, partial: true };
+  } catch (err) {
+    console.error("[Commission] adjustCommissionsForReturn failed:", err.message);
+    return _maybeThrow(safe, err);
+  }
+};
+
 // ─────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────
@@ -586,5 +766,6 @@ module.exports = {
   backfillCommissionsForOrder,
   confirmCommissionsForOrder,
   reverseCommissionsForOrder,
+  adjustCommissionsForReturn,
   recomputeOrderSummary,
 };

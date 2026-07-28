@@ -35,6 +35,7 @@ const AutoBannerSection = () => {
             .map((item, index) => ({
                 id: item.itemId || item.id || `auto-banner-${index + 1}`,
                 image: resolveLegacyCmsAsset(item.image, item.image),
+                mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, item.mobileImage) : null,
                 title: item.label,
                 subtitle: item.subtitle || '',
                 link: item.path || '/shop',
@@ -59,13 +60,13 @@ const AutoBannerSection = () => {
     }, [currentIndex, slides.length]);
 
     return (
-        <section className="w-full relative overflow-hidden bg-white pt-10 md:pt-16 pb-0">
-            <div className="container mx-auto px-4 mb-8 md:mb-12 text-center">
+        <section className="w-full relative overflow-hidden bg-white pt-4 md:pt-6 pb-0">
+            <div className="container mx-auto px-4 mb-3 md:mb-5 text-center">
                 <motion.span 
                     initial={{ opacity: 0, y: 10 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="text-[#8E2B45] text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-3 block"
+                    className="text-[#8E2B45] text-[10px] md:text-xs font-bold tracking-[0.4em] uppercase mb-1 block"
                 >
                     Premium Narrative
                 </motion.span>
@@ -77,10 +78,10 @@ const AutoBannerSection = () => {
                 >
                     Signature <span className="italic font-light text-[#8E2B45]">Curations</span>
                 </motion.h2>
-                <div className="w-12 h-[2px] bg-[#8E2B45]/20 mx-auto mt-4 rounded-full" />
+                <div className="w-12 h-[2px] bg-[#8E2B45]/20 mx-auto mt-2 rounded-full" />
             </div>
 
-            <div className="w-full h-[220px] md:h-[420px] relative">
+            <div className="w-full aspect-[2.5/1] md:aspect-[5/1] relative">
                 <AnimatePresence mode="wait">
                     <motion.div
                         key={currentIndex}
@@ -102,6 +103,19 @@ const AutoBannerSection = () => {
                     >
                         <div className="w-full h-full relative group">
                             {/* Banner Image with subtle zoom */}
+                            {slides[currentIndex].mobileImage && (
+                                <motion.img 
+                                    key={`img-mob-${currentIndex}`}
+                                    initial={{ scale: 1.1 }}
+                                    animate={{ scale: 1 }}
+                                    transition={{ duration: 5 }}
+                                    src={slides[currentIndex].mobileImage} 
+                                    alt={`${slides[currentIndex].title} Mobile`}
+                                    loading="lazy"
+                                    decoding="async"
+                                    className="w-full h-full object-cover block md:hidden"
+                                />
+                            )}
                             <motion.img 
                                 key={`img-${currentIndex}`}
                                 initial={{ scale: 1.1 }}
@@ -111,7 +125,7 @@ const AutoBannerSection = () => {
                                 alt={slides[currentIndex].title}
                                 loading="lazy"
                                 decoding="async"
-                                className="w-full h-full object-cover"
+                                className={`w-full h-full object-cover ${slides[currentIndex].mobileImage ? 'hidden md:block' : 'block'}`}
                             />
                             
                             {/* Premium Content Overlay - allows clicks to pass through */}
@@ -157,42 +171,36 @@ const AutoBannerSection = () => {
                             <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-black/0 pointer-events-none" />
 
                             {/* Carousel Navigation Arrows */}
-                            <button
-                                onClick={() => setCurrentIndex((prev) => (prev - 1 + slides.length) % slides.length)}
-                                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 z-20 hover:scale-110 transition-transform"
-                                title="Previous"
-                            >
-                                <div className="bg-white/40 backdrop-blur-md hover:bg-white/60 p-2 md:p-3 rounded-full transition-all duration-300 shadow-lg">
-                                    <ChevronLeft className="w-6 h-6 md:w-7 md:h-7 text-white" strokeWidth={3} />
-                                </div>
-                            </button>
+                            
 
-                            <button
-                                onClick={() => setCurrentIndex((prev) => (prev + 1) % slides.length)}
-                                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 z-20 hover:scale-110 transition-transform"
-                                title="Next"
-                            >
-                                <div className="bg-white/40 backdrop-blur-md hover:bg-white/60 p-2 md:p-3 rounded-full transition-all duration-300 shadow-lg">
-                                    <ChevronRight className="w-6 h-6 md:w-7 md:h-7 text-white" strokeWidth={3} />
-                                </div>
-                            </button>
+                            
 
-                            {/* Progress Indicators */}
-                            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-3 z-10">
-                                {slides.map((_, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => setCurrentIndex(index)}
-                                        className={`h-1.5 transition-all duration-300 ${
-                                            index === currentIndex ? 'w-10 bg-white' : 'w-4 bg-white/40'
-                                        }`}
-                                    />
-                                ))}
-                            </div>
                         </div>
                     </motion.div>
                 </AnimatePresence>
+
             </div>
+
+            {/* Sliding Line Indicators - Below Carousel */}
+            {slides.length > 1 && (
+                <div className="flex items-center justify-center gap-2 md:gap-3 mt-6 mb-2 relative z-10">
+                    {slides.map((_, index) => {
+                        const isActive = index === currentIndex;
+                        return (
+                            <button
+                                key={index}
+                                onClick={() => setCurrentIndex(index)}
+                                className={`transition-all duration-500 rounded-full ${
+                                    isActive 
+                                        ? 'w-8 md:w-10 h-1 bg-gray-800' 
+                                        : 'w-3 md:w-4 h-1 bg-gray-300 hover:bg-gray-400'
+                                }`}
+                                aria-label={`Go to slide ${index + 1}`}
+                            />
+                        );
+                    })}
+                </div>
+            )}
         </section>
     );
 };

@@ -13,15 +13,33 @@ export const AuthProvider = ({ children }) => {
 
     // Load user on startup
     useEffect(() => {
-        const token = localStorage.getItem('sands_token');
+        const path = window.location.pathname;
+        let tokenKey = 'sands_token';
+        let userKey = 'sands_current_user';
+
+        if (path.startsWith('/admin')) {
+            tokenKey = 'sands_admin_token';
+            userKey = 'sands_admin_user';
+        } else if (path.startsWith('/seller')) {
+            tokenKey = 'sands_seller_token';
+            userKey = 'sands_seller_user';
+        }
+
+        const token = localStorage.getItem(tokenKey);
         if (token) {
-            loadUser();
+            const cachedUser = localStorage.getItem(userKey);
+            if (cachedUser) {
+                try {
+                    setUser(JSON.parse(cachedUser));
+                } catch (e) {}
+            }
+            loadUser(userKey);
         } else {
             setLoading(false);
         }
     }, []);
 
-    const loadUser = async () => {
+    const loadUser = async (userKey) => {
         try {
             const res = await api.get('auth/me');
             if (res.data.success) {
@@ -29,7 +47,7 @@ export const AuthProvider = ({ children }) => {
                 const userData = res.data.data?.user || res.data.user;
                 if (userData) {
                     setUser(userData);
-                    localStorage.setItem('sands_current_user', JSON.stringify(userData));
+                    localStorage.setItem(userKey, JSON.stringify(userData));
                 }
             }
         } catch (err) {
@@ -83,8 +101,8 @@ export const AuthProvider = ({ children }) => {
                 // Backend returns { success: true, data: { token, user } }
                 const { user: userData, token } = res.data.data;
                 setUser(userData);
-                localStorage.setItem('sands_token', token);
-                localStorage.setItem('sands_current_user', JSON.stringify(userData));
+                localStorage.setItem('sands_admin_token', token);
+                localStorage.setItem('sands_admin_user', JSON.stringify(userData));
                 toast.success("Admin login successful!");
                 // Register FCM token
                 registerFCMToken(true).catch(err => console.error("FCM registration error:", err));
@@ -115,8 +133,8 @@ export const AuthProvider = ({ children }) => {
                 const { user: userData, token } = res.data.data;
                 const normalizedUser = userData?.role ? userData : { ...userData, role: 'seller' };
                 setUser(normalizedUser);
-                localStorage.setItem('sands_token', token);
-                localStorage.setItem('sands_current_user', JSON.stringify(normalizedUser));
+                localStorage.setItem('sands_seller_token', token);
+                localStorage.setItem('sands_seller_user', JSON.stringify(normalizedUser));
                 toast.success("Seller login successful!");
                 // Register FCM token
                 registerFCMToken(true).catch(err => console.error("FCM registration error:", err));
@@ -129,8 +147,17 @@ export const AuthProvider = ({ children }) => {
 
     const logout = (options = {}) => {
         setUser(null);
-        localStorage.removeItem('sands_token');
-        localStorage.removeItem('sands_current_user');
+        const path = window.location.pathname;
+        if (path.startsWith('/admin')) {
+            localStorage.removeItem('sands_admin_token');
+            localStorage.removeItem('sands_admin_user');
+        } else if (path.startsWith('/seller')) {
+            localStorage.removeItem('sands_seller_token');
+            localStorage.removeItem('sands_seller_user');
+        } else {
+            localStorage.removeItem('sands_token');
+            localStorage.removeItem('sands_current_user');
+        }
         if (!options?.silent) {
             toast.success("Logged out successfully");
         }
@@ -147,6 +174,28 @@ export const AuthProvider = ({ children }) => {
             return { success: false, message: res.data.message || "Failed to delete account" };
         } catch (err) {
             return { success: false, message: err.response?.data?.message || "Failed to delete account" };
+        }
+    };
+
+    const refreshUser = async () => {
+        const path = window.location.pathname;
+        let userKey = 'sands_current_user';
+        if (path.startsWith('/admin')) {
+            userKey = 'sands_admin_user';
+        } else if (path.startsWith('/seller')) {
+            userKey = 'sands_seller_user';
+        }
+        try {
+            const res = await api.get('auth/me');
+            if (res.data.success) {
+                const userData = res.data.data?.user || res.data.user;
+                if (userData) {
+                    setUser(userData);
+                    localStorage.setItem(userKey, JSON.stringify(userData));
+                }
+            }
+        } catch (err) {
+            console.error("Failed to refresh user:", err.message);
         }
     };
 
@@ -190,7 +239,8 @@ export const AuthProvider = ({ children }) => {
             sellerLogin, 
             logout,
             deleteAccount,
-            updateProfile
+            updateProfile,
+            refreshUser
         }}>
             {children}
         </AuthContext.Provider>

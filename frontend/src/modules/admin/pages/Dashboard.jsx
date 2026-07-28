@@ -210,7 +210,7 @@ const AdminDashboard = () => {
 
             <div>
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4 text-left">QUICK MANAGEMENT</p>
-                <div className="grid grid-cols-2 lg:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
                     {quickActions.map((action, idx) => (
                         <button
                             key={idx}
@@ -228,7 +228,7 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {stats.map((stat, idx) => (
                     <AdminStatsCard
                         key={idx}

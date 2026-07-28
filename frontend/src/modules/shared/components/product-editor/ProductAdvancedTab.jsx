@@ -383,13 +383,18 @@ const ProductAdvancedTab = ({
 
                     <div className="bg-[#FDFBF7] rounded-[2.5rem] p-4 sm:p-8 border border-amber-100/50 space-y-6">
                         <div className="space-y-4">
-                            <Input
-                                label="SEO Meta Title"
-                                value={formData.seo?.title || ''}
-                                onChange={(e) => setFormData(prev => ({ ...prev, seo: { ...prev.seo, title: e.target.value } }))}
-                                placeholder="e.g. Pure 925 Sterling Silver Heart Pendant"
-                                disabled={isViewMode}
-                            />
+                            <div>
+                                <Input
+                                    label="SEO Meta Title"
+                                    value={formData.seo?.title || ''}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, seo: { ...prev.seo, title: e.target.value } }))}
+                                    placeholder="e.g. Pure 925 Sterling Silver Heart Pendant"
+                                    disabled={isViewMode}
+                                />
+                                <p className="text-[9px] text-[#8D6E63] font-semibold mt-1 ml-1 leading-normal">
+                                    This is the main title shown on Google search results. Keep it between 50 to 60 characters.
+                                </p>
+                            </div>
                             <div className="space-y-1.5">
                                 <label className="block text-[10px] font-black text-gray-400 uppercase tracking-widest ml-1">SEO Meta Description</label>
                                 <textarea
@@ -406,14 +411,22 @@ const ProductAdvancedTab = ({
                                         {(formData.seo?.description || '').length} Characters
                                     </p>
                                 </div>
+                                <p className="text-[9px] text-[#8D6E63] font-semibold mt-1 ml-1 leading-normal">
+                                    Write a short summary to describe your product. This shows up below the title on Google results.
+                                </p>
                             </div>
-                            <Input
-                                label="Keywords (Comma separated)"
-                                value={formData.seo?.keywords || ''}
-                                onChange={(e) => setFormData(prev => ({ ...prev, seo: { ...prev.seo, keywords: e.target.value } }))}
-                                placeholder="silver, jewelry, pendant, gift"
-                                disabled={isViewMode}
-                            />
+                            <div>
+                                <Input
+                                    label="Keywords (Comma separated)"
+                                    value={formData.seo?.keywords || ''}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, seo: { ...prev.seo, keywords: e.target.value } }))}
+                                    placeholder="silver, jewelry, pendant, gift"
+                                    disabled={isViewMode}
+                                />
+                                <p className="text-[9px] text-[#8D6E63] font-semibold mt-1 ml-1 leading-normal">
+                                    Enter simple search terms separated by commas (e.g. silver, gift, pendant) to help people find this item.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -437,11 +450,17 @@ const ProductAdvancedTab = ({
                                 <div className="relative">
                                     <input 
                                         type="number"
-                                        value={formData.logistics?.estimatedShippingDays || 3}
+                                        value={formData.logistics?.estimatedShippingDays ?? 3}
                                         onChange={(e) => {
                                             const val = e.target.value;
                                             if (val !== '' && Number(val) < 0) return;
-                                            setFormData(prev => ({ ...prev, logistics: { ...prev.logistics, estimatedShippingDays: parseInt(val) || 0 } }));
+                                            setFormData(prev => ({ 
+                                                ...prev, 
+                                                logistics: { 
+                                                    ...prev.logistics, 
+                                                    estimatedShippingDays: val === '' ? '' : parseInt(val) 
+                                                } 
+                                            }));
                                         }}
                                         disabled={isViewMode}
                                         className={`w-full bg-white border rounded-xl py-3.5 px-5 text-sm font-bold text-gray-800 outline-none focus:ring-4 transition-all shadow-sm ${errors.estimatedShippingDays ? 'border-red-400 focus:border-red-500 focus:ring-red-200/40' : 'border-gray-200 focus:border-emerald-500'}`}
@@ -452,14 +471,22 @@ const ProductAdvancedTab = ({
                                     </div>
                                 </div>
                                 {errors.estimatedShippingDays && <div className="text-[10px] text-red-500 mt-1 ml-1">{errors.estimatedShippingDays}</div>}
+                                <p className="text-[9px] text-[#2E7D32] font-semibold mt-1 ml-1 leading-normal">
+                                    How many days it takes you to prepare and ship the item. We will add 2 days for delivery transit automatically.
+                                </p>
                             </div>
-                            <Input
-                                label="Registry Artifact URL"
-                                value={formData.logistics?.certificateUrl || ''}
-                                onChange={(e) => setFormData(prev => ({ ...prev, logistics: { ...prev.logistics, certificateUrl: e.target.value } }))}
-                                placeholder="Cloudinary/Drive Link"
-                                disabled={isViewMode}
-                            />
+                            <div className="space-y-2">
+                                <Input
+                                    label="Registry Artifact URL"
+                                    value={formData.logistics?.certificateUrl || ''}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, logistics: { ...prev.logistics, certificateUrl: e.target.value } }))}
+                                    placeholder="Cloudinary/Drive Link"
+                                    disabled={isViewMode}
+                                />
+                                <p className="text-[9px] text-[#2E7D32] font-semibold mt-1 ml-1 leading-normal">
+                                    Upload a copy of the product's certificate (to Google Drive or Cloudinary) and paste the link here.
+                                </p>
+                            </div>
                         </div>
                     </div>
                 </div>

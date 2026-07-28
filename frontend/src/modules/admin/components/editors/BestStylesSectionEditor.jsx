@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Input } from '../common/FormControls';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const BestStylesSectionEditor = ({ sectionData, onSave, defaultSection = {} }) => {
     const isGoldPage = sectionData?.pageKey === 'gold-collection';
@@ -16,7 +17,7 @@ const BestStylesSectionEditor = ({ sectionData, onSave, defaultSection = {} }) =
         };
     }, [defaultSection?.settings, isGoldPage, sectionData?.settings]);
 
-    const [settings, setSettings] = useState(initialSettings);
+    const [settings, setSettings] = useDraftState(`draft_settings_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialSettings);
 
     const updateSetting = (field, value) => {
         setSettings((prev) => ({ ...prev, [field]: value }));

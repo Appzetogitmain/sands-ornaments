@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Eye, UserX, UserCheck, Shield, Users, ShieldCheck, AlertCircle } from 'lucide-react';
+import { Search, Eye, UserX, UserCheck, Shield, Users, ShieldCheck, AlertCircle, Download } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import AdminStatsCard from '../components/AdminStatsCard';
 import { adminService } from '../services/adminService';
 import { toast } from 'react-hot-toast';
+import { exportToExcelCSV } from '../../../utils/exportUtils';
 
 const UserManagement = () => {
     const navigate = useNavigate();
@@ -55,13 +56,48 @@ const UserManagement = () => {
         return matchesSearch;
     });
 
+    const handleExport = () => {
+        const headers = [
+            'fullName',
+            'email',
+            'phone',
+            'isBlocked',
+            'role',
+            'createdAt'
+        ];
+        const columnNames = [
+            'Name',
+            'Email Address',
+            'Phone Number',
+            'Account Blocked',
+            'Role',
+            'Created At'
+        ];
+        const formattedUsers = filteredUsers.map(u => ({
+            ...u,
+            fullName: u.fullName || u.name || '',
+            phone: u.phone ? `\t${u.phone}` : '',
+            createdAt: u.createdAt ? new Date(u.createdAt).toISOString().split('T')[0] : ''
+        }));
+        const filename = activeTab === 'admins' ? 'Admins_Report' : 'Customers_Report';
+        exportToExcelCSV(formattedUsers, headers, columnNames, filename);
+        toast.success(`${activeTab === 'admins' ? 'Admins' : 'Customers'} report exported successfully`);
+    };
+
     return (
         <div className="max-w-[1400px] mx-auto space-y-3 md:space-y-4 animate-in fade-in duration-500 pb-20">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-1 px-1">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-1">
                 <PageHeader
                     title="User Management"
                     subtitle={`Manage ${activeTab} & access control`}
                 />
+                <button
+                    onClick={handleExport}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap self-start md:self-auto"
+                    title={`Export ${activeTab} as Excel/CSV`}
+                >
+                    <Download size={14} /> Export {activeTab}
+                </button>
             </div>
 
             {/* Tabs Row */}

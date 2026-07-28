@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
@@ -28,6 +28,7 @@ const LAUNCH_CATEGORIES = [
 
 const SilverNewLaunchGrid = () => {
     const scrollRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(0);
     const { data: homepageSections = {} } = useHomepageCms();
     const sectionData = homepageSections?.['silver-new-launch-grid'];
     const configuredItems = Array.isArray(sectionData?.items) ? sectionData.items : [];
@@ -49,6 +50,33 @@ const SilverNewLaunchGrid = () => {
     const ribbonLabel = sectionData?.settings?.ribbonLabel || 'NEW LAUNCH';
     const offerText = sectionData?.settings?.offerText || 'Upto 15% Off';
     const ctaLabel = sectionData?.settings?.ctaLabel || 'Explore';
+
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            const maxScroll = scrollWidth - clientWidth;
+            if (maxScroll <= 0) {
+                setActiveIndex(0);
+                return;
+            }
+            const percentage = scrollLeft / maxScroll;
+            const index = Math.round(percentage * (cards.length - 1));
+            setActiveIndex(Math.min(index, cards.length - 1));
+        }
+    };
+
+    const scrollToDot = (index) => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            const percentage = index / (cards.length - 1 || 1);
+            container.scrollTo({
+                left: percentage * maxScroll,
+                behavior: 'smooth'
+            });
+            setActiveIndex(index);
+        }
+    };
 
     return (
         <section className="w-full bg-[#D1C7CB] mt-1 md:mt-2 py-3 md:py-4 overflow-hidden font-sans">
@@ -85,7 +113,8 @@ const SilverNewLaunchGrid = () => {
 
                 <div
                     ref={scrollRef}
-                    className="flex overflow-x-auto scrollbar-hide gap-2.5 md:gap-4 pb-4 px-4 snap-x snap-mandatory"
+                    onScroll={handleScroll}
+                    className="flex overflow-x-auto scrollbar-hide gap-2.5 md:gap-4 pb-4 px-4 snap-x snap-mandatory scroll-smooth"
                 >
                     {cards.map((cat) => (
                         <Link
@@ -115,6 +144,24 @@ const SilverNewLaunchGrid = () => {
                         </Link>
                     ))}
                 </div>
+
+                {/* Carousel Dots */}
+                {cards.length > 1 && (
+                    <div className="flex justify-center items-center gap-2 pb-4 mt-2">
+                        {cards.map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => scrollToDot(idx)}
+                                className={`transition-all duration-300 rounded-full ${
+                                    activeIndex === idx 
+                                    ? 'w-6 h-1.5 bg-[#5C1B33]' 
+                                    : 'w-1.5 h-1.5 bg-gray-400/50 hover:bg-gray-500'
+                                }`}
+                                aria-label={`Go to item ${idx + 1}`}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
         </section>
     );

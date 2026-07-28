@@ -5,8 +5,8 @@ import api from "../../../services/api";
 import blogFallback from "@assets/trending_heritage.png";
 import Loader from "../../shared/components/Loader";
 
-const stripHtml = (html = "") =>
-  html
+const stripHtml = (html) =>
+  String(html || "")
     .replace(/<[^>]+>/g, " ")
     .replace(/\s+/g, " ")
     .trim();

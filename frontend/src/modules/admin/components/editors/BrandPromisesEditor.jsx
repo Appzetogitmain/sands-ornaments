@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { Input, Select, TextArea } from '../common/FormControls';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const ICON_OPTIONS = [
     { value: 'gem', label: 'Gem' },
@@ -48,7 +49,7 @@ const BrandPromisesEditor = ({ sectionData, onSave, defaultItems = [] }) => {
         return [createBlankPromise()];
     }, [defaultItems, sectionData?.items]);
 
-    const [items, setItems] = useState(initialItems);
+    const [items, setItems] = useDraftState(`draft_items_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialItems);
 
     const updateItem = (id, field, value) => {
         setItems((prev) => prev.map((item) => (

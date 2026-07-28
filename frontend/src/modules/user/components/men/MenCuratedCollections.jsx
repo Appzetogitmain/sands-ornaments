@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { ChevronRight, ChevronLeft } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -23,6 +23,7 @@ const collections = [
 const MenCuratedCollections = ({ sectionData }) => {
     const navigate = useNavigate();
     const scrollRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const resolvedSettings = useMemo(() => ({
         badge: sectionData?.settings?.badge || 'More Gifts for Him',
@@ -51,15 +52,30 @@ const MenCuratedCollections = ({ sectionData }) => {
         return normalizedConfigured.length > 0 ? normalizedConfigured : collections;
     }, [sectionData]);
 
-    const scroll = (direction) => {
+    const handleScroll = () => {
         if (scrollRef.current) {
-            const { current } = scrollRef;
-            const scrollAmount = window.innerWidth > 768 ? 600 : 300;
-            if (direction === 'left') {
-                current.scrollLeft -= scrollAmount;
-            } else {
-                current.scrollLeft += scrollAmount;
+            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            const maxScroll = scrollWidth - clientWidth;
+            if (maxScroll <= 0) {
+                setActiveIndex(0);
+                return;
             }
+            const percentage = scrollLeft / maxScroll;
+            const index = Math.round(percentage * (resolvedCollections.length - 1));
+            setActiveIndex(Math.min(index, resolvedCollections.length - 1));
+        }
+    };
+
+    const scrollToDot = (index) => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            const percentage = index / (resolvedCollections.length - 1 || 1);
+            container.scrollTo({
+                left: percentage * maxScroll,
+                behavior: 'smooth'
+            });
+            setActiveIndex(index);
         }
     };
 
@@ -84,23 +100,14 @@ const MenCuratedCollections = ({ sectionData }) => {
                 <div className="relative group/main">
                     
                     {/* Left Scroll Arrow */}
-                    <button 
-                        onClick={() => scroll('left')}
-                        className="absolute left-2 md:left-3 top-1/2 -translate-y-1/2 z-30 w-8 h-8 md:w-11 md:h-11 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg border border-gray-100 opacity-0 group-hover/main:opacity-100 transition-all duration-300 hover:bg-white hover:scale-105 active:scale-95"
-                    >
-                        <ChevronLeft className="w-4 h-4 md:w-5 md:h-5 text-black" />
-                    </button>
+                    
 
                     {/* Right Scroll Arrow */}
-                    <button 
-                        onClick={() => scroll('right')}
-                        className="absolute right-2 md:right-3 top-1/2 -translate-y-1/2 z-30 w-8 h-8 md:w-11 md:h-11 bg-white/90 backdrop-blur-md rounded-full flex items-center justify-center shadow-lg border border-gray-100 opacity-0 group-hover/main:opacity-100 transition-all duration-300 hover:bg-white hover:scale-105 active:scale-95"
-                    >
-                        <ChevronRight className="w-4 h-4 md:w-5 md:h-5 text-black" />
-                    </button>
+                    
 
                     <div 
                         ref={scrollRef}
+                        onScroll={handleScroll}
                         className="flex overflow-x-auto gap-2 md:gap-4 pb-3 md:pb-10 hide-scrollbar scroll-smooth snap-x snap-mandatory px-4"
                     >
                         {resolvedCollections.map((item, idx) => (
@@ -134,6 +141,24 @@ const MenCuratedCollections = ({ sectionData }) => {
                             </motion.div>
                         ))}
                     </div>
+
+                    {/* Carousel Dots */}
+                    {resolvedCollections.length > 1 && (
+                        <div className="flex justify-center items-center gap-2 pb-6 mt-2 md:mt-[-10px]">
+                            {resolvedCollections.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => scrollToDot(idx)}
+                                    className={`transition-all duration-300 rounded-full ${
+                                        activeIndex === idx 
+                                        ? "w-6 h-1.5 bg-black" 
+                                        : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400"
+                                    }`}
+                                    aria-label={`Go to item ${idx + 1}`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Edit2, Trash2, Eye, Package, TrendingUp, Check, Plus } from 'lucide-react';
+import { Edit2, Trash2, Eye, Package, TrendingUp, Check, Plus, Download } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import DataTable from '../components/common/DataTable';
 import BulkUpdateModal from '../components/BulkUpdateModal';
 import { adminService } from '../services/adminService';
 import toast from 'react-hot-toast';
+import { exportToExcelCSV } from '../../../utils/exportUtils';
 
 const ProductManagement = () => {
     const navigate = useNavigate();
@@ -33,6 +34,73 @@ const ProductManagement = () => {
         limit: 20
     });
     const [pagination, setPagination] = useState(null);
+
+    const handleExport = async () => {
+        const loadingToast = toast.loading("Generating product export...");
+        try {
+            const params = {
+                search: searchTerm,
+                category: selectedCategory === 'all' ? '' : selectedCategory,
+                minPrice: filtersObj.minPrice,
+                maxPrice: filtersObj.maxPrice,
+                inStock: filtersObj.inStock === 'all' ? '' : filtersObj.inStock,
+                sortBy: filtersObj.sortBy,
+                sellerId: sellerId || '',
+                page: 1,
+                limit: Math.max(1000, pagination?.total || 1000)
+            };
+            const response = await adminService.getProducts(params);
+            const exportProducts = response.products || [];
+            if (exportProducts.length === 0) {
+                toast.error("No products to export", { id: loadingToast });
+                return;
+            }
+
+            const headers = [
+                'name',
+                'sku',
+                'price',
+                'stock',
+                'categoryName',
+                'sellerName',
+                'status',
+                'createdAt'
+            ];
+            const columnNames = [
+                'Product Name',
+                'SKU',
+                'Price (INR)',
+                'Stock Units',
+                'Category',
+                'Seller Shop',
+                'Status',
+                'Created At'
+            ];
+
+            const formattedProducts = exportProducts.map(p => {
+                const primaryCat = p.categories && p.categories[0];
+                const price = p.variants?.[0]?.price || p.price || 0;
+                const stock = (p.variants || []).reduce((sum, v) => sum + (v.stock || 0), 0);
+                const sku = p.variants?.[0]?.sku || p.sku || 'N/A';
+
+                return {
+                    ...p,
+                    sku,
+                    price,
+                    stock,
+                    categoryName: primaryCat?.name || primaryCat?.category || categoriesById[p.category] || 'Uncategorized',
+                    sellerName: p.sellerId?.shopName || p.sellerName || 'Platform',
+                    status: p.active === false ? 'INACTIVE' : 'ACTIVE'
+                };
+            });
+
+            exportToExcelCSV(formattedProducts, headers, columnNames, 'Products_Report');
+            toast.success("Products report exported successfully", { id: loadingToast });
+        } catch (err) {
+            console.error("Export products failed:", err);
+            toast.error("Failed to export products", { id: loadingToast });
+        }
+    };
 
     const fetchProducts = async (isLoadMore = false) => {
         try {
@@ -293,7 +361,6 @@ const ProductManagement = () => {
         }
     ];
 
-
     const handleBulkApply = async (config) => {
         const categoryId = selectedCategory === 'all' ? undefined : selectedCategory;
         const success = await adminService.bulkUpdatePrices({
@@ -321,6 +388,7 @@ const ProductManagement = () => {
                     label: "Add New Product",
                     onClick: () => navigate('/admin/products/new')
                 } : undefined}
+                backPath={sellerId ? `/admin/seller-details/${sellerId}` : undefined}
             />
 
             <DataTable
@@ -351,15 +419,25 @@ const ProductManagement = () => {
                         />
                     </div>
                     {!isSelectMode && (
-                        <button
-                            onClick={() => setIsBulkModalOpen(true)}
-                            className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 hover:bg-[#3E2723] hover:text-white hover:border-[#3E2723] transition-all flex items-center gap-2 shrink-0"
-                            title="Bulk Update Prices"
-                        >
-                            <TrendingUp size={14} />
-                            <span className="hidden md:inline">Bulk Actions</span>
-                            <span className="md:hidden">Bulk</span>
-                        </button>
+                        <div className="flex gap-2 shrink-0">
+                            <button
+                                onClick={handleExport}
+                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 hover:bg-[#3E2723] hover:text-white hover:border-[#3E2723] transition-all flex items-center gap-2 shrink-0"
+                                title="Export Products as Excel/CSV"
+                            >
+                                <Download size={14} />
+                                <span>Export</span>
+                            </button>
+                            <button
+                                onClick={() => setIsBulkModalOpen(true)}
+                                className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-xs font-bold text-gray-600 hover:bg-[#3E2723] hover:text-white hover:border-[#3E2723] transition-all flex items-center gap-2 shrink-0"
+                                title="Bulk Update Prices"
+                            >
+                                <TrendingUp size={14} />
+                                <span className="hidden md:inline">Bulk Actions</span>
+                                <span className="md:hidden">Bulk</span>
+                            </button>
+                        </div>
                     )}
                 </div>
             </DataTable>

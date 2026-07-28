@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
@@ -27,6 +27,8 @@ const ensureGoldPath = (rawPath = '', categoryId = '') => {
 
 const GoldRingCarousel = ({ sectionData = null }) => {
     const navigate = useNavigate();
+    const scrollRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const ringTypes = useMemo(() => {
         const configured = Array.isArray(sectionData?.items) ? sectionData.items : [];
@@ -44,6 +46,33 @@ const GoldRingCarousel = ({ sectionData = null }) => {
     const ctaLabel = String(sectionData?.settings?.ctaLabel || 'View All Rings').trim() || 'View All Rings';
     const ctaPath = ensureGoldPath(String(sectionData?.settings?.ctaPath || '/shop?metal=gold&category=rings').trim() || '/shop?metal=gold&category=rings');
 
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            const maxScroll = scrollWidth - clientWidth;
+            if (maxScroll <= 0) {
+                setActiveIndex(0);
+                return;
+            }
+            const percentage = scrollLeft / maxScroll;
+            const index = Math.round(percentage * (ringTypes.length - 1));
+            setActiveIndex(Math.min(index, ringTypes.length - 1));
+        }
+    };
+
+    const scrollToDot = (index) => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            const percentage = index / (ringTypes.length - 1 || 1);
+            container.scrollTo({
+                left: percentage * maxScroll,
+                behavior: 'smooth'
+            });
+            setActiveIndex(index);
+        }
+    };
+
     return (
         <section className="w-full py-12 bg-white">
             <div className="max-w-[1450px] mx-auto px-6">
@@ -54,7 +83,11 @@ const GoldRingCarousel = ({ sectionData = null }) => {
                     <div className="h-[1px] w-24 bg-[#D4B390] mx-auto opacity-50" />
                 </div>
 
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-6">
+                <div 
+                    ref={scrollRef}
+                    onScroll={handleScroll}
+                    className="flex overflow-x-auto scrollbar-hide gap-4 md:gap-6 pb-6 snap-x snap-mandatory scroll-smooth px-1"
+                >
                     {ringTypes.map((type) => (
                         <motion.div
                             key={type.id}
@@ -63,7 +96,7 @@ const GoldRingCarousel = ({ sectionData = null }) => {
                             viewport={{ once: true }}
                             transition={{ duration: 0.5 }}
                             onClick={() => navigate(type.path)}
-                            className="bg-white border border-gray-100 rounded-lg overflow-hidden group cursor-pointer shadow-sm hover:shadow-lg transition-all duration-500 flex flex-col h-full p-3"
+                            className="flex-shrink-0 w-[140px] md:w-[180px] lg:w-[200px] snap-start bg-white border border-gray-100 rounded-lg overflow-hidden group cursor-pointer shadow-sm hover:shadow-lg transition-all duration-500 flex flex-col h-full p-3"
                         >
                             {/* Image Container - Square and clean */}
                             <div className="relative w-full aspect-square overflow-hidden bg-[#F8F8F8] rounded-md">
@@ -87,7 +120,25 @@ const GoldRingCarousel = ({ sectionData = null }) => {
                     ))}
                 </div>
 
-                <div className="mt-12 flex justify-center">
+                {/* Carousel Dots */}
+                {ringTypes.length > 1 && (
+                    <div className="flex justify-center items-center gap-2 pb-6 mt-2">
+                        {ringTypes.map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => scrollToDot(idx)}
+                                className={`transition-all duration-300 rounded-full ${
+                                    activeIndex === idx 
+                                        ? "w-6 h-1.5 bg-[#142E1F]" 
+                                        : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400"
+                                }`}
+                                aria-label={`Go to item ${idx + 1}`}
+                            />
+                        ))}
+                    </div>
+                )}
+
+                <div className="mt-8 flex justify-center">
                     <motion.button
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}

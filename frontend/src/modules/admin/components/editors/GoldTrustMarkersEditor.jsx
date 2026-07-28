@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import toast from 'react-hot-toast';
 import { Input, Select } from '../common/FormControls';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const ICON_OPTIONS = [
     { value: 'ShieldCheck', label: 'Shield Check' },
@@ -35,7 +36,7 @@ const GoldTrustMarkersEditor = ({ sectionData, onSave }) => {
         });
     }, [sectionData?.items]);
 
-    const [items, setItems] = useState(initialItems);
+    const [items, setItems] = useDraftState(`draft_items_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialItems);
 
     const updateItem = (id, field, value) => {
         setItems((prev) => prev.map((item) => (

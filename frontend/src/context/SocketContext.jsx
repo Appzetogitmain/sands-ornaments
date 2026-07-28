@@ -25,7 +25,14 @@ export const SocketProvider = ({ children }) => {
 
   const connect = useCallback(() => {
     // Retrieve token at connection time
-    const token = localStorage.getItem('sands_token');
+    let tokenKey = 'sands_token';
+    if (user?.role === 'admin') {
+      tokenKey = 'sands_admin_token';
+    } else if (user?.role === 'seller') {
+      tokenKey = 'sands_seller_token';
+    }
+
+    const token = localStorage.getItem(tokenKey);
     if (!token || !user) return;
 
     // Avoid duplicate connections

@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { adminService } from '../../services/adminService';
 import { Input } from '../common/FormControls';
 import { buildMenShopPath } from '../../../user/utils/menNavigation';
+import { useDraftState } from '../../hooks/useDraftState';
 
 const createItemId = () => `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -83,16 +84,14 @@ const MenCuratedCollectionsEditor = ({ sectionData, onSave, defaultSection = {} 
         return normalizeInitialItems(source);
     }, [defaultSection?.items, sectionData?.items]);
 
-    const [settings, setSettings] = useState(initialSettings);
-    const [items, setItems] = useState(initialItems);
+    const [settings, setSettings] = useDraftState(`draft_settings_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialSettings);
+    const [items, setItems] = useDraftState(`draft_items_${sectionData?.sectionKey || sectionData?.id || ''}_${sectionData?.pageKey || ''}`, initialItems);
 
     useEffect(() => {
         setSettings(initialSettings);
     }, [initialSettings]);
 
-    useEffect(() => {
-        setItems(initialItems);
-    }, [initialItems]);
+    
 
     useEffect(() => {
         const fetchCategories = async () => {
@@ -268,11 +267,19 @@ const MenCuratedCollectionsEditor = ({ sectionData, onSave, defaultSection = {} 
                                             </div>
                                         )}
                                     </div>
-                                    <label className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E2723] px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#2D1B18] transition-all cursor-pointer">
-                                        <ImageIcon size={14} />
-                                        Change Image
-                                        <input type="file" accept="image/*" className="hidden" onChange={(event) => handleImageUpload(item.id, event.target.files?.[0])} />
-                                    </label>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#3E2723] px-4 py-3 text-xs font-bold uppercase tracking-widest text-white hover:bg-[#2D1B18] transition-all cursor-pointer">
+                                            <ImageIcon size={14} />
+                                            Change Image
+                                            <input type="file" accept="image/*" className="hidden" onChange={(event) => handleImageUpload(item.id, event.target.files?.[0])} />
+                                            <p className="text-[10px] text-amber-600 font-bold uppercase tracking-widest bg-amber-50 px-2.5 py-1.5 rounded border border-amber-200 mt-2 mb-2 inline-block">✨ Recommended Size: 1080x1080px (1:1 Ratio)</p>
+                                        </label>
+                                        <div className="text-center">
+                                            <p className="text-[9px] text-amber-600 font-bold uppercase tracking-wider bg-amber-50 px-2 py-1 rounded border border-amber-200 inline-block w-full">
+                                                ✨ Recommended: 1080x1080px (1:1 Ratio)
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4">

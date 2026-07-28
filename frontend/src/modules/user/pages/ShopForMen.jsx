@@ -1,19 +1,19 @@
-import React, { useEffect, useMemo, useState, lazy, Suspense } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import MenHeroCarousel from "../components/men/MenHeroCarousel";
 import MenCategoriesGrid from "../components/men/MenCategoriesGrid";
 import LazySection from "../../../components/LazySection";
 
 // Lazy loaded below-fold components
-const MenLuxurySection = lazy(() => import("../components/men/MenLuxurySection"));
-const CelebrateMen = lazy(() => import("../components/men/CelebrateMen"));
-const MenCuratedCollections = lazy(() => import("../components/men/MenCuratedCollections"));
-const MenExploreCollections = lazy(() => import("../components/men/MenExploreCollections"));
-const MenPersonalizedBanner = lazy(() => import("../components/men/MenPersonalizedBanner"));
-const MenPickYourGlam = lazy(() => import("../components/men/MenPickYourGlam"));
-const MenInteractiveLook = lazy(() => import("../components/men/MenInteractiveLook"));
-const MenStyleGuide = lazy(() => import("../components/men/MenStyleGuide"));
-const MenStyleTrends = lazy(() => import("../components/men/MenStyleTrends"));
-const MenFeaturedProducts = lazy(() => import("../components/men/MenFeaturedProducts"));
+import MenLuxurySection from "../components/men/MenLuxurySection";
+import CelebrateMen from "../components/men/CelebrateMen";
+import MenCuratedCollections from "../components/men/MenCuratedCollections";
+import MenExploreCollections from "../components/men/MenExploreCollections";
+import MenPersonalizedBanner from "../components/men/MenPersonalizedBanner";
+import MenPickYourGlam from "../components/men/MenPickYourGlam";
+import MenInteractiveLook from "../components/men/MenInteractiveLook";
+import MenStyleGuide from "../components/men/MenStyleGuide";
+import MenStyleTrends from "../components/men/MenStyleTrends";
+import MenFeaturedProducts from "../components/men/MenFeaturedProducts";
 
 import Loader from "../../shared/components/Loader";
 import { usePublicCmsPage } from "../hooks/usePublicCmsPage";
@@ -74,38 +74,35 @@ const ShopForMen = () => {
       <MenHeroCarousel sectionData={sectionMap["hero-banners"]} />
       <MenCategoriesGrid sectionData={sectionMap["categories-grid"]} />
       
-      <Suspense fallback={<div className="h-40" />}>
-        <LazySection minHeight="300px">
-          <MenLuxurySection sectionData={sectionMap["luxury-section"]} />
-        </LazySection>
-        <LazySection minHeight="300px">
+      <MenLuxurySection sectionData={sectionMap["luxury-section"]} />
+        
           <CelebrateMen sectionData={sectionMap["celebrate-men"]} />
-        </LazySection>
-        <LazySection minHeight="300px">
+        
+        
           <MenCuratedCollections sectionData={sectionMap["curated-collections"]} />
-        </LazySection>
-        <LazySection minHeight="300px">
+        
+        
           <MenExploreCollections sectionData={sectionMap["explore-collections"]} />
-        </LazySection>
-        <LazySection minHeight="200px">
+        
+        
           <MenPersonalizedBanner sectionData={sectionMap["personalized-banner"]} />
-        </LazySection>
-        <LazySection minHeight="300px">
+        
+        
           <MenPickYourGlam sectionData={sectionMap["pick-your-glam"]} />
-        </LazySection>
-        <LazySection minHeight="300px">
+        
+        
           <MenInteractiveLook />
-        </LazySection>
-        <LazySection minHeight="300px">
+        
+        
           <MenStyleGuide sectionData={sectionMap["style-guide"]} />
-        </LazySection>
-        <LazySection minHeight="300px">
+        
+        
           <MenStyleTrends sectionData={sectionMap["style-trends"]} />
-        </LazySection>
-        <LazySection minHeight="300px">
+        
+        
           <MenFeaturedProducts sectionData={sectionMap["products-listing"]} />
-        </LazySection>
-      </Suspense>
+        
+      
     </div>
   );
 };

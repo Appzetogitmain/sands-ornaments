@@ -122,6 +122,7 @@ export const CartProvider = ({ children }) => {
       localStorage.setItem("guestCart", JSON.stringify(cart));
       if (localStorage.getItem("cart")) localStorage.removeItem("cart");
     } else {
+      if (user.role === "seller" || user.role === "admin") return;
       localStorage.setItem(
         `user_cart_${user.id || user._id}`,
         JSON.stringify(cart),

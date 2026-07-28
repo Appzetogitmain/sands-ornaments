@@ -1,4 +1,4 @@
-import React, { useMemo, useRef } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
@@ -27,6 +27,7 @@ const GOLD_CATEGORIES = [
 
 const GoldCategoryGrid = ({ sectionData = null }) => {
     const scrollRef = useRef(null);
+    const [activeIndex, setActiveIndex] = useState(0);
 
     const sectionTitle = String(sectionData?.settings?.title || sectionData?.label || 'Shop by Category').trim() || 'Shop by Category';
 
@@ -69,11 +70,31 @@ const GoldCategoryGrid = ({ sectionData = null }) => {
         }));
     }, [sectionData]);
 
-    const scroll = (direction) => {
-        if (!scrollRef.current) return;
-        const { scrollLeft } = scrollRef.current;
-        const scrollTo = direction === 'left' ? scrollLeft - 300 : scrollLeft + 300;
-        scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            const maxScroll = scrollWidth - clientWidth;
+            if (maxScroll <= 0) {
+                setActiveIndex(0);
+                return;
+            }
+            const percentage = scrollLeft / maxScroll;
+            const index = Math.round(percentage * (categories.length - 1));
+            setActiveIndex(Math.min(index, categories.length - 1));
+        }
+    };
+
+    const scrollToDot = (index) => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            const percentage = index / (categories.length - 1 || 1);
+            container.scrollTo({
+                left: percentage * maxScroll,
+                behavior: 'smooth'
+            });
+            setActiveIndex(index);
+        }
     };
 
     return (
@@ -91,56 +112,64 @@ const GoldCategoryGrid = ({ sectionData = null }) => {
                     <span className="text-[#C9A84C] text-xl">*</span>
                 </div>
 
-                <button
-                    onClick={() => scroll('left')}
-                    className="absolute left-6 top-[110px] -translate-y-1/2 z-20 bg-white/90 shadow-lg rounded-full p-2 border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center hover:bg-white"
-                >
-                    <ChevronLeft className="w-5 h-5 text-gray-700" />
-                </button>
+                {/* Overscroll Wrapper to prevent cropping elements on viewport edges */}
+                <div className="-mx-4 overflow-hidden">
+                    <div
+                        ref={scrollRef}
+                        onScroll={handleScroll}
+                        className="flex overflow-x-auto scrollbar-hide gap-3 md:gap-5 pb-2 md:pb-4 px-4 md:px-12 snap-x snap-mandatory scroll-smooth"
+                    >
+                        {categories.map((cat) => (
+                            <Link
+                                key={cat.id}
+                                to={cat.path}
+                                className="flex flex-col items-center group/item cursor-pointer shrink-0 snap-start"
+                            >
+                                <div className="relative w-[98px] h-[112px] md:w-[175px] md:h-[195px] mb-2 md:mb-3 overflow-hidden rounded-[12px] md:rounded-[14px] border border-[#e8d5a3] group-hover/item:border-[#C9A84C] transition-all duration-300 shadow-sm">
+                                    <img
+                                        src={cat.image}
+                                        alt={cat.name}
+                                        className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-700"
+                                    />
+                                    {cat.badge ? (
+                                        <div className="absolute top-2 right-2 bg-[#C9A84C] text-white text-[7px] md:text-[9px] px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md uppercase font-bold tracking-wider z-10">
+                                            <span className="text-[10px]">*</span>
+                                            {cat.badge}
+                                        </div>
+                                    ) : null}
 
-                <div
-                    ref={scrollRef}
-                    className="flex overflow-x-auto scrollbar-hide gap-3 md:gap-5 pb-2 md:pb-4 px-1 md:px-2 snap-x snap-mandatory"
-                >
-                    {categories.map((cat) => (
-                        <Link
-                            key={cat.id}
-                            to={cat.path}
-                            className="flex flex-col items-center group/item cursor-pointer shrink-0 snap-start"
-                        >
-                            <div className="relative w-[98px] h-[112px] md:w-[175px] md:h-[195px] mb-2 md:mb-3 overflow-hidden rounded-[12px] md:rounded-[14px] border border-[#e8d5a3] group-hover/item:border-[#C9A84C] transition-all duration-300 shadow-sm">
-                                <img
-                                    src={cat.image}
-                                    alt={cat.name}
-                                    className="w-full h-full object-cover group-hover/item:scale-110 transition-transform duration-700"
-                                />
-                                {cat.badge ? (
-                                    <div className="absolute top-2 right-2 bg-[#C9A84C] text-white text-[7px] md:text-[9px] px-2 py-0.5 rounded-full flex items-center gap-1 shadow-md uppercase font-bold tracking-wider z-10">
-                                        <span className="text-[10px]">*</span>
-                                        {cat.badge}
+                                    {/* Premium Sliding Button Overlay */}
+                                    <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#C9A84C] to-[#D4B56A] py-3 md:py-4 transform translate-y-full group-hover/item:translate-y-0 transition-transform duration-500 ease-in-out flex items-center justify-center shadow-[0_-4px_15px_rgba(0,0,0,0.1)]">
+                                        <span className="text-[9px] md:text-[11px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-1.5">
+                                            Shop Now <ChevronRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
+                                        </span>
                                     </div>
-                                ) : null}
-
-                                {/* Premium Sliding Button Overlay */}
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-[#C9A84C] to-[#D4B56A] py-3 md:py-4 transform translate-y-full group-hover/item:translate-y-0 transition-transform duration-500 ease-in-out flex items-center justify-center shadow-[0_-4px_15px_rgba(0,0,0,0.1)]">
-                                    <span className="text-[9px] md:text-[11px] font-black text-white uppercase tracking-[0.3em] flex items-center gap-1.5">
-                                        Shop Now <ChevronRight className="w-3 h-3 md:w-3.5 md:h-3.5" />
-                                    </span>
                                 </div>
-                            </div>
-                            <span className="text-[12px] md:text-[16px] font-bold text-gray-800 group-hover/item:text-[#A8862A] transition-colors text-center tracking-tight leading-tight">
-                                {cat.name}
-                            </span>
-                        </Link>
-                    ))}
+                                <span className="text-[12px] md:text-[16px] font-bold text-gray-800 group-hover/item:text-[#A8862A] transition-colors text-center tracking-tight leading-tight">
+                                    {cat.name}
+                                </span>
+                            </Link>
+                        ))}
+                    </div>
                 </div>
 
-                <button
-                    onClick={() => scroll('right')}
-                    className="absolute right-6 top-[110px] -translate-y-1/2 z-20 bg-white/90 shadow-lg rounded-full p-2 border border-gray-100 opacity-0 group-hover:opacity-100 transition-opacity hidden md:flex items-center justify-center hover:bg-white"
-                >
-                    <ChevronRight className="w-5 h-5 text-gray-700" />
-                </button>
+                {/* Carousel Dots */}
+                {categories.length > 1 && (
+                    <div className="flex justify-center items-center gap-2 pb-6 mt-4 md:mt-2">
+                        {categories.map((_, idx) => (
+                            <button
+                                key={idx}
+                                onClick={() => scrollToDot(idx)}
+                                className={`transition-all duration-300 rounded-full ${
+                                    activeIndex === idx 
+                                    ? "w-6 h-1.5 bg-[#C9A84C]" 
+                                    : "w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400"
+                                }`}
+                                aria-label={`Go to item ${idx + 1}`}
+                            />
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

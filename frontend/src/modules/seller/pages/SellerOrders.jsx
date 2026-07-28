@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Eye, PackageCheck, Truck, XCircle } from 'lucide-react';
+import { Eye, PackageCheck, Truck, XCircle, Download } from 'lucide-react';
 import AdminTable from '../../admin/components/AdminTable';
 import { sellerOrderService } from '../services/sellerOrderService';
 import { formatINR, commissionStatusTone } from '../services/sellerCommissionService';
 import toast from 'react-hot-toast';
+import { exportToExcelCSV } from '../../../utils/exportUtils';
 
 const formatCurrency = (value) => `INR ${Number(value || 0).toLocaleString()}`;
 
@@ -33,6 +34,67 @@ const SellerOrders = () => {
         const t = setTimeout(() => setDebouncedSearch(search), 300);
         return () => clearTimeout(t);
     }, [search]);
+
+    const handleExport = async () => {
+        const loadingToast = toast.loading("Generating orders export...");
+        try {
+            const params = {
+                page: 1,
+                limit: Math.max(1000, pagination?.totalItems || 1000)
+            };
+            if (debouncedSearch) params.search = debouncedSearch;
+            if (status !== 'all') params.status = status;
+            if (paymentStatus !== 'all') params.paymentStatus = paymentStatus;
+
+            const result = await sellerOrderService.getSellerOrdersPaged(params);
+            const exportOrders = result.orders || [];
+            if (exportOrders.length === 0) {
+                toast.error("No orders to export", { id: loadingToast });
+                return;
+            }
+
+            const headers = [
+                'orderId',
+                'formattedDate',
+                'customerName',
+                'customerEmail',
+                'formattedPhone',
+                'paymentMethod',
+                'paymentStatus',
+                'itemCount',
+                'totalAmount',
+                'orderStatus',
+                'shippingCarrier',
+                'trackingId'
+            ];
+            const columnNames = [
+                'Order ID',
+                'Date',
+                'Customer Name',
+                'Email',
+                'Phone',
+                'Payment Method',
+                'Payment Status',
+                'Items Count',
+                'Total Value (INR)',
+                'Order Status',
+                'Shipping Carrier',
+                'Tracking ID'
+            ];
+
+            const formattedOrders = exportOrders.map(order => ({
+                ...order,
+                formattedDate: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : '',
+                formattedPhone: order.customerPhone ? `\t${order.customerPhone}` : ''
+            }));
+
+            exportToExcelCSV(formattedOrders, headers, columnNames, 'Seller_Orders_Report');
+            toast.success("Orders report exported successfully", { id: loadingToast });
+        } catch (err) {
+            console.error("Export seller orders failed:", err);
+            toast.error("Failed to export orders", { id: loadingToast });
+        }
+    };
 
     const loadOrders = async () => {
         setLoading(true);
@@ -219,6 +281,13 @@ const SellerOrders = () => {
                     <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">SELLER ORDER PIPELINE</h1>
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-[0.2em] mt-1">Manage only the orders that belong to your catalogue</p>
                 </div>
+                <button
+                    onClick={handleExport}
+                    className="flex items-center gap-1.5 px-4 py-2.5 bg-gray-900 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-sm active:scale-95 whitespace-nowrap self-end"
+                    title="Export Orders as Excel/CSV"
+                >
+                    <Download size={14} /> Export Excel
+                </button>
             </div>
 
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">

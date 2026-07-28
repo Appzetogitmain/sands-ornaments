@@ -458,4 +458,99 @@ module.exports = {
   welcomeEmail,
   giftCardDelivery,
   giftCardPurchaseConfirmation,
+  replacementRequested,
+  replacementStatusUpdate,
+  sellerReplacementNotif,
 };
+
+/**
+ * 12. Replacement Request Submitted
+ */
+function replacementRequested({ replacementReq, userName, order }) {
+  const body = `
+    <h2 style="margin:0 0 4px;font-size:22px;color:${BRAND_DARK};">Replacement Request Received</h2>
+    <p style="color:#666;margin:0 0 24px;font-size:15px;">Hi ${userName || "there"}, we've received your replacement request for order <strong>${order?.orderId || ""}</strong>.</p>
+
+    <div style="background:${BRAND_LIGHT};border-radius:8px;padding:20px 24px;margin-bottom:24px;">
+      <p style="margin:0;font-size:13px;color:#888;font-weight:600;text-transform:uppercase;">Replacement ID</p>
+      <p style="margin:4px 0 0;font-size:18px;font-weight:700;color:${BRAND_DARK};">${replacementReq.replacementId}</p>
+      <p style="margin:8px 0 0;font-size:13px;color:#555;">Status: ${badge("Pending Review", "#FF9800")}</p>
+      ${replacementReq.evidence?.reason ? `<p style="margin:8px 0 0;font-size:13px;color:#555;">Reason: ${replacementReq.evidence.reason}</p>` : ""}
+    </div>
+
+    <p style="font-size:13px;color:#666;line-height:1.7;">Our team will review your replacement request within <strong>24–48 hours</strong>. You will receive an email once a decision is made.</p>
+    ${divider()}
+    <div style="text-align:center;">
+      ${btn("View Replacement Status", `${process.env.CLIENT_URL || "https://sandsjewels.com"}/profile/replacements`)}
+    </div>`;
+
+  return layout(`Replacement Request — ${replacementReq.replacementId}`, body);
+}
+
+/**
+ * 13. Replacement Status Update
+ */
+function replacementStatusUpdate({
+  replacementReq,
+  userName,
+  newStatus,
+  note,
+  order,
+}) {
+  const statusColors = {
+    Approved: "#4CAF50",
+    Rejected: "#e57373",
+    "Pickup Scheduled": "#2196F3",
+    "Pickup Completed": "#3F51B5",
+    "Replacement Shipped": "#9C27B0",
+    Delivered: "#009688",
+    Closed: "#888",
+  };
+  const color = statusColors[newStatus] || BRAND_COLOR;
+
+  const body = `
+    <h2 style="margin:0 0 4px;font-size:22px;color:${BRAND_DARK};">Replacement Update</h2>
+    <p style="color:#666;margin:0 0 24px;font-size:15px;">Hi ${userName || "there"}, your replacement request has been updated.</p>
+
+    <div style="background:${BRAND_LIGHT};border-radius:8px;padding:20px 24px;margin-bottom:24px;">
+      <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+          <td><p style="margin:0;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">Replacement ID</p>
+              <p style="margin:4px 0 0;font-size:16px;font-weight:700;color:${BRAND_DARK};">${replacementReq.replacementId}</p></td>
+          <td style="text-align:right;"><p style="margin:0;font-size:12px;color:#888;font-weight:600;text-transform:uppercase;">New Status</p>
+              <p style="margin:4px 0 0;">${badge(newStatus, color)}</p></td>
+        </tr>
+      </table>
+      ${note ? `<p style="margin:12px 0 0;font-size:13px;color:#555;border-top:1px solid #ece8e1;padding-top:12px;">Note from team: ${note}</p>` : ""}
+      ${newStatus === "Replacement Shipped" && replacementReq.shipment?.awb ? `<p style="margin:12px 0 0;font-size:13px;color:#555;">Tracking AWB: <strong>${replacementReq.shipment.awb}</strong> (${replacementReq.shipment.partner || "Courier"})</p>` : ""}
+    </div>
+    ${divider()}
+    <div style="text-align:center;">
+      ${btn("View Replacement Details", `${process.env.CLIENT_URL || "https://sandsjewels.com"}/profile/replacements`)}
+    </div>`;
+
+  return layout(`Replacement ${newStatus} — ${replacementReq.replacementId}`, body);
+}
+
+/**
+ * 14. Seller — Replacement Notif
+ */
+function sellerReplacementNotif({ order, sellerName, item, replacementId }) {
+  const body = `
+    <h2 style="margin:0 0 4px;font-size:22px;color:${BRAND_DARK};">Replacement Requested for Your Item</h2>
+    <p style="color:#666;margin:0 0 24px;font-size:15px;">Hi ${sellerName || "there"}, a customer has requested a replacement for an item from order <strong>${order?.orderId || ""}</strong>.</p>
+
+    <div style="background:#fff8f0;border:1px solid #ffe0b2;border-radius:8px;padding:20px 24px;margin-bottom:24px;">
+      <p style="margin:0;font-size:13px;color:#555;"><strong>Item:</strong> ${item?.name || "N/A"}</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#555;"><strong>Replacement ID:</strong> ${replacementId}</p>
+      <p style="margin:6px 0 0;font-size:13px;color:#555;"><strong>Reason:</strong> ${item?.reason || "Not specified"}</p>
+    </div>
+
+    <p style="font-size:13px;color:#666;">The admin team is reviewing this replacement request. You will be notified of further updates.</p>
+    ${divider()}
+    <div style="text-align:center;">
+      ${btn("View in Dashboard", `${process.env.CLIENT_URL || "https://sandsjewels.com"}/seller/replacements`)}
+    </div>`;
+
+  return layout(`Replacement Request — Order ${order?.orderId}`, body);
+}

@@ -5,6 +5,7 @@ const boolField = Joi.boolean().truthy("true").falsy("false");
 const variantSchema = Joi.object({
   _id: Joi.string().trim().allow(""),
   name: Joi.string().required().trim(),
+  size: Joi.string().trim().allow("").optional(),
   variantCode: Joi.string().trim().allow(""),
   mrp: Joi.number().min(0).optional(),
   price: Joi.number().min(0).optional(),

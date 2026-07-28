@@ -61,7 +61,7 @@ const LatestDrop = () => {
                     </div>
                 </div>
 
-                <div ref={scrollRef} className="flex gap-6 overflow-x-auto no-scrollbar pb-8 snap-x snap-mandatory px-1">
+                <div ref={scrollRef} className={`flex gap-6 overflow-x-auto no-scrollbar pb-8 snap-x snap-mandatory px-1 ${displayProducts.length === 1 ? 'justify-center' : ''}`}>
                     {displayProducts.map((product) => (
                         <div key={product.id} className="min-w-[180px] md:min-w-[280px] w-[180px] md:w-[280px] snap-start">
                             <ProductCard product={product} />

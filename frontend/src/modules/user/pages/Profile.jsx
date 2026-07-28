@@ -45,12 +45,14 @@ const Profile = () => {
     const {
         user, updateProfile, logout, orders, wishlist, addresses,
         addAddress, removeAddress, setDefaultAddress, defaultAddressId,
-        deleteAccount, notificationsEnabled, toggleNotificationSettings, coupons
+        deleteAccount, notificationsEnabled, toggleNotificationSettings, coupons,
+        replacements
     } = useShop();
 
     const safeOrders = Array.isArray(orders) ? orders : [];
     const safeWishlist = Array.isArray(wishlist) ? wishlist : [];
     const safeAddresses = Array.isArray(addresses) ? addresses : [];
+    const safeReplacements = Array.isArray(replacements) ? replacements : [];
     const availableCoupons = Array.isArray(coupons) ? coupons.filter(c => c?.active !== false) : [];
     const { activeTab: tabParam, subId } = useParams();
     const activeTab = tabParam || 'profile';
@@ -217,6 +219,7 @@ const Profile = () => {
                         handleLogout={handleLogout}
                         setShowDeleteModal={setShowDeleteModal}
                         tabParam={tabParam}
+                        safeReplacements={safeReplacements}
                     />
 
                     {/* Content Area - Hidden on mobile if NO tab is active */}

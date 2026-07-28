@@ -75,7 +75,10 @@ export const sellerService = {
 
     updateProfile: async (payload) => {
         try {
-            const res = await api.put('/seller/profile/me', payload);
+            const config = payload instanceof FormData
+                ? { headers: { 'Content-Type': 'multipart/form-data' } }
+                : undefined;
+            const res = await api.put('/seller/profile/me', payload, config);
             return res.data;
         } catch (err) {
             console.error("Failed to update seller profile:", err);

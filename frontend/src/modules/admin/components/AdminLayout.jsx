@@ -51,6 +51,7 @@ const AdminLayout = ({ children }) => {
         { name: 'Returns', icon: RotateCcw, path: '/admin/returns' },
         { name: 'Replacements', icon: RefreshCw, path: '/admin/replacements' },
         { name: 'Shipping', icon: Truck, path: '/admin/shipping' },
+        { name: 'Direct Sales', icon: Store, path: '/admin/direct-sales' },
         {
             name: 'Inventory',
             icon: Boxes,

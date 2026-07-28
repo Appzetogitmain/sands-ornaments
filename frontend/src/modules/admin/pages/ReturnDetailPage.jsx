@@ -294,6 +294,29 @@ const ReturnDetailPage = () => {
                                 )}
                             </div>
                         </div>
+                        <div className="mt-6 border-t border-gray-100 pt-6">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-3">Product Condition Evidence</p>
+                            <div className="flex gap-4 overflow-x-auto pb-2">
+                                {(ret.evidenceImages || []).map((img, index) => (
+                                    <a
+                                        key={index}
+                                        href={img}
+                                        target="_blank"
+                                        rel="noreferrer"
+                                        className="w-32 h-32 rounded-xl border border-gray-200 overflow-hidden shrink-0 relative group cursor-pointer shadow-sm hover:shadow-md transition-all"
+                                    >
+                                        <img src={img} alt="Product Proof" className="w-full h-full object-cover" />
+                                        <div className="absolute inset-0 bg-black/5 group-hover:bg-transparent transition-colors"></div>
+                                        <div className="absolute bottom-2 left-2 bg-gray-600 text-white text-[8px] font-black px-2 py-0.5 rounded tracking-tighter">General Photo</div>
+                                    </a>
+                                ))}
+                                {!ret.evidenceImages?.length && (
+                                    <div className="text-xs text-gray-500 font-bold bg-gray-50 px-4 py-2 rounded-lg border border-gray-100 italic">
+                                        No product condition photos uploaded by customer.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
                     </div>
 
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">

@@ -9,7 +9,7 @@ const SupportForm = ({ onCancel, initialOrder = '' }) => {
     const [formData, setFormData] = useState({
         subject: '',
         orderId: initialOrder,
-        category: 'General',
+        category: 'General Inquiry',
         message: ''
     });
 
@@ -57,11 +57,11 @@ const SupportForm = ({ onCancel, initialOrder = '' }) => {
                         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                         className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3 py-2 md:px-4 md:py-3 text-sm md:text-base text-gray-900 focus:outline-none focus:border-black focus:ring-1 focus:ring-black transition-all"
                     >
-                        <option>General Enquiry</option>
-                        <option>Order Tracking</option>
-                        <option>Payment Issue</option>
-                        <option>Returns & Refunds</option>
-                        <option>Product Feedback</option>
+                        <option value="General Inquiry">General Enquiry</option>
+                        <option value="Order Tracking">Order Tracking</option>
+                        <option value="Payment Issue">Payment Issue</option>
+                        <option value="Return/Refund">Returns & Refunds</option>
+                        <option value="Product Feedback">Product Feedback</option>
                     </select>
                 </div>
                 <div>

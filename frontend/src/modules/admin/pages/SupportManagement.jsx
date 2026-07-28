@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Eye, Trash2, Mail, Calendar, Inbox, AlertCircle, ShoppingBag, FileText, CheckCircle2, Send, Clock, User, MessageSquare, X, Headphones } from 'lucide-react';
+import { Eye, Trash2, Mail, Calendar, Inbox, AlertCircle, ShoppingBag, FileText, CheckCircle2, Send, Clock, User, MessageSquare, X, Headphones, Paperclip } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import DataTable from '../components/common/DataTable';
 import AdminStatsCard from '../components/AdminStatsCard';
@@ -9,6 +9,7 @@ import toast from 'react-hot-toast';
 
 const SupportManagement = () => {
     const { socket } = useSocket();
+    const [activeTab, setActiveTab] = useState('user'); // 'user' or 'seller'
     const [tickets, setTickets] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -17,12 +18,93 @@ const SupportManagement = () => {
     const [adminReplyText, setAdminReplyText] = useState('');
     const [ticketStatusUpdate, setTicketStatusUpdate] = useState('In Progress');
     const repliesEndRef = useRef(null);
+    const fileInputRef = useRef(null);
+    const [stagedAttachments, setStagedAttachments] = useState([]);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState(0);
+
+    // Clear staged files when ticket selection changes
+    useEffect(() => {
+        setStagedAttachments([]);
+    }, [selectedTicket]);
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const MAX_SIZE = 20 * 1024 * 1024;
+        if (file.size > MAX_SIZE) {
+            toast.error("File size must be under 20MB");
+            return;
+        }
+
+        const isImage = file.type.startsWith("image/");
+        const isVideo = file.type.startsWith("video/");
+        if (!isImage && !isVideo) {
+            toast.error("Only image and video uploads are supported");
+            return;
+        }
+
+        try {
+            setIsUploading(true);
+            setUploadProgress(0);
+            
+            const { uploadToCloudinary } = await import('../../../utils/upload');
+            const attachment = await uploadToCloudinary(
+                file,
+                "admin/support/upload-signature",
+                (progress) => setUploadProgress(progress)
+            );
+
+            setStagedAttachments(prev => [...prev, attachment]);
+            toast.success("File uploaded successfully");
+        } catch (err) {
+            console.error(err);
+            toast.error("Upload failed: " + (err.message || "Unknown error"));
+        } finally {
+            setIsUploading(false);
+            setUploadProgress(0);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    const removeStagedAttachment = (idx) => {
+        setStagedAttachments(prev => prev.filter((_, i) => i !== idx));
+    };
+
+    const renderAttachments = (attachments) => {
+        if (!attachments || attachments.length === 0) return null;
+        return (
+            <div className="flex flex-col gap-2 mt-2 max-w-full">
+                {attachments.map((att, idx) => (
+                    <div key={idx} className="relative">
+                        {att.type === 'video' ? (
+                            <video 
+                                src={att.url} 
+                                controls 
+                                preload="none" 
+                                className="max-h-40 rounded-lg border border-gray-200 bg-black" 
+                            />
+                        ) : (
+                            <img 
+                                src={att.url} 
+                                alt={att.name || "attachment"} 
+                                className="max-h-40 rounded-lg border border-gray-200 cursor-pointer object-contain bg-gray-50" 
+                                onClick={() => window.open(att.url, '_blank')}
+                            />
+                        )}
+                    </div>
+                ))}
+            </div>
+        );
+    };
 
     // Fetch all tickets from backend
     const fetchTickets = async () => {
         setIsLoading(true);
         try {
-            const res = await api.get('admin/support');
+            const endpoint = activeTab === 'user' ? 'admin/support' : 'admin/support/seller';
+            const res = await api.get(endpoint);
             if (res.data.success) {
                 setTickets(res.data.data?.tickets || res.data.tickets || []);
             }
@@ -36,22 +118,34 @@ const SupportManagement = () => {
 
     useEffect(() => {
         fetchTickets();
-    }, []);
+    }, [activeTab]);
 
     // Socket listeners for real-time support updates
     useEffect(() => {
         if (!socket) return;
 
         const handleNewTicket = (newTicket) => {
-            setTickets(prev => [newTicket, ...prev]);
-            toast.success(`New support ticket created: "${newTicket.subject}"`, {
-                icon: '🎫',
-                duration: 5000
-            });
+            if (activeTab === 'user') {
+                setTickets(prev => [newTicket, ...prev]);
+                toast.success(`New customer support ticket created: "${newTicket.subject}"`, {
+                    icon: '🎫',
+                    duration: 5000
+                });
+            }
+        };
+
+        const handleNewSellerTicket = (newTicket) => {
+            if (activeTab === 'seller') {
+                setTickets(prev => [newTicket, ...prev]);
+                toast.success(`New merchant support ticket created: "${newTicket.subject}"`, {
+                    icon: '🎫',
+                    duration: 5000
+                });
+            }
         };
 
         const handleSupportMessage = (data) => {
-            // data contains: { ticketId, _id, userId, reply: { from, text, date }, status }
+            if (activeTab !== 'user') return;
             const { _id, reply, status } = data;
 
             setTickets(prev => prev.map(t => {
@@ -69,7 +163,6 @@ const SupportManagement = () => {
                 return t;
             }));
 
-            // If the active viewed ticket is the one updated, update the selected ticket state
             setSelectedTicket(prev => {
                 if (prev && prev._id === _id) {
                     const exists = prev.replies.some(r => r.text === reply.text && r.from === reply.from && Math.abs(new Date(r.date) - new Date(reply.date)) < 2000);
@@ -84,7 +177,6 @@ const SupportManagement = () => {
                 return prev;
             });
 
-            // Show a notification if user replied
             if (reply.from === 'user') {
                 toast(`User reply on ticket #${data.ticketId}: "${reply.text.substring(0, 30)}..."`, {
                     icon: '💬',
@@ -93,14 +185,59 @@ const SupportManagement = () => {
             }
         };
 
+        const handleSellerSupportMessage = (data) => {
+            if (activeTab !== 'seller') return;
+            const { _id, reply, status } = data;
+
+            setTickets(prev => prev.map(t => {
+                if (t._id === _id) {
+                    const exists = t.replies.some(r => r.text === reply.text && r.from === reply.from && Math.abs(new Date(r.date) - new Date(reply.date)) < 2000);
+                    if (exists) return t;
+
+                    return {
+                        ...t,
+                        status,
+                        replies: [...t.replies, reply],
+                        updatedAt: new Date().toISOString()
+                    };
+                }
+                return t;
+            }));
+
+            setSelectedTicket(prev => {
+                if (prev && prev._id === _id) {
+                    const exists = prev.replies.some(r => r.text === reply.text && r.from === reply.from && Math.abs(new Date(r.date) - new Date(reply.date)) < 2000);
+                    if (exists) return prev;
+
+                    return {
+                        ...prev,
+                        status,
+                        replies: [...prev.replies, reply]
+                    };
+                }
+                return prev;
+            });
+
+            if (reply.from === 'seller') {
+                toast(`Merchant reply on ticket #${data.ticketId}: "${reply.text.substring(0, 30)}..."`, {
+                    icon: '💬',
+                    duration: 5000
+                });
+            }
+        };
+
         socket.on('support_ticket_created', handleNewTicket);
+        socket.on('seller_support_ticket_created', handleNewSellerTicket);
         socket.on('support_message', handleSupportMessage);
+        socket.on('seller_support_message', handleSellerSupportMessage);
 
         return () => {
             socket.off('support_ticket_created', handleNewTicket);
+            socket.off('seller_support_ticket_created', handleNewSellerTicket);
             socket.off('support_message', handleSupportMessage);
+            socket.off('seller_support_message', handleSellerSupportMessage);
         };
-    }, [socket]);
+    }, [socket, activeTab]);
 
     // Scroll to bottom of replies when selected ticket changes or gets replies
     useEffect(() => {
@@ -111,12 +248,16 @@ const SupportManagement = () => {
 
     const handleSendAdminReply = async (e) => {
         e.preventDefault();
-        if (!adminReplyText.trim() || !selectedTicket) return;
+        if ((!adminReplyText.trim() && stagedAttachments.length === 0) || !selectedTicket) return;
 
         try {
-            const res = await api.post(`admin/support/${selectedTicket._id}/reply`, {
+            const endpoint = activeTab === 'user' 
+                ? `admin/support/${selectedTicket._id}/reply`
+                : `admin/support/seller/${selectedTicket._id}/reply`;
+            const res = await api.post(endpoint, {
                 message: adminReplyText,
-                status: ticketStatusUpdate
+                status: ticketStatusUpdate,
+                attachments: stagedAttachments
             });
 
             if (res.data.success) {
@@ -124,6 +265,7 @@ const SupportManagement = () => {
                 setSelectedTicket(updatedTicket);
                 setTickets(prev => prev.map(t => t._id === updatedTicket._id ? updatedTicket : t));
                 setAdminReplyText('');
+                setStagedAttachments([]);
                 toast.success('Reply sent successfully');
             }
         } catch (err) {
@@ -134,9 +276,10 @@ const SupportManagement = () => {
 
     const handleStatusChange = async (id, newStatus) => {
         try {
-            // We can reuse the reply route but only send status update (or we can just update via API)
-            // For now, let's keep it simple: if changing status, send a status update reply
-            const res = await api.post(`admin/support/${id}/reply`, {
+            const endpoint = activeTab === 'user'
+                ? `admin/support/${id}/reply`
+                : `admin/support/seller/${id}/reply`;
+            const res = await api.post(endpoint, {
                 message: `Ticket status changed to ${newStatus} by admin.`,
                 status: newStatus
             });
@@ -152,9 +295,10 @@ const SupportManagement = () => {
     };
 
     const filteredTickets = tickets.filter(t => {
+        const nameToSearch = activeTab === 'seller' ? t.sellerName : t.userName;
         const matchesSearch = 
             t.subject?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            t.userName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            nameToSearch?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             t.ticketId?.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesStatus = statusFilter === 'All' || t.status === statusFilter;
         return matchesSearch && matchesStatus;
@@ -176,11 +320,15 @@ const SupportManagement = () => {
             )
         },
         {
-            header: 'User',
+            header: activeTab === 'seller' ? 'Seller' : 'User',
             render: (item) => (
                 <div>
-                    <p className="text-xs font-bold text-gray-900">{item.userName || 'Customer'}</p>
-                    <p className="text-[10px] text-gray-500">{item.userEmail}</p>
+                    <p className="text-xs font-bold text-gray-900">
+                        {activeTab === 'seller' ? item.sellerName : (item.userName || 'Customer')}
+                    </p>
+                    <p className="text-[10px] text-gray-500">
+                        {activeTab === 'seller' ? item.sellerEmail : item.userEmail}
+                    </p>
                 </div>
             )
         },
@@ -254,6 +402,30 @@ const SupportManagement = () => {
                 subtitle="Track and resolve customer support requests"
             />
 
+            {/* Toggle Tabs */}
+            <div className="flex border-b border-gray-200 mt-4 shrink-0">
+                <button
+                    onClick={() => setActiveTab('user')}
+                    className={`py-2.5 px-6 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
+                        activeTab === 'user'
+                            ? 'border-[#3E2723] text-[#3E2723]'
+                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                    }`}
+                >
+                    User Tickets
+                </button>
+                <button
+                    onClick={() => setActiveTab('seller')}
+                    className={`py-2.5 px-6 font-bold text-xs uppercase tracking-wider border-b-2 transition-all ${
+                        activeTab === 'seller'
+                            ? 'border-[#3E2723] text-[#3E2723]'
+                            : 'border-transparent text-gray-400 hover:text-gray-600'
+                    }`}
+                >
+                    Seller Tickets
+                </button>
+            </div>
+
             {/* Stats Cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 mb-8 shrink-0">
                 <AdminStatsCard
@@ -317,7 +489,7 @@ const SupportManagement = () => {
                             {/* Metadata bar */}
                             <div className="bg-white border-b border-gray-100 px-6 py-3 flex flex-wrap justify-between items-center gap-4 shrink-0 text-xs text-gray-600">
                                 <div>
-                                    <span className="font-bold text-gray-900">User:</span> {selectedTicket.userName || 'Customer'} ({selectedTicket.userEmail})
+                                    <span className="font-bold text-gray-900">{activeTab === 'seller' ? 'Seller' : 'User'}:</span> {activeTab === 'seller' ? selectedTicket.sellerName : (selectedTicket.userName || 'Customer')} ({activeTab === 'seller' ? selectedTicket.sellerEmail : selectedTicket.userEmail})
                                 </div>
                                 {selectedTicket.orderId && (
                                     <div>
@@ -338,8 +510,9 @@ const SupportManagement = () => {
                                     </div>
                                     <div>
                                         <div className="bg-white border border-gray-200/60 p-3.5 rounded-2xl rounded-tl-none text-xs text-gray-800 shadow-sm leading-relaxed">
-                                            <p className="font-bold text-[10px] text-[#9C5B61] mb-1">Customer</p>
+                                            <p className="font-bold text-[10px] text-[#9C5B61] mb-1">{activeTab === 'seller' ? 'Seller' : 'Customer'}</p>
                                             {selectedTicket.message}
+                                            {renderAttachments(selectedTicket.attachments)}
                                         </div>
                                         <span className="text-[9px] text-gray-400 mt-1 block pl-1">
                                             {new Date(selectedTicket.createdAt).toLocaleString()}
@@ -348,7 +521,7 @@ const SupportManagement = () => {
                                 </div>
 
                                 {/* Replies */}
-                                {selectedTicket.replies?.map((reply, i) => {
+                                {selectedTicket.replies?.slice(1).map((reply, i) => {
                                     const isAdmin = reply.from === 'admin';
                                     return (
                                         <div
@@ -381,9 +554,10 @@ const SupportManagement = () => {
                                                             isAdmin ? 'text-[#D7CCC8]' : 'text-[#9C5B61]'
                                                         }`}
                                                     >
-                                                        {isAdmin ? 'Admin Support' : 'Customer'}
+                                                        {isAdmin ? 'Admin Support' : (activeTab === 'seller' ? 'Seller' : 'Customer')}
                                                     </p>
                                                     {reply.text}
+                                                    {renderAttachments(reply.attachments)}
                                                 </div>
                                                 <span className="text-[9px] text-gray-400 mt-1 block px-1 text-right">
                                                     {new Date(reply.date).toLocaleString()}
@@ -411,7 +585,43 @@ const SupportManagement = () => {
                                         </select>
                                     </div>
                                 </div>
-                                <div className="flex gap-2">
+                                {stagedAttachments.length > 0 && (
+                                    <div className="flex flex-wrap gap-2 px-1">
+                                        {stagedAttachments.map((att, idx) => (
+                                            <div key={idx} className="relative group w-12 h-12 bg-gray-50 rounded-lg border border-gray-200 flex items-center justify-center overflow-hidden">
+                                                {att.type === 'video' ? (
+                                                    <video src={att.url} className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <img src={att.url} className="w-full h-full object-cover" />
+                                                )}
+                                                <button 
+                                                    type="button" 
+                                                    onClick={() => removeStagedAttachment(idx)}
+                                                    className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                                {isUploading && (
+                                    <div className="flex items-center gap-3 px-1">
+                                        <span className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">Uploading: {uploadProgress}%</span>
+                                        <div className="flex-grow h-1 bg-gray-100 rounded-full overflow-hidden">
+                                            <div className="h-full bg-[#3E2723] transition-all duration-300" style={{ width: `${uploadProgress}%` }} />
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex gap-2 items-center">
+                                    <button
+                                        type="button"
+                                        disabled={isUploading}
+                                        onClick={() => fileInputRef.current?.click()}
+                                        className="p-2 hover:bg-gray-100 rounded-full text-gray-400 hover:text-gray-600 transition-colors cursor-pointer shrink-0"
+                                    >
+                                        <Paperclip className="w-4 h-4" />
+                                    </button>
                                     <textarea
                                         rows="2"
                                         placeholder="Type support response..."
@@ -421,8 +631,8 @@ const SupportManagement = () => {
                                     ></textarea>
                                     <button
                                         type="submit"
-                                        disabled={!adminReplyText.trim()}
-                                        className="px-5 bg-[#3E2723] hover:bg-[#2D1B18] disabled:opacity-40 disabled:hover:bg-[#3E2723] text-white rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold cursor-pointer"
+                                        disabled={!adminReplyText.trim() && stagedAttachments.length === 0}
+                                        className="px-5 py-3.5 bg-[#3E2723] hover:bg-[#2D1B18] disabled:opacity-40 disabled:hover:bg-[#3E2723] text-white rounded-xl flex items-center justify-center gap-1.5 transition-all text-xs font-bold cursor-pointer shrink-0"
                                     >
                                         <Send className="w-3.5 h-3.5" />
                                         Send
@@ -433,6 +643,13 @@ const SupportManagement = () => {
                     </div>
                 </div>
             )}
+        <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            accept="image/*,video/*" 
+            className="hidden" 
+        />
         </div>
     );
 };

@@ -77,33 +77,33 @@ const TaxSettings = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {cards.map((card) => (
-          <div key={card.title} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <div key={card.title} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
             <div className="flex items-center justify-between">
-              <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">{card.title}</p>
+              <p className="text-[11px] font-medium tracking-wide text-gray-400">{card.title}</p>
               <card.icon className="w-5 h-5 text-[#3E2723]" />
             </div>
-            <p className="text-3xl font-black text-gray-900 mt-3">{card.value}</p>
+            <p className="text-3xl font-medium text-gray-900 mt-3">{card.value}</p>
             <p className="text-sm text-gray-500 mt-2">{card.note}</p>
           </div>
         ))}
       </div>
 
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-6">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-6">
         <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-900">
           GST is managed only by admin. When this percentage changes, the system recalculates every product using:
           Metal Price + Making Charge + Hidden Charge, then applies GST on that subtotal. Hidden Charge includes hallmarking and diamond certificate charges. If a product is configured to pass payment gateway charges to the user, that extra 2% is added after GST.
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-3">
-            <h3 className="text-sm font-black text-gray-800 uppercase tracking-widest">Global GST</h3>
+            <h3 className="text-sm font-medium text-gray-800 tracking-wide">Global GST</h3>
             <div className="space-y-3">
-              <label className="text-[10px] font-black text-gray-400 uppercase tracking-widest">GST Percentage</label>
+              <label className="text-[10px] font-medium text-gray-400 tracking-wide">GST Percentage</label>
               <input
                 type="number"
                 value={gstRate}
                 onChange={(e) => setGstRate(e.target.value)}
-                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-3 px-4 text-sm font-bold text-gray-800 focus:outline-none focus:border-[#3E2723]/40"
+                className="w-full bg-gray-50 border border-gray-200 rounded-xl py-2 px-4 text-sm font-medium text-gray-800 focus:outline-none focus:border-[#3E2723]/40"
                 placeholder="0"
                 disabled={loading}
               />
@@ -117,7 +117,7 @@ const TaxSettings = () => {
         <button
           onClick={handleSave}
           disabled={saving || loading}
-          className="w-full md:w-auto px-6 py-3 rounded-xl bg-[#3E2723] text-white text-xs font-black uppercase tracking-widest flex items-center justify-center gap-2 shadow-md disabled:opacity-60"
+          className="w-full md:w-auto px-6 py-2 rounded-xl bg-[#3E2723] text-white text-xs font-medium tracking-wide flex items-center justify-center gap-2 shadow-md disabled:opacity-60"
         >
           <Save className="w-4 h-4" />
           {saving ? 'Saving...' : 'Save Tax Settings'}

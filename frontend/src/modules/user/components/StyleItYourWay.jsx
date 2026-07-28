@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useHomepageCms } from '../hooks/useHomepageCms';
@@ -99,6 +99,35 @@ const StyleItYourWay = () => {
 
     const displayCollections = normalizedConfiguredItems.length > 0 ? normalizedConfiguredItems : defaultCollections;
 
+    const [activeIndex, setActiveIndex] = useState(0);
+
+    const handleScroll = () => {
+        if (scrollRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+            const maxScroll = scrollWidth - clientWidth;
+            if (maxScroll <= 0) {
+                setActiveIndex(0);
+                return;
+            }
+            const percentage = scrollLeft / maxScroll;
+            const index = Math.round(percentage * (displayCollections.length - 1));
+            setActiveIndex(Math.min(index, displayCollections.length - 1));
+        }
+    };
+
+    const scrollToDot = (index) => {
+        if (scrollRef.current) {
+            const container = scrollRef.current;
+            const maxScroll = container.scrollWidth - container.clientWidth;
+            const percentage = index / (displayCollections.length - 1 || 1);
+            container.scrollTo({
+                left: percentage * maxScroll,
+                behavior: 'smooth'
+            });
+            setActiveIndex(index);
+        }
+    };
+
     React.useEffect(() => {
         const isMobile = window.innerWidth < 768;
         if (!isMobile) return;
@@ -136,31 +165,20 @@ const StyleItYourWay = () => {
 
                 <div className="relative group/carousel">
                     {/* Navigation Buttons - Absolute Positioned */}
-                    <button
-                        onClick={() => scroll('left')}
-                        className="absolute left-0 top-[40%] -translate-y-1/2 -translate-x-1/2 z-50 p-2.5 bg-white rounded-full shadow-xl text-[#4A1015] hover:bg-[#4A1015] hover:text-white transition-all duration-300 opacity-0 group-hover/carousel:opacity-100 hidden md:flex items-center justify-center border border-gray-100"
-                        title="Scroll Left"
-                    >
-                        <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                        onClick={() => scroll('right')}
-                        className="absolute right-0 top-[40%] -translate-y-1/2 translate-x-1/2 z-50 p-2.5 bg-white rounded-full shadow-xl text-[#4A1015] hover:bg-[#4A1015] hover:text-white transition-all duration-300 opacity-0 group-hover/carousel:opacity-100 hidden md:flex items-center justify-center border border-gray-100"
-                        title="Scroll Right"
-                    >
-                        <ChevronRight className="w-5 h-5" />
-                    </button>
+                    
+                    
 
                     {/* Carousel Container */}
                     <div
                         ref={scrollRef}
-                        className="flex gap-4 md:gap-8 overflow-x-auto pb-16 pt-2 snap-x snap-mandatory scrollbar-hide scroll-smooth"
+                        onScroll={handleScroll}
+                        className="flex gap-4 md:gap-8 overflow-x-auto pb-12 pt-2 snap-x snap-mandatory scrollbar-hide scroll-smooth"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                         {displayCollections.map((detail) => (
                             <div
                                 key={detail.id}
-                                className={`min-w-[75vw] md:min-w-[calc(45%-20px)] h-[160px] md:h-[280px] rounded-[1.2rem] md:rounded-[2rem] relative flex-shrink-0 snap-center group overflow-visible cursor-pointer transition-all duration-500 isolate mb-10`}
+                                className={`min-w-[75vw] md:min-w-[calc(45%-20px)] h-[160px] md:h-[280px] rounded-[1.2rem] md:rounded-[2rem] relative flex-shrink-0 snap-center group overflow-visible cursor-pointer transition-all duration-500 isolate mb-6`}
                             >
                                 <Link to={detail.path}>
                                     {/* Full Card Banner Image */}
@@ -201,6 +219,24 @@ const StyleItYourWay = () => {
                             </div>
                         ))}
                     </div>
+
+                    {/* Carousel Dots */}
+                    {displayCollections.length > 1 && (
+                        <div className="flex justify-center items-center gap-2 pb-2 mt-[-24px]">
+                            {displayCollections.map((_, idx) => (
+                                <button
+                                    key={idx}
+                                    onClick={() => scrollToDot(idx)}
+                                    className={`transition-all duration-300 rounded-full ${
+                                        activeIndex === idx 
+                                        ? 'w-6 h-1.5 bg-[#722F37]' 
+                                        : 'w-1.5 h-1.5 bg-gray-300 hover:bg-gray-400'
+                                    }`}
+                                    aria-label={`Go to item ${idx + 1}`}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </section>

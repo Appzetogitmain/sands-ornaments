@@ -4,7 +4,10 @@ const Product = require("../../../models/Product");
 const StockLog = require("../../../models/StockLog");
 const User = require("../../../models/User");
 const { success, error } = require("../../../utils/apiResponse");
-const { isSerializedVariant, restockSerializedUnits } = require("../../../utils/inventorySync");
+const { isSerializedVariant, restockSerializedUnits, consumeSerializedStock, normalizeSerialCodes } = require("../../../utils/inventorySync");
+const { enqueueEmail } = require("../../../services/emailService");
+const emailTemplates = require("../../../services/emailTemplates");
+const { createNotification } = require("../../../services/notificationService");
 
 const VALID_STATUSES = [
   "Pending",
@@ -17,13 +20,24 @@ const VALID_STATUSES = [
   "Closed"
 ];
 
-const ALLOWED_TRANSITIONS = {
+const ALLOWED_TRANSITIONS_AFTER_PICKUP = {
   Pending: ["Approved", "Rejected"],
-  Approved: ["Pickup Scheduled", "Pickup Completed", "Replacement Shipped", "Closed"],
+  Approved: ["Pickup Scheduled", "Pickup Completed", "Closed"],
   Rejected: [],
   "Pickup Scheduled": ["Pickup Completed"],
   "Pickup Completed": ["Replacement Shipped", "Closed"],
   "Replacement Shipped": ["Delivered", "Closed"],
+  Delivered: ["Closed"],
+  Closed: []
+};
+
+const ALLOWED_TRANSITIONS_IMMEDIATE = {
+  Pending: ["Approved", "Rejected"],
+  Approved: ["Replacement Shipped", "Closed"],
+  Rejected: [],
+  "Replacement Shipped": ["Pickup Scheduled", "Pickup Completed", "Delivered", "Closed"],
+  "Pickup Scheduled": ["Pickup Completed"],
+  "Pickup Completed": ["Delivered", "Closed"],
   Delivered: ["Closed"],
   Closed: []
 };
@@ -46,10 +60,7 @@ const buildOrderStatusFromReplacementStatus = (currentStatus, nextStatus) => {
   }
 
   if (nextStatus === "Delivered" || nextStatus === "Closed") {
-    if (currentStatus === "Rejected") {
-      return "Delivered";
-    }
-    return "Returned";
+    return "Delivered";
   }
 
   return null;
@@ -179,12 +190,15 @@ exports.updateReplacementStatus = async (req, res) => {
 
     const currentStatus = String(repl.status || "").trim();
     const nextStatus = String(status || "").trim();
-    const allowed = ALLOWED_TRANSITIONS[currentStatus] || [];
+    
+    const effectiveReplacementMode = String(replacementMode || repl.replacementMode || "after_pickup").trim();
+    const transitions = effectiveReplacementMode === "immediate" ? ALLOWED_TRANSITIONS_IMMEDIATE : ALLOWED_TRANSITIONS_AFTER_PICKUP;
+    const allowed = transitions[currentStatus] || [];
+    
     if (currentStatus !== nextStatus && !allowed.includes(nextStatus)) {
       return error(res, `Invalid status transition from ${currentStatus} to ${nextStatus}`, 400);
     }
-
-    const effectiveReplacementMode = String(replacementMode || repl.replacementMode || "after_pickup").trim();
+    
     if (nextStatus === "Replacement Shipped" && effectiveReplacementMode === "after_pickup" && currentStatus !== "Pickup Completed") {
       return error(res, "After-pickup replacements can only be shipped after pickup is completed", 400);
     }
@@ -202,6 +216,35 @@ exports.updateReplacementStatus = async (req, res) => {
       const effectiveShipmentPartner = String(shipmentPartner || repl.shipment?.partner || "").trim();
       if (!effectiveShipmentPartner) {
         return error(res, "Shipment partner is required before marking replacement shipped", 400);
+      }
+    }
+
+    if (nextStatus === "Replacement Shipped" && !repl.inventory?.shippedProcessedAt) {
+      for (const item of repl.originalItems || []) {
+        const product = await Product.findById(item.productId);
+        if (!product) {
+          return error(res, `Product ${item.name} not found for replacement`, 404);
+        }
+        const variant = product.variants.id(item.variantId);
+        if (!variant) {
+          return error(res, `Variant not found for product ${product.name}`, 404);
+        }
+
+        const quantity = Number(item.qty ?? item.quantity ?? 0);
+        if (quantity <= 0) continue;
+
+        if (isSerializedVariant(product, variant)) {
+          const normalized = normalizeSerialCodes(variant.serialCodes || []);
+          const available = normalized.filter((code) => (code.status || "AVAILABLE") === "AVAILABLE");
+          if (available.length < quantity) {
+            return error(res, `Insufficient serialized stock for replacement item: ${product.name} (${variant.name}). Available: ${available.length}, Required: ${quantity}`, 400);
+          }
+        } else {
+          const currentStock = Number(variant.stock) || 0;
+          if (currentStock < quantity) {
+            return error(res, `Insufficient stock for replacement item: ${product.name} (${variant.name}). Available: ${currentStock}, Required: ${quantity}`, 400);
+          }
+        }
       }
     }
 
@@ -302,9 +345,76 @@ exports.updateReplacementStatus = async (req, res) => {
       await repl.save();
     }
 
+    // Deduct stock for new replacement item being shipped
+    const shouldDeductShippingStock =
+      nextStatus === "Replacement Shipped" &&
+      !repl.inventory?.shippedProcessedAt;
+
+    if (shouldDeductShippingStock) {
+      for (const item of repl.originalItems || []) {
+        const quantity = Number(item.qty ?? item.quantity ?? 0);
+        if (item.productId && item.variantId && quantity > 0) {
+          const product = await Product.findById(item.productId);
+          if (!product) continue;
+
+          const variant = product.variants.id(item.variantId);
+          if (!variant) continue;
+
+          const previousStock = Number(variant.stock) || 0;
+          const variantIndex = product.variants.findIndex(v => String(v._id) === String(item.variantId));
+
+          if (isSerializedVariant(product, variant)) {
+            consumeSerializedStock({
+              product,
+              variant,
+              quantity,
+              variantIndex,
+              saleStatus: "SOLD_ONLINE"
+            });
+          } else {
+            variant.stock = previousStock - quantity;
+          }
+
+          variant.sold = (Number(variant.sold) || 0) + quantity;
+          await product.save();
+
+          await StockLog.create({
+            productId: product._id,
+            variantId: variant._id,
+            changeType: "sale",
+            previousStock,
+            newStock: variant.stock,
+            change: variant.stock - previousStock,
+            reason: `Replacement item shipped for ${repl.replacementId || repl._id}`,
+            adminId: req.user.userId
+          });
+        }
+      }
+
+      repl.inventory = {
+        ...(repl.inventory || {}),
+        shippedProcessedAt: new Date(),
+        shippedProcessedStatus: nextStatus
+      };
+      await repl.save();
+    }
+
     if (repl.orderId) {
-      const nextOrderStatus = buildOrderStatusFromReplacementStatus(currentStatus, nextStatus);
+      let nextOrderStatus = buildOrderStatusFromReplacementStatus(currentStatus, nextStatus);
       if (nextOrderStatus) {
+        if (nextOrderStatus === "Delivered") {
+          const { hasOtherActiveClaims } = require("../../../utils/activeClaimsHelper");
+          const otherActive = await hasOtherActiveClaims(repl.orderId, repl._id);
+          if (otherActive) {
+            nextOrderStatus = "Return Requested";
+          } else {
+            const ReturnModel = require("../../../models/Return");
+            const completedReturns = await ReturnModel.find({ orderId: repl.orderId, status: "Refunded" });
+            if (completedReturns.length > 0) {
+              nextOrderStatus = "Partially Returned";
+            }
+          }
+        }
         await Order.updateOne(
           { _id: repl.orderId },
           {
@@ -324,6 +434,36 @@ exports.updateReplacementStatus = async (req, res) => {
     const refreshed = await Replacement.findById(repl._id)
       .populate("userId", "name email phone")
       .populate("orderId", "orderId paymentStatus total shippingAddress");
+
+    // Trigger notifications/emails
+    const replUser = refreshed.userId;
+    const replOrder = refreshed.orderId;
+    if (replUser && replUser.email) {
+      try {
+        await createNotification({
+          userId: replUser._id,
+          title: `Replacement Status: ${nextStatus}`,
+          message: `Your replacement request for order #${replOrder?.orderId || replOrder?._id} has been updated to "${nextStatus}".`,
+          type: "REPLACEMENT",
+          link: "/profile/orders"
+        });
+      } catch (notifErr) {
+        console.error("Failed to create in-app notification:", notifErr);
+      }
+
+      enqueueEmail({
+        to: replUser.email,
+        subject: `Replacement Update - ${refreshed.replacementId} | Sands Jewels`,
+        html: emailTemplates.replacementStatusUpdate({
+          replacementReq: refreshed,
+          userName: replUser.name,
+          newStatus: nextStatus,
+          note: note || "",
+          order: replOrder
+        }),
+        type: "replacement_status_update"
+      });
+    }
 
     return success(res, { repl: refreshed }, `Replacement ${nextStatus} successfully`);
   } catch (err) { return error(res, err.message); }

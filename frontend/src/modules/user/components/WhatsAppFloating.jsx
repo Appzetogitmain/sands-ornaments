@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 import { MessageCircle } from "lucide-react";
 
 const WhatsAppFloating = ({ inline = false }) => {
-  const phoneNumber = "919876543210"; // Placeholder - Replace with actual number
+  const phoneNumber = "919608811487"; // WhatsApp business phone number
   const message =
     "Hi Sands Jewels, I'm interested in your silver jewellery collection.";
 
