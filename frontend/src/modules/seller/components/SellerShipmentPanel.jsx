@@ -385,7 +385,17 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
                     <div>
                       <span className="font-bold">{serviceability.serviceable ? 'Serviceable' : 'Not Serviceable'}</span>
                       {serviceability.estimatedDays && <span className="ml-2">• Est. {serviceability.estimatedDays} days</span>}
-                      {serviceability.codAvailable === false && <span className="ml-2 text-amber-600">• COD not available</span>}
+                      {serviceability.serviceable && serviceability.codAvailable === false && (
+                        <span className="ml-2 text-amber-600">• COD not available</span>
+                      )}
+                      {!serviceability.serviceable && serviceability.message && (
+                        <span className="ml-2 font-normal">• {serviceability.message}</span>
+                      )}
+                      {(serviceability.pickupPincode || serviceability.deliveryPincode) && (
+                        <p className="mt-1 text-[10px] font-normal opacity-70">
+                          Route checked: {serviceability.pickupPincode || '—'} → {serviceability.deliveryPincode || '—'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

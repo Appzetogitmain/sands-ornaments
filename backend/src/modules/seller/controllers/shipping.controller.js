@@ -146,7 +146,11 @@ exports.checkServiceability = async (req, res) => {
       weight,
     });
 
-    return success(res, result, "Serviceability checked");
+    return success(
+      res,
+      { ...result, pickupPincode: resolvedPickupPincode, deliveryPincode },
+      "Serviceability checked"
+    );
   } catch (err) {
     return error(res, err.message, 400);
   }
