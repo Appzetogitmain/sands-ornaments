@@ -4,9 +4,9 @@ export const sellerShippingService = {
   /**
    * Check courier serviceability for a route.
    */
-  checkServiceability: async ({ courier, pickupPincode, deliveryPincode, paymentMode, weight }) => {
+  checkServiceability: async ({ courier, pickupPincode, deliveryPincode, paymentMode, weight, pickupLocationId }) => {
     const res = await api.post('seller/shipping/serviceability', {
-      courier, pickupPincode, deliveryPincode, paymentMode, weight,
+      courier, pickupPincode, deliveryPincode, paymentMode, weight, pickupLocationId,
     });
     return res.data?.data || {};
   },

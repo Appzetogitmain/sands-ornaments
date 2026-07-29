@@ -85,14 +85,18 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
     setCheckingService(true);
     setServiceability(null);
     try {
-      const sellerPincode = order?.sellerPincode || '';
       const customerPincode = order?.shippingAddress?.pincode || '';
+      if (!customerPincode) {
+        setServiceability({ serviceable: false, message: 'Customer delivery pincode is missing on this order' });
+        return;
+      }
       const result = await sellerShippingService.checkServiceability({
         courier: selectedCourier,
-        pickupPincode: sellerPincode,
+        pickupPincode: order?.sellerPincode || undefined,
         deliveryPincode: customerPincode,
         paymentMode,
         weight: Number(packageInfo.weight) || 500,
+        pickupLocationId: selectedPickupLocationId || undefined,
       });
       setServiceability(result);
     } catch (err) {

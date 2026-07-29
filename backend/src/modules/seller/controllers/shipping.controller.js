@@ -106,13 +106,45 @@ const updateOrderShippingStatus = async (orderId) => {
  */
 exports.checkServiceability = async (req, res) => {
   try {
-    const { courier, pickupPincode, deliveryPincode, paymentMode, weight } = req.body;
+    const sellerId = req.user.userId;
+    const { courier, pickupPincode, deliveryPincode, paymentMode, weight, pickupLocationId } = req.body;
 
     if (!courier) return error(res, "Courier is required", 400);
-    if (!pickupPincode || !deliveryPincode) return error(res, "Both pickup and delivery pincodes are required", 400);
+    if (!deliveryPincode) return error(res, "Delivery pincode is required", 400);
+
+    // Resolve pickup pincode: explicit value → chosen pickup location → default location → seller profile
+    let resolvedPickupPincode = pickupPincode || "";
+
+    if (!resolvedPickupPincode && pickupLocationId) {
+      if (!mongoose.Types.ObjectId.isValid(pickupLocationId)) {
+        return error(res, "Invalid pickupLocationId", 400);
+      }
+      const pickupLoc = await PickupLocation.findOne({ _id: pickupLocationId, sellerId, isActive: true });
+      if (!pickupLoc) return error(res, "Pickup location not found or not yours", 404);
+      resolvedPickupPincode = pickupLoc.pincode || "";
+    }
+
+    if (!resolvedPickupPincode) {
+      const defaultLoc = await PickupLocation.findOne({ sellerId, isDefault: true, isActive: true });
+      resolvedPickupPincode = defaultLoc?.pincode || "";
+    }
+
+    if (!resolvedPickupPincode) {
+      const seller = await Seller.findById(sellerId).select("pincode");
+      resolvedPickupPincode = seller?.pincode || "";
+    }
+
+    if (!resolvedPickupPincode) {
+      return error(res, "Pickup pincode not found. Add a pickup location or set the pincode in your profile.", 400);
+    }
 
     const provider = getCourierProvider(courier);
-    const result = await provider.checkServiceability({ pickupPincode, deliveryPincode, paymentMode, weight });
+    const result = await provider.checkServiceability({
+      pickupPincode: resolvedPickupPincode,
+      deliveryPincode,
+      paymentMode,
+      weight,
+    });
 
     return success(res, result, "Serviceability checked");
   } catch (err) {

@@ -317,10 +317,7 @@ const SellerOrderDetail = () => {
                     {/* Courier Shipment Panel */}
                     <div>
                         <SellerShipmentPanel
-                            order={{
-                                ...order,
-                                sellerPincode: '', // Will be fetched from seller profile on backend
-                            }}
+                            order={order}
                             onShipmentCreated={() => {
                                 // Refresh order data
                                 sellerOrderService.getOrderDetails(id).then(setOrder);
