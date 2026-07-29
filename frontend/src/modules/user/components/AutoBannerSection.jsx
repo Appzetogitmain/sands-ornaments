@@ -151,19 +151,7 @@ const AutoBannerSection = () => {
                                         {slides[currentIndex].title}
                                     </motion.h2>
 
-                                    <motion.div
-                                        initial={{ opacity: 0, scale: 0.8 }}
-                                        animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: 0.7 }}
-                                        className="z-30 pointer-events-auto"
-                                    >
-                                        <Link
-                                            to={slides[currentIndex].link || '/shop'}
-                                            className="inline-flex items-center justify-center rounded-lg bg-[#A85E6F] hover:bg-[#8E2B45] px-8 py-3 text-[10px] md:text-xs font-bold uppercase tracking-[0.3em] text-white transition-all duration-300 shadow-lg hover:shadow-xl hover:scale-105 cursor-pointer active:scale-95"
-                                        >
-                                            {slides[currentIndex].ctaLabel || 'Explore Collection'}
-                                        </Link>
-                                    </motion.div>
+
                                 </div>
                             </div>
 
