@@ -339,13 +339,20 @@ const ProductDetails = () => {
     isLoading,
     pincode,
     updatePincode,
+    pincodeData,
+    pincodeLoading,
+    checkPincodeServiceability,
   } = useShop();
   const { user } = useAuth();
   const [localPincode, setLocalPincode] = useState(pincode || "");
 
   useEffect(() => {
     setLocalPincode(pincode);
+    if (pincode && !pincodeData) {
+      checkPincodeServiceability(pincode);
+    }
   }, [pincode]);
+
 
   const catalogueProduct = useMemo(
     () => (products || []).find((p) => String(p.id || p._id) === String(id)),
@@ -1731,58 +1738,72 @@ const ProductDetails = () => {
               onChange={(e) =>
                 setLocalPincode(e.target.value.replace(/\D/g, "").slice(0, 6))
               }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (localPincode.length === 6) {
+                    checkPincodeServiceability(localPincode);
+                  } else {
+                    toast.error("Please enter a valid 6-digit pincode");
+                  }
+                }
+              }}
               className="flex-1 bg-transparent border-none px-3 py-1 text-xs focus:ring-0 transition-all placeholder:text-gray-300 font-bold"
             />
             <button
-              onClick={() => {
-                if (localPincode.length === 6 && /^[1-9][0-9]{5}$/.test(localPincode)) {
-                  updatePincode(localPincode);
-                  toast.success("Checking availability...");
+              disabled={pincodeLoading}
+              onClick={async () => {
+                if (localPincode.length === 6) {
+                  const res = await checkPincodeServiceability(localPincode);
+                  if (res?.serviceable) {
+                    toast.success(`Serviceable to ${res.state || 'your area'}!`);
+                  } else {
+                    toast.error(res?.reason || "Pincode is not serviceable");
+                  }
                 } else {
                   toast.error("Please enter a valid 6-digit pincode");
                 }
               }}
-              className="bg-[#8E2B45] text-white px-4 py-1.5 rounded-md font-black text-[9px] uppercase tracking-wider hover:bg-[#5B1E26] transition-all shadow-sm active:scale-95"
+              className="bg-[#8E2B45] text-white px-4 py-1.5 rounded-md font-black text-[9px] uppercase tracking-wider hover:bg-[#5B1E26] transition-all shadow-sm active:scale-95 disabled:opacity-50 flex items-center gap-1 min-w-[70px] justify-center"
             >
-              Check
+              {pincodeLoading ? (
+                <>
+                  <Loader2 className="w-3 h-3 animate-spin" />
+                  <span>Checking...</span>
+                </>
+              ) : (
+                "Check"
+              )}
             </button>
           </div>
 
-          {pincode && /^[1-9][0-9]{5}$/.test(pincode) ? (
+          {pincodeData && pincodeData.pincode === localPincode && pincodeData.serviceable ? (
             <div className="flex flex-col md:flex-row items-center gap-3 md:ml-auto md:border-l md:border-gray-100 md:pl-6 animate-in fade-in slide-in-from-left-2 duration-500">
               <div className="flex items-center gap-2 text-emerald-600">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[10px] font-black uppercase tracking-widest">
-                  Available
+                  Available {pincodeData.state ? `(${pincodeData.state})` : ''}
                 </span>
               </div>
               <div className="h-4 w-[1px] bg-gray-100 hidden md:block" />
               <p className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">
                 Get it by{" "}
                 <span className="text-[#8E2B45]">
-                  {(() => {
-                    const days = product?.logistics?.estimatedShippingDays || 3;
-                    const date = new Date();
-                    date.setDate(date.getDate() + days + 2); // 2 days buffer for delivery
-                    return date.toLocaleDateString("en-IN", {
-                      day: "numeric",
-                      month: "short",
-                      weekday: "short",
-                    });
-                  })()}
+                  {pincodeData.formattedDeliveryDate || "3-5 Days"}
                 </span>
               </p>
             </div>
-          ) : pincode ? (
+          ) : pincodeData && pincodeData.pincode === localPincode && !pincodeData.serviceable ? (
             <div className="flex flex-col md:flex-row items-center gap-3 md:ml-auto md:border-l md:border-gray-100 md:pl-6 text-rose-600 animate-in fade-in duration-300">
               <div className="flex items-center gap-2">
                 <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                 <span className="text-[10px] font-black uppercase tracking-widest">
-                  Not Serviceable
+                  {pincodeData.reason || "Not Serviceable"}
                 </span>
               </div>
             </div>
           ) : (
+
             <div className="flex items-center gap-6 md:ml-auto md:border-l md:border-gray-100 md:pl-6 pr-2 opacity-60">
               {[
                 { icon: <Truck className="w-3.5 h-3.5" />, label: "Express" },

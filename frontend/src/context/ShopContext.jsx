@@ -23,6 +23,7 @@ import { useCart } from './CartContext';
 import { useWishlist } from './WishlistContext';
 import { useOrder } from './OrderContext';
 import { useNotification } from './NotificationContext';
+import api from '../services/api';
 
 export const ShopContext = createContext();
 
@@ -34,6 +35,13 @@ export const ShopProvider = ({ children }) => {
     const [notification, setNotification] = useState(null);
     const [isPincodeModalOpen, setIsPincodeModalOpen] = useState(false);
     const [pincode, setPincode] = useState(() => localStorage.getItem('user_pincode') || '');
+    const [pincodeData, setPincodeData] = useState(() => {
+        try {
+            const saved = localStorage.getItem('user_pincode_data');
+            return saved ? JSON.parse(saved) : null;
+        } catch { return null; }
+    });
+    const [pincodeLoading, setPincodeLoading] = useState(false);
     const [activeMetal, setActiveMetal] = useState(() => localStorage.getItem('user_active_metal') || 'silver');
     const [globalGst, _setGlobalGst] = useState(() => localStorage.getItem('admin_global_gst') || '0');
 
@@ -52,8 +60,47 @@ export const ShopProvider = ({ children }) => {
     const updatePincode = useCallback((newPincode) => {
         setPincode(newPincode);
         if (newPincode) localStorage.setItem('user_pincode', newPincode);
-        else localStorage.removeItem('user_pincode');
+        else {
+            localStorage.removeItem('user_pincode');
+            localStorage.removeItem('user_pincode_data');
+            setPincodeData(null);
+        }
     }, []);
+
+    const checkPincodeServiceability = useCallback(async (targetPincode) => {
+        const pinStr = String(targetPincode || '').trim();
+        if (!pinStr) {
+            const errorResult = { serviceable: false, reason: "Pincode is required" };
+            setPincodeData(errorResult);
+            return errorResult;
+        }
+
+        setPincodeLoading(true);
+        try {
+            const response = await api.get(`/public/logistics/check-pincode?pincode=${pinStr}`);
+            const result = response.data?.data || {};
+            setPincodeData(result);
+            if (result.serviceable) {
+                setPincode(pinStr);
+                localStorage.setItem('user_pincode', pinStr);
+                localStorage.setItem('user_pincode_data', JSON.stringify(result));
+            } else {
+                localStorage.removeItem('user_pincode_data');
+            }
+            return result;
+        } catch (err) {
+            const errorResult = {
+                pincode: pinStr,
+                serviceable: false,
+                reason: err.response?.data?.message || "Failed to verify pincode"
+            };
+            setPincodeData(errorResult);
+            return errorResult;
+        } finally {
+            setPincodeLoading(false);
+        }
+    }, []);
+
 
     // Auto-hide notification after 3s
     useEffect(() => {
@@ -233,6 +280,7 @@ export const ShopProvider = ({ children }) => {
         notification,
         isPincodeModalOpen, setIsPincodeModalOpen,
         pincode, updatePincode,
+        pincodeData, pincodeLoading, checkPincodeServiceability,
         activeMetal, updateActiveMetal,
         globalGst, setGlobalGst,
 
@@ -268,12 +316,13 @@ export const ShopProvider = ({ children }) => {
         placeOrder, deleteAccount, logout, login, updateProfile,
         getRecommendations, getVariantById, getPackById,
         // UI
-        user, notification, isPincodeModalOpen, pincode, activeMetal, globalGst,
-        showNotification, setIsPincodeModalOpen, updatePincode,
+        user, notification, isPincodeModalOpen, pincode, pincodeData, pincodeLoading, activeMetal, globalGst,
+        showNotification, setIsPincodeModalOpen, updatePincode, checkPincodeServiceability,
         updateActiveMetal, setGlobalGst,
         // Catalogue
         products, categories, isCatalogueLoading,
     ]);
+
 
     return (
         <ShopContext.Provider value={contextValue}>

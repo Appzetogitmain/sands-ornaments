@@ -12,5 +12,7 @@ router.use("/pages",      require("./page.routes"));
 router.use("/contact",    require("./contact.routes"));
 router.use("/shipping",   require("./shippingWebhook.routes"));
 router.use("/settings",   require("./settings.routes"));
+router.use("/logistics",  require("./logistics.routes"));
 
 module.exports = router;
+
