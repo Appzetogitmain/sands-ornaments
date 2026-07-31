@@ -58,8 +58,9 @@ exports.checkPincodeServiceability = async (req, res) => {
     let serviceable = false;
     let estimatedDays = 3;
     let courierName = "zone-logistics";
-    let state = formatCheck.circle?.states[0] || "India";
-    let region = formatCheck.circle?.region || "India";
+    let state = formatCheck.location?.state || "India";
+    let region = formatCheck.location?.region || "India";
+    let city = formatCheck.location?.city || "";
 
     if (liveResult && liveResult.serviceable) {
       serviceable = true;
@@ -72,7 +73,9 @@ exports.checkPincodeServiceability = async (req, res) => {
       estimatedDays = offlineResult.estimatedDays;
       state = offlineResult.state;
       region = offlineResult.region;
+      city = offlineResult.city || "";
     }
+
 
     if (!serviceable) {
       return success(
@@ -107,11 +110,13 @@ exports.checkPincodeServiceability = async (req, res) => {
         serviceable: true,
         region,
         state,
+        city,
         estimatedDays: totalDays,
         formattedDeliveryDate,
         isoDeliveryDate: targetDate.toISOString(),
         courier: courierName,
       },
+
       "Pincode serviceable"
     );
   } catch (err) {

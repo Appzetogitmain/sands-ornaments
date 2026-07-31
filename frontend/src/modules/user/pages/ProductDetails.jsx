@@ -1798,8 +1798,9 @@ const ProductDetails = () => {
               <div className="flex items-center gap-2 text-emerald-600">
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-[10px] font-black uppercase tracking-widest">
-                  Available {pincodeData.state ? `(${pincodeData.state})` : ''}
+                  Available {pincodeData.city ? `(${pincodeData.city.split('/')[0].trim()}, ${pincodeData.state})` : pincodeData.state ? `(${pincodeData.state})` : ''}
                 </span>
+
               </div>
               <div className="h-4 w-[1px] bg-gray-100 hidden md:block" />
               <p className="text-[10px] font-bold text-gray-900 uppercase tracking-widest">

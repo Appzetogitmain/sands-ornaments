@@ -10,17 +10,99 @@ const BLACKLISTED_PINCODES = new Set([
   "123123", "987654", "012345"
 ]);
 
-// 1st digit Postal Circle / Region Mapping
-const POSTAL_CIRCLES = {
-  "1": { region: "North Zone", states: ["Delhi", "Haryana", "Punjab", "Himachal Pradesh", "Jammu & Kashmir", "Chandigarh"] },
-  "2": { region: "North Zone", states: ["Uttar Pradesh", "Uttarakhand"] },
-  "3": { region: "West Zone", states: ["Rajasthan", "Gujarat", "Daman & Diu", "Dadra & Nagar Haveli"] },
-  "4": { region: "West/Central Zone", states: ["Maharashtra", "Goa", "Madhya Pradesh", "Chhattisgarh"] },
-  "5": { region: "South Zone", states: ["Andhra Pradesh", "Telangana", "Karnataka"] },
-  "6": { region: "South Zone", states: ["Tamil Nadu", "Kerala", "Puducherry", "Lakshadweep"] },
-  "7": { region: "East/North-East Zone", states: ["West Bengal", "Odisha", "Assam", "Arunachal Pradesh", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Tripura", "Sikkim", "Andaman & Nicobar"] },
-  "8": { region: "East Zone", states: ["Bihar", "Jharkhand"] },
-  "9": { region: "Army Postal Service", states: ["Field Post Office"] }
+// Precise 2-digit and 3-digit Pincode Prefix Map for Indian States & Major Cities
+const STATE_PREFIX_MAP = {
+  // Northern Region
+  "11": { state: "Delhi", region: "North Zone", city: "Delhi NCR" },
+  "12": { state: "Haryana", region: "North Zone", city: "Faridabad / Gurugram" },
+  "13": { state: "Haryana", region: "North Zone", city: "Ambala / Panipat" },
+  "14": { state: "Punjab", region: "North Zone", city: "Ludhiana / Jalandhar" },
+  "15": { state: "Punjab", region: "North Zone", city: "Bhatinda / Patiala" },
+  "16": { state: "Chandigarh", region: "North Zone", city: "Chandigarh" },
+  "17": { state: "Himachal Pradesh", region: "North Zone", city: "Shimla / Dharamshala" },
+  "18": { state: "Jammu & Kashmir", region: "North Zone", city: "Jammu" },
+  "19": { state: "Jammu & Kashmir", region: "North Zone", city: "Srinagar / Ladakh" },
+
+  // Uttar Pradesh & Uttarakhand
+  "20": { state: "Uttar Pradesh", region: "North Zone", city: "Noida / Ghaziabad / Aligarh" },
+  "21": { state: "Uttar Pradesh", region: "North Zone", city: "Kanpur / Prayagraj" },
+  "22": { state: "Uttar Pradesh", region: "North Zone", city: "Lucknow / Varanasi" },
+  "23": { state: "Uttar Pradesh", region: "North Zone", city: "Mirzapur" },
+  "24": { state: "Uttar Pradesh", region: "North Zone", city: "Bareilly / Moradabad" },
+  "248": { state: "Uttarakhand", region: "North Zone", city: "Dehradun" },
+  "249": { state: "Uttarakhand", region: "North Zone", city: "Haridwar / Rishikesh" },
+  "25": { state: "Uttar Pradesh", region: "North Zone", city: "Meerut" },
+  "26": { state: "Uttar Pradesh", region: "North Zone", city: "Pilibhit / Lakhimpur" },
+  "27": { state: "Uttar Pradesh", region: "North Zone", city: "Gorakhpur" },
+  "28": { state: "Uttar Pradesh", region: "North Zone", city: "Agra / Jhansi" },
+
+  // Rajasthan & Gujarat
+  "30": { state: "Rajasthan", region: "West Zone", city: "Jaipur" },
+  "31": { state: "Rajasthan", region: "West Zone", city: "Udaipur / Kota" },
+  "32": { state: "Rajasthan", region: "West Zone", city: "Sawai Madhopur" },
+  "33": { state: "Rajasthan", region: "West Zone", city: "Bikaner / Churu" },
+  "34": { state: "Rajasthan", region: "West Zone", city: "Jodhpur / Barmer" },
+  "36": { state: "Gujarat", region: "West Zone", city: "Rajkot" },
+  "37": { state: "Gujarat", region: "West Zone", city: "Kutch / Gandhidham" },
+  "38": { state: "Gujarat", region: "West Zone", city: "Ahmedabad / Gandhinagar" },
+  "39": { state: "Gujarat", region: "West Zone", city: "Surat / Vadodara" },
+
+  // Maharashtra & Goa
+  "40": { state: "Maharashtra", region: "West Zone", city: "Mumbai" },
+  "403": { state: "Goa", region: "West Zone", city: "Goa" },
+  "41": { state: "Maharashtra", region: "West Zone", city: "Pune / Solapur" },
+  "42": { state: "Maharashtra", region: "West Zone", city: "Nashik / Thane" },
+  "43": { state: "Maharashtra", region: "West Zone", city: "Chhatrapati Sambhajinagar" },
+  "44": { state: "Maharashtra", region: "West Zone", city: "Nagpur / Amravati" },
+
+  // Madhya Pradesh & Chhattisgarh
+  "45": { state: "Madhya Pradesh", region: "Central Zone", city: "Indore / Ujjain" },
+  "46": { state: "Madhya Pradesh", region: "Central Zone", city: "Bhopal / Gwalior" },
+  "47": { state: "Madhya Pradesh", region: "Central Zone", city: "Gwalior / Morena" },
+  "48": { state: "Madhya Pradesh", region: "Central Zone", city: "Jabalpur / Rewa" },
+  "49": { state: "Chhattisgarh", region: "Central Zone", city: "Raipur / Bhilai" },
+
+  // Southern Region
+  "50": { state: "Telangana", region: "South Zone", city: "Hyderabad" },
+  "51": { state: "Andhra Pradesh", region: "South Zone", city: "Tirupati / Chittoor" },
+  "52": { state: "Andhra Pradesh", region: "South Zone", city: "Vijayawada" },
+  "53": { state: "Andhra Pradesh", region: "South Zone", city: "Visakhapatnam" },
+  "56": { state: "Karnataka", region: "South Zone", city: "Bengaluru" },
+  "57": { state: "Karnataka", region: "South Zone", city: "Mangaluru / Mysuru" },
+  "58": { state: "Karnataka", region: "South Zone", city: "Hubballi / Belagavi" },
+  "59": { state: "Karnataka", region: "South Zone", city: "Belagavi" },
+
+  // Tamil Nadu & Kerala
+  "60": { state: "Tamil Nadu", region: "South Zone", city: "Chennai" },
+  "61": { state: "Tamil Nadu", region: "South Zone", city: "Thanjavur / Trichy" },
+  "62": { state: "Tamil Nadu", region: "South Zone", city: "Madurai" },
+  "63": { state: "Tamil Nadu", region: "South Zone", city: "Vellore / Salem" },
+  "64": { state: "Tamil Nadu", region: "South Zone", city: "Coimbatore" },
+  "67": { state: "Kerala", region: "South Zone", city: "Kozhikode" },
+  "68": { state: "Kerala", region: "South Zone", city: "Kochi / Ernakulam" },
+  "69": { state: "Kerala", region: "South Zone", city: "Thiruvananthapuram" },
+
+  // Eastern & North-Eastern Region
+  "70": { state: "West Bengal", region: "East Zone", city: "Kolkata" },
+  "71": { state: "West Bengal", region: "East Zone", city: "Howrah / Hooghly" },
+  "72": { state: "West Bengal", region: "East Zone", city: "Midnapore" },
+  "73": { state: "West Bengal", region: "East Zone", city: "Siliguri / Darjeeling" },
+  "737": { state: "Sikkim", region: "North-East Zone", city: "Gangtok" },
+  "74": { state: "West Bengal", region: "East Zone", city: "24 Parganas" },
+  "744": { state: "Andaman & Nicobar", region: "East Zone", city: "Port Blair" },
+  "75": { state: "Odisha", region: "East Zone", city: "Bhubaneswar" },
+  "76": { state: "Odisha", region: "East Zone", city: "Cuttack / Sambalpur" },
+  "77": { state: "Odisha", region: "East Zone", city: "Rourkela" },
+  "78": { state: "Assam", region: "North-East Zone", city: "Guwahati" },
+  "79": { state: "North-East Region", region: "North-East Zone", city: "Shillong / Imphal / Aizawl" },
+
+  // Bihar & Jharkhand
+  "80": { state: "Bihar", region: "East Zone", city: "Patna" },
+  "81": { state: "Bihar", region: "East Zone", city: "Bhagalpur" },
+  "82": { state: "Bihar", region: "East Zone", city: "Gaya" },
+  "83": { state: "Jharkhand", region: "East Zone", city: "Ranchi" },
+  "84": { state: "Bihar", region: "East Zone", city: "Muzaffarpur" },
+  "85": { state: "Bihar", region: "East Zone", city: "Purnea" }
 };
 
 // Known Metro / Major Hub 2-digit prefixes
@@ -34,13 +116,34 @@ const METRO_PREFIXES = new Set([
   "38"  // Ahmedabad
 ]);
 
-// Special / Remote prefix ranges (may need extra shipping days)
+// Special / Remote prefix ranges
 const REMOTE_PREFIXES = new Set([
   "19", // J&K / Ladakh
   "78", "79", // Assam / NE States
   "737", // Sikkim
   "744" // Andaman & Nicobar
 ]);
+
+/**
+ * Find exact state and city location info from pincode.
+ */
+function getLocationFromPincode(pinStr) {
+  const pin = String(pinStr || "").trim();
+
+  // Try 3-digit prefix match first (e.g. 248, 403, 737, 744)
+  const first3 = pin.slice(0, 3);
+  if (STATE_PREFIX_MAP[first3]) {
+    return STATE_PREFIX_MAP[first3];
+  }
+
+  // Try 2-digit prefix match
+  const first2 = pin.slice(0, 2);
+  if (STATE_PREFIX_MAP[first2]) {
+    return STATE_PREFIX_MAP[first2];
+  }
+
+  return { state: "India", region: "India", city: "" };
+}
 
 /**
  * Validate format and check if pincode is a real Indian postal code structure.
@@ -58,14 +161,9 @@ function validatePincodeFormat(pincode) {
     return { valid: false, reason: "The entered pincode is invalid or non-existent" };
   }
 
-  // Check if 1st digit maps to a valid postal circle
-  const firstDigit = pinStr[0];
-  const circle = POSTAL_CIRCLES[firstDigit];
-  if (!circle) {
-    return { valid: false, reason: "Invalid Indian postal circle" };
-  }
+  const location = getLocationFromPincode(pinStr);
 
-  return { valid: true, circle, pinStr };
+  return { valid: true, location, pinStr };
 }
 
 /**
@@ -125,16 +223,15 @@ function checkOfflineServiceability(deliveryPin, pickupPin = "110001") {
     };
   }
 
-  const { circle, pinStr } = formatCheck;
+  const { location, pinStr } = formatCheck;
   const estimatedDays = calculateEstimatedDays(pickupPin, pinStr);
-
-  const primaryState = circle.states[0] || "India";
 
   return {
     serviceable: true,
     pincode: pinStr,
-    region: circle.region,
-    state: primaryState,
+    region: location.region,
+    state: location.state,
+    city: location.city,
     estimatedDays,
     courier: "standard-logistics"
   };
@@ -144,5 +241,6 @@ module.exports = {
   validatePincodeFormat,
   calculateEstimatedDays,
   checkOfflineServiceability,
+  getLocationFromPincode,
   BLACKLISTED_PINCODES
 };
