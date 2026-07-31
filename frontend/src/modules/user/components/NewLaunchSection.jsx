@@ -63,21 +63,21 @@ const NewLaunchSection = () => {
     useEffect(() => {
         const updateDims = () => {
             if (window.innerWidth < 480) {
-                setRadius(500); // Increased from 400 to spread cards more
-                setCardWidth(150);
-                setCardHeight(220);
+                setRadius(450);
+                setCardWidth(130);
+                setCardHeight(185);
             } else if (window.innerWidth < 768) {
-                setRadius(700);
-                setCardWidth(200);
-                setCardHeight(280);
+                setRadius(600);
+                setCardWidth(160);
+                setCardHeight(225);
             } else if (window.innerWidth < 1024) {
-                setRadius(900);
-                setCardWidth(240);
-                setCardHeight(340);
+                setRadius(800);
+                setCardWidth(190);
+                setCardHeight(270);
             } else {
-                setRadius(1200);
-                setCardWidth(300);
-                setCardHeight(420);
+                setRadius(1000);
+                setCardWidth(235);
+                setCardHeight(330);
             }
         };
         updateDims();
@@ -87,7 +87,7 @@ const NewLaunchSection = () => {
 
     return (
         <section 
-            className="pt-10 pb-2 md:pt-16 md:pb-4 bg-[#2D060F] relative overflow-hidden"
+            className="pt-6 pb-2 md:pt-8 md:pb-3 bg-[#F4D3DB] relative overflow-hidden"
             style={{
                 '--radius': `${radius}px`,
                 '--cardW': `${cardWidth}px`,
@@ -108,7 +108,7 @@ const NewLaunchSection = () => {
                     display: flex;
                     align-items: center;
                     justify-content: center;
-                    margin-top: 2rem;
+                    margin-top: 1rem;
                 }
                 .rotator {
                     width: var(--cardW);
@@ -127,7 +127,7 @@ const NewLaunchSection = () => {
                     width: 100%;
                     height: 100%;
                     backface-visibility: hidden;
-                    border-radius: 1.5rem;
+                    border-radius: 1.25rem;
                 }
                 `}
             </style>
@@ -139,12 +139,12 @@ const NewLaunchSection = () => {
                     initial={{ opacity: 0, y: -20 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
-                    className="relative flex flex-col items-center justify-center mb-0 md:mb-2 text-center"
+                    className="relative flex flex-col items-center justify-center text-center"
                 >
-                    <div className="inline-block bg-[#8E2B45] border border-white/20 text-white px-5 py-1 font-serif tracking-[0.2em] text-[10px] uppercase rounded-full shadow-sm mb-4">
+                    <div className="inline-block bg-[#8E2B45]/12 border border-[#8E2B45]/25 text-[#8E2B45] px-4 py-0.5 font-serif tracking-[0.2em] text-[9px] uppercase rounded-full shadow-sm mb-2 md:mb-3">
                         New Launch
                     </div>
-                    <h3 className="font-serif text-white text-2xl md:text-6xl font-light tracking-tight uppercase drop-shadow-md">
+                    <h3 className="font-serif text-[#4A0E1C] text-2xl md:text-4xl font-light tracking-tight uppercase drop-shadow-sm">
                         {sectionData?.label || "Limited Edition"}
                     </h3>
                 </motion.div>
@@ -161,12 +161,12 @@ const NewLaunchSection = () => {
                             return (
                                 <div
                                     key={`cyl-${index}`}
-                                    className="cylinder-card shadow-2xl group"
+                                    className="cylinder-card shadow-xl hover:shadow-2xl group transition-shadow duration-500"
                                     style={{
                                         transform: `rotateY(${angle}deg) translateZ(var(--radius))`,
                                     }}
                                 >
-                                    <Link to={itemPath} className="block w-full h-full relative isolate rounded-3xl overflow-hidden cursor-pointer bg-white">
+                                    <Link to={itemPath} className="block w-full h-full relative isolate rounded-2xl md:rounded-3xl overflow-hidden cursor-pointer bg-white border border-black/5">
                                         {/* Image */}
                                         <div className="absolute inset-0 bg-[#FCD8D8]/50">
                                             <img
@@ -177,26 +177,26 @@ const NewLaunchSection = () => {
                                         </div>
 
                                         {/* Classic Gradient Overlay */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent transition-opacity duration-500 group-hover:opacity-80"></div>
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-transparent transition-opacity duration-500 group-hover:opacity-75"></div>
 
                                         {/* Text Section overlay at bottom */}
-                                        <div className="absolute bottom-0 left-0 right-0 p-4 md:p-8 flex flex-col items-center justify-end text-center z-10">
-                                            <h4 className="font-serif font-medium text-lg md:text-[1.75rem] text-white tracking-[0.15em] mb-2 md:mb-4 drop-shadow-lg uppercase">
+                                        <div className="absolute bottom-0 left-0 right-0 p-3 md:p-5 flex flex-col items-center justify-end text-center z-10">
+                                            <h4 className="font-serif font-medium text-base md:text-xl text-white tracking-[0.15em] mb-1.5 md:mb-2 drop-shadow-lg uppercase">
                                                 {itemLabel}
                                             </h4>
                                             
                                             {/* Discover/Animated Arrow */}
-                                            <div className="flex items-center gap-3 text-[#FFD9E0] transition-all duration-500">
-                                                <div className="h-[1px] w-5 bg-[#FFD9E0]/40 group-hover:w-8 transition-all"></div>
-                                                <span className="text-[10px] font-black uppercase tracking-[0.4em] drop-shadow-md">
+                                            <div className="flex items-center gap-2 text-[#FFD9E0] transition-all duration-500">
+                                                <div className="h-[1px] w-4 bg-[#FFD9E0]/40 group-hover:w-6 transition-all"></div>
+                                                <span className="text-[9px] font-black uppercase tracking-[0.35em] drop-shadow-md">
                                                     EXPLORE
                                                 </span>
-                                                <div className="h-[1px] w-5 bg-[#FFD9E0]/40 group-hover:w-8 transition-all"></div>
+                                                <div className="h-[1px] w-4 bg-[#FFD9E0]/40 group-hover:w-6 transition-all"></div>
                                             </div>
                                         </div>
 
                                         {/* Border Glow on Hover */}
-                                        <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#FFD9E0]/20 rounded-3xl transition-colors duration-500 pointer-events-none"></div>
+                                        <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#FFD9E0]/30 rounded-2xl md:rounded-3xl transition-colors duration-500 pointer-events-none"></div>
                                     </Link>
                                 </div>
                             );

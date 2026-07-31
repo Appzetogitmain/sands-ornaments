@@ -56,7 +56,7 @@ const CategoryNav = ({ showMetalToggle = true }) => {
         <div className="border-b hidden md:block w-full" style={{ background: '#FFFFFF', borderColor: '#EBEBEB', fontFamily: "'Inter', 'Lato', sans-serif" }}>
             <div className="container mx-auto px-4 md:px-12 relative" onMouseLeave={resetMenu}>
                 {/* Navigation Links - Centered and Spaced Out */}
-                <div className="flex justify-center items-center py-1.5 w-full">
+                <div className="flex justify-center items-center py-0.5 w-full">
                     <ul className="flex items-center justify-between lg:justify-center w-full gap-2 lg:gap-5 xl:gap-8 flex-nowrap px-1">
                         {navItems.map((item) => (
                             <li
@@ -102,7 +102,7 @@ const CategoryNav = ({ showMetalToggle = true }) => {
 
                 {/* Silver / Gold Toggle - Precise SANDS Polish with Navigation logic */}
                 {showMetalToggle && (
-                    <div className="flex justify-center pb-1 pt-1 relative">
+                    <div className="flex justify-center pb-0.5 pt-0.5 relative">
                         <div className="p-1 w-[600px] max-w-[95%] rounded-full border border-[#D4B390]/40 flex items-center bg-white shadow-[0_4px_25px_rgba(212,179,144,0.15)] relative">
                             {/* Animated Background Pill */}
                             <div className="absolute inset-1 flex" style={{ zIndex: 0 }}>

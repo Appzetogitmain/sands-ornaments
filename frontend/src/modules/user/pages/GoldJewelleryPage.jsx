@@ -82,6 +82,10 @@ const GoldJewelleryPage = () => {
       : [];
     const slides = configuredItems
       .filter((item) => item?.label || item?.name || item?.image)
+      .filter((item) => {
+        const title = String(item?.label || item?.title || '').toLowerCase();
+        return !title.includes('unique story in golds') && !title.includes('unique story in gold');
+      })
       .map((item, index) => ({
         id: item.itemId || item.id || `gold-hero-${index + 1}`,
         image: resolveLegacyCmsAsset(item.image, heroGold),

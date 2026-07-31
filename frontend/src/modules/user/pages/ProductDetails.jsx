@@ -345,6 +345,7 @@ const ProductDetails = () => {
   } = useShop();
   const { user } = useAuth();
   const [localPincode, setLocalPincode] = useState(pincode || "");
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
 
   useEffect(() => {
     setLocalPincode(pincode);
@@ -405,6 +406,14 @@ const ProductDetails = () => {
   const product = useMemo(() => {
     return detailProduct || catalogueProduct || null;
   }, [detailProduct, catalogueProduct]);
+
+  const metalType = useMemo(() => {
+    if (!product) return null;
+    const material = String(product?.material || product?.metal || "").trim().toLowerCase();
+    if (material.includes("gold")) return "gold";
+    if (material.includes("silver") || String(product?.name || "").toLowerCase().includes("silver")) return "silver";
+    return null;
+  }, [product]);
 
   const is925SterlingSilver = useMemo(() => {
     if (!product) return false;
@@ -1327,12 +1336,19 @@ const ProductDetails = () => {
                             {product.material || product.metal || "925 Silver"}
                           </span>
                         </div>
-                        <div className="space-y-0.5 md:space-y-1">
-                          <span className="text-[8px] md:text-[9px] font-bold text-gray-400 uppercase tracking-widest block">
+                        <div 
+                          onClick={() => setShowAuthPopup(true)}
+                          className="space-y-0.5 md:space-y-1 cursor-pointer group/purity hover:opacity-90 transition-all duration-300 flex flex-col items-center"
+                        >
+                          <span className="text-[8px] md:text-[9px] font-bold text-gray-400 uppercase tracking-widest block group-hover/purity:text-[#8E2B45] transition-colors">
                             Purity
                           </span>
-                          <span className="text-[11px] md:text-xs font-semibold text-gray-900 block">
+                          <span className="inline-flex items-center gap-1.5 text-[11px] md:text-xs font-semibold text-gray-900 underline decoration-dashed decoration-gray-300 hover:decoration-[#8E2B45] group-hover/purity:text-[#8E2B45] transition-all">
                             {product.silverCategory || product.purity || "---"}
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8E2B45] opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8E2B45]"></span>
+                            </span>
                           </span>
                         </div>
                         {!is925SterlingSilver && (
@@ -2004,12 +2020,22 @@ const ProductDetails = () => {
                           ]
                             .filter((s) => s.value && s.value !== "---")
                             .map((spec, i) => (
-                              <div key={i} className="space-y-1.5">
-                                <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest block">
+                              <div 
+                                key={i} 
+                                className={`space-y-1.5 ${spec.clickable ? "cursor-pointer group/spec" : ""}`}
+                                onClick={spec.onClick}
+                              >
+                                <span className={`text-[9px] font-bold text-gray-400 uppercase tracking-widest block ${spec.clickable ? "group-hover/spec:text-[#8E2B45] transition-colors" : ""}`}>
                                   {spec.label}
                                 </span>
-                                <span className="text-sm font-bold text-gray-900 block">
+                                <span className={`inline-flex items-center justify-center gap-1.5 text-sm font-bold text-gray-900 w-full ${spec.clickable ? "underline decoration-dashed decoration-gray-300 group-hover/spec:text-[#8E2B45] transition-all" : ""}`}>
                                   {spec.value}
+                                  {spec.clickable && (
+                                    <span className="relative flex h-2 w-2">
+                                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#8E2B45] opacity-75"></span>
+                                      <span className="relative inline-flex rounded-full h-2 w-2 bg-[#8E2B45]"></span>
+                                    </span>
+                                  )}
                                 </span>
                               </div>
                             ))}
@@ -2037,6 +2063,8 @@ const ProductDetails = () => {
                               product.goldCategory ||
                               product.purity ||
                               "---",
+                            onClick: () => setShowAuthPopup(true),
+                            clickable: true,
                           },
                           !is925SterlingSilver && {
                             label: "Weight",
@@ -3101,6 +3129,61 @@ const ProductDetails = () => {
         onPrev={handleLightboxPrev}
         onNext={handleLightboxNext}
       />
+
+      {/* Dynamic Authenticity Popup */}
+      <AnimatePresence>
+        {showAuthPopup && metalType && (
+          <div 
+            onClick={() => setShowAuthPopup(false)}
+            className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.3 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-[#1A1A1A]/95 text-white w-full max-w-sm rounded-[2rem] p-8 relative border border-white/10 shadow-2xl flex flex-col items-center text-center"
+            >
+              {/* Close Button */}
+              <button
+                onClick={() => setShowAuthPopup(false)}
+                className="absolute top-5 right-5 text-white/50 hover:text-white transition-colors"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+
+              {/* Badge Icon */}
+              {metalType === "silver" ? (
+                <div className="w-14 h-14 rounded-full bg-[#8E2B45] flex items-center justify-center border border-white/20 mb-4 shadow-lg">
+                  <div className="w-11 h-11 rounded-full border border-dashed border-white/40 flex flex-col items-center justify-center">
+                    <span className="text-[12px] font-black tracking-tight leading-none text-white font-sans">925</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="w-14 h-14 rounded-full bg-amber-600 flex items-center justify-center border border-white/20 mb-4 shadow-lg">
+                  <div className="w-11 h-11 rounded-full border border-dashed border-white/40 flex flex-col items-center justify-center">
+                    <span className="text-[10px] font-black tracking-wider leading-none text-white font-sans">BIS</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Title */}
+              <h3 className="text-base font-bold tracking-wide uppercase mb-2 font-sans">
+                {metalType === "silver" ? "Fine 925 Silver" : "BIS Hallmarked Gold"}
+              </h3>
+
+              {/* Description */}
+              <p className="text-white/80 text-[11px] font-medium leading-relaxed tracking-wide font-sans">
+                {metalType === "silver" 
+                  ? "Get an assured 925 silver authenticity certificate with every piece of our silver jewellery."
+                  : "Get government-certified BIS Hallmarked gold with complete purity assurance."}
+              </p>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

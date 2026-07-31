@@ -172,13 +172,13 @@ const StyleItYourWay = () => {
                     <div
                         ref={scrollRef}
                         onScroll={handleScroll}
-                        className="flex gap-4 md:gap-8 overflow-x-auto pb-16 pt-2 snap-x snap-mandatory scrollbar-hide scroll-smooth"
+                        className="flex gap-4 md:gap-8 overflow-x-auto pb-12 pt-2 snap-x snap-mandatory scrollbar-hide scroll-smooth"
                         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
                     >
                         {displayCollections.map((detail) => (
                             <div
                                 key={detail.id}
-                                className={`min-w-[75vw] md:min-w-[calc(45%-20px)] h-[160px] md:h-[280px] rounded-[1.2rem] md:rounded-[2rem] relative flex-shrink-0 snap-center group overflow-visible cursor-pointer transition-all duration-500 isolate mb-10`}
+                                className={`min-w-[75vw] md:min-w-[calc(45%-20px)] h-[160px] md:h-[280px] rounded-[1.2rem] md:rounded-[2rem] relative flex-shrink-0 snap-center group overflow-visible cursor-pointer transition-all duration-500 isolate mb-6`}
                             >
                                 <Link to={detail.path}>
                                     {/* Full Card Banner Image */}
@@ -222,7 +222,7 @@ const StyleItYourWay = () => {
 
                     {/* Carousel Dots */}
                     {displayCollections.length > 1 && (
-                        <div className="flex justify-center items-center gap-2 pb-6 mt-[-10px]">
+                        <div className="flex justify-center items-center gap-2 pb-2 mt-[-24px]">
                             {displayCollections.map((_, idx) => (
                                 <button
                                     key={idx}

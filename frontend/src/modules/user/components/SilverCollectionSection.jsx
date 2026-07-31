@@ -197,7 +197,7 @@ const SilverCollectionSection = () => {
                     <div
                         ref={scrollRef}
                         onScroll={handleScroll}
-                        className="flex flex-nowrap overflow-x-auto scrollbar-hide gap-6 md:gap-12 pb-6 md:pb-10 px-2 snap-x snap-mandatory scroll-smooth"
+                        className="flex flex-nowrap overflow-x-auto scrollbar-hide gap-4 md:gap-12 pb-6 md:pb-10 px-4 snap-x snap-mandatory scroll-smooth"
                     >
                         {items.map((cat, idx) => (
                             <motion.div
@@ -209,21 +209,21 @@ const SilverCollectionSection = () => {
                                 className="flex flex-col items-center group/item cursor-pointer shrink-0 snap-center"
                                 onClick={() => navigate(cat.path)}
                             >
-                                <div className="relative w-[130px] h-[130px] md:w-[185px] md:h-[185px] mb-5 overflow-hidden rounded-[40px] md:rounded-[55px] shadow-[0_15px_35px_rgba(180,30,80,0.18)] border-2 border-white transition-all duration-500 group-hover/item:-translate-y-3 group-hover/item:shadow-[0_25px_50px_rgba(180,30,80,0.25)]">
+                                <div className="relative w-[105px] h-[105px] sm:w-[130px] sm:h-[130px] md:w-[185px] md:h-[185px] mb-4 overflow-hidden rounded-[32px] sm:rounded-[40px] md:rounded-[55px] shadow-[0_15px_35px_rgba(180,30,80,0.18)] border-2 border-white transition-all duration-500 group-hover/item:-translate-y-3 group-hover/item:shadow-[0_25px_50px_rgba(180,30,80,0.25)]">
                                     <img
                                         src={cat.image}
                                         alt={cat.name}
                                         className="w-full h-full object-cover transition-transform duration-700 group-hover/item:scale-110"
                                     />
                                     {cat.badgeIcon && (
-                                        <div className="absolute top-2 right-2 md:top-3 md:right-3 w-8 h-8 md:w-11 md:h-11 bg-[#FADADD]/85 backdrop-blur-sm rounded-full flex items-center justify-center text-[#B44C63] shadow-inner z-10 border border-white/40">
+                                        <div className="absolute top-1.5 right-1.5 md:top-3 md:right-3 w-6.5 h-6.5 md:w-11 md:h-11 bg-[#FADADD]/85 backdrop-blur-sm rounded-full flex items-center justify-center text-[#B44C63] shadow-inner z-10 border border-white/40">
                                             {cat.badgeIcon}
                                         </div>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-tr from-black/10 to-transparent pointer-events-none" />
                                 </div>
 
-                                <span className="text-[15px] md:text-[19px] font-bold text-gray-800 tracking-tight group-hover/item:text-[#EC7798] transition-colors">
+                                <span className="text-[12px] sm:text-[15px] md:text-[19px] font-bold text-gray-800 tracking-tight group-hover/item:text-[#EC7798] transition-colors text-center w-full max-w-[105px] truncate">
                                     {cat.name}
                                 </span>
                             </motion.div>

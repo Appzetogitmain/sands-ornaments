@@ -25,7 +25,7 @@ const MostGifted = () => {
     const scrollRef = React.useRef(null);
 
     const sectionData = homepageSections?.['most-gifted'];
-    
+
     // Normalize products for display
     const displayProducts = React.useMemo(() => {
         const list = Array.isArray(products) ? products : [];
@@ -59,28 +59,32 @@ const MostGifted = () => {
             scrollRef.current.scrollTo({ left: scrollTo, behavior: 'smooth' });
         }
     };
-
     return (
+
+
         <section className="py-12 bg-white relative overflow-hidden">
+
+
+
             {/* Live Floating Particles Background */}
             <div className="absolute inset-0 pointer-events-none z-0">
                 {[...Array(4)].map((_, i) => (
                     <motion.div
                         key={i}
-                        animate={{ 
+                        animate={{
                             y: [0, -50, 0],
                             opacity: [0.1, 0.2, 0.1],
                         }}
-                        transition={{ 
-                            duration: 15, 
-                            repeat: Infinity, 
+                        transition={{
+                            duration: 15,
+                            repeat: Infinity,
                             ease: "easeInOut",
                             delay: i * 2
                         }}
                         className="absolute w-64 h-64 bg-pink-100/30 blur-[100px] rounded-full"
-                        style={{ 
-                            left: `${Math.random() * 80}%`, 
-                            top: `${Math.random() * 80}%` 
+                        style={{
+                            left: `${Math.random() * 80}%`,
+                            top: `${Math.random() * 80}%`
                         }}
                     />
                 ))}
@@ -88,9 +92,9 @@ const MostGifted = () => {
 
             <div className="container mx-auto px-4 md:px-6 relative z-10">
                 <div className="flex flex-col lg:flex-row gap-8 lg:h-[550px]">
-                    
+
                     {/* Cinematic Feature Banner */}
-                    <motion.div 
+                    <motion.div
                         initial={{ opacity: 0, x: -50 }}
                         whileInView={{ opacity: 1, x: 0 }}
                         transition={{ duration: 1.2 }}
@@ -104,7 +108,7 @@ const MostGifted = () => {
                             className="absolute inset-0 w-full h-full object-cover"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent z-10" />
-                        
+
                         <div className="absolute inset-0 flex flex-col justify-end p-8 z-30 pb-12">
                             <span className="text-[#C9A24D] text-[10px] font-bold tracking-[0.4em] uppercase mb-2 block">{heroItem.tag}</span>
                             <h2 className="font-display text-2xl md:text-3xl font-bold text-white mb-6 leading-tight uppercase tracking-wider">

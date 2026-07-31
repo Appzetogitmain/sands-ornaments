@@ -8,9 +8,9 @@ import { pickupLocationService } from '../services/pickupLocationService';
 import ShipmentTimeline from '../../shared/components/ShipmentTimeline';
 
 const COURIERS = [
-  { id: 'delhivery',  name: 'Delhivery',  desc: 'Pan-India coverage with express delivery' },
-  { id: 'bluedart',  name: 'Blue Dart',   desc: 'Premium courier with high reliability' },
-  { id: 'shiprocket', name: 'Shiprocket', desc: 'Smart courier selection via Shiprocket' },
+  { id: 'delhivery',  name: 'Delhivery',  desc: 'Temporarily unavailable', disabled: true },
+  { id: 'bluedart',  name: 'Blue Dart',   desc: 'Temporarily unavailable', disabled: true },
+  { id: 'shiprocket', name: 'Shiprocket', desc: 'Smart courier selection via Shiprocket', disabled: false },
 ];
 
 const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
@@ -56,6 +56,9 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
   };
 
   const handleCourierSelect = async (courierId) => {
+    const courier = COURIERS.find((c) => c.id === courierId);
+    if (courier?.disabled) return;
+
     setSelectedCourier(courierId);
     setServiceability(null);
     setSelectedPickupLocationId('');
@@ -82,14 +85,18 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
     setCheckingService(true);
     setServiceability(null);
     try {
-      const sellerPincode = order?.sellerPincode || '';
       const customerPincode = order?.shippingAddress?.pincode || '';
+      if (!customerPincode) {
+        setServiceability({ serviceable: false, message: 'Customer delivery pincode is missing on this order' });
+        return;
+      }
       const result = await sellerShippingService.checkServiceability({
         courier: selectedCourier,
-        pickupPincode: sellerPincode,
+        pickupPincode: order?.sellerPincode || undefined,
         deliveryPincode: customerPincode,
         paymentMode,
         weight: Number(packageInfo.weight) || 500,
+        pickupLocationId: selectedPickupLocationId || undefined,
       });
       setServiceability(result);
     } catch (err) {
@@ -311,13 +318,17 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
                   {COURIERS.map((c) => (
                     <button
                       key={c.id}
+                      type="button"
+                      disabled={c.disabled}
                       onClick={() => handleCourierSelect(c.id)}
-                      className={`p-4 rounded-xl border-2 text-left transition-all ${selectedCourier === c.id
-                        ? 'border-[#3E2723] bg-[#3E2723]/5 shadow-md'
-                        : 'border-gray-200 hover:border-gray-300'
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${c.disabled
+                        ? 'border-gray-100 bg-gray-50 opacity-50 cursor-not-allowed'
+                        : selectedCourier === c.id
+                          ? 'border-[#3E2723] bg-[#3E2723]/5 shadow-md'
+                          : 'border-gray-200 hover:border-gray-300'
                         }`}
                     >
-                      <p className="text-sm font-bold text-gray-900">{c.name}</p>
+                      <p className={`text-sm font-bold ${c.disabled ? 'text-gray-400' : 'text-gray-900'}`}>{c.name}</p>
                       <p className="text-[10px] text-gray-500 mt-0.5">{c.desc}</p>
                     </button>
                   ))}
@@ -374,7 +385,17 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
                     <div>
                       <span className="font-bold">{serviceability.serviceable ? 'Serviceable' : 'Not Serviceable'}</span>
                       {serviceability.estimatedDays && <span className="ml-2">• Est. {serviceability.estimatedDays} days</span>}
-                      {serviceability.codAvailable === false && <span className="ml-2 text-amber-600">• COD not available</span>}
+                      {serviceability.serviceable && serviceability.codAvailable === false && (
+                        <span className="ml-2 text-amber-600">• COD not available</span>
+                      )}
+                      {!serviceability.serviceable && serviceability.message && (
+                        <span className="ml-2 font-normal">• {serviceability.message}</span>
+                      )}
+                      {(serviceability.pickupPincode || serviceability.deliveryPincode) && (
+                        <p className="mt-1 text-[10px] font-normal opacity-70">
+                          Route checked: {serviceability.pickupPincode || '—'} → {serviceability.deliveryPincode || '—'}
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}

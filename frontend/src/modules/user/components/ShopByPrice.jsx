@@ -39,14 +39,14 @@ const ShopByPrice = () => {
         ];
 
     return (
-        <section className="pt-8 pb-0 md:pt-16 md:pb-0 bg-white">
+        <section className="pt-3 pb-0 md:pt-8 md:pb-0 bg-white">
             <div className="container mx-auto px-4 max-w-[1240px]">
-                <div className="flex flex-col items-center mb-8 md:mb-12 text-center">
+                <div className="flex flex-col items-center mb-4 md:mb-6 text-center">
                     <motion.span
                         initial={{ opacity: 0, y: 10 }}
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
-                        className="inline-block bg-[#9C5B61] text-white px-4 py-1.5 text-[9px] md:text-[11px] font-black tracking-[0.4em] uppercase mb-4 rounded-sm shadow-md"
+                        className="inline-block bg-[#9C5B61] text-white px-3.5 py-1 text-[9px] md:text-[10px] font-black tracking-[0.35em] uppercase mb-2 md:mb-2.5 rounded-sm shadow-sm"
                     >
                         GIFT THE EXCELLENCE
                     </motion.span>
@@ -55,14 +55,14 @@ const ShopByPrice = () => {
                         whileInView={{ opacity: 1, y: 0 }}
                         viewport={{ once: true }}
                         transition={{ delay: 0.1 }}
-                        className="text-3xl md:text-6xl font-serif text-gray-950 tracking-tight leading-none mb-6"
+                        className="text-2xl md:text-4xl font-serif text-gray-950 tracking-tight leading-none mb-3 md:mb-4"
                     >
                         Luxury <span className="italic font-light text-[#9C5B61]">within Reach</span>
                     </motion.h2>
-                    <div className="w-16 h-[2px] bg-[#9C5B61]/30 rounded-full" />
+                    <div className="w-12 h-[2px] bg-[#9C5B61]/30 rounded-full" />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-10 max-w-[1100px] mx-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 max-w-[1100px] mx-auto">
                     {displayItems.map((item, index) => (
                         <motion.div
                             key={item.id}
@@ -70,9 +70,9 @@ const ShopByPrice = () => {
                             whileInView={{ opacity: 1, scale: 1 }}
                             viewport={{ once: true }}
                             transition={{ duration: 0.6, delay: index * 0.2 }}
-                            whileHover={{ y: -8 }}
+                            whileHover={{ y: -6 }}
                             onClick={() => navigate(item.path)}
-                            className="relative aspect-[16/8] md:aspect-[16/7] rounded-[32px] overflow-hidden cursor-pointer group shadow-lg hover:shadow-2xl transition-all duration-700"
+                            className="relative aspect-[16/8] md:aspect-[16/7] rounded-[24px] md:rounded-[28px] overflow-hidden cursor-pointer group shadow-md hover:shadow-xl transition-all duration-700"
                         >
                             <img
                                 src={item.image}
@@ -85,17 +85,17 @@ const ShopByPrice = () => {
                             <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/20 to-transparent opacity-90 group-hover:opacity-70 transition-opacity duration-700" />
                             <div className="absolute inset-0 bg-[#9C5B61]/20 mix-blend-overlay group-hover:opacity-0 transition-opacity duration-700" />
 
-                            <div className="absolute inset-0 p-8 md:p-12 flex flex-col justify-center">
-                                <div className="transform transition-transform duration-700 group-hover:translate-x-3">
-                                    <h3 className="text-white font-serif text-3xl md:text-5xl tracking-tight mb-2 drop-shadow-lg">
+                            <div className="absolute inset-0 p-6 md:p-8 flex flex-col justify-center">
+                                <div className="transform transition-transform duration-700 group-hover:translate-x-2">
+                                    <h3 className="text-white font-serif text-2xl md:text-4xl tracking-tight mb-1.5 drop-shadow-lg">
                                         {item.title}
                                     </h3>
-                                    <div className="h-[3px] w-10 bg-[#C9A24D] mb-4 group-hover:w-24 transition-all duration-700 rounded-full shadow-glow" />
+                                    <div className="h-[2.5px] w-8 bg-[#C9A24D] mb-2 group-hover:w-20 transition-all duration-700 rounded-full shadow-glow" />
                                 </div>
                             </div>
 
                             <div className="absolute inset-0 bg-gradient-to-tr from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000 pointer-events-none transform -translate-x-full group-hover:translate-x-full transition-transform duration-[1.5s]" />
-                            <div className="absolute top-6 right-6 w-10 h-10 border-t-2 border-r-2 border-white/30 rounded-tr-xl group-hover:border-white/60 transition-colors duration-500" />
+                            <div className="absolute top-4 right-4 md:top-5 md:right-5 w-8 h-8 md:w-9 md:h-9 border-t-2 border-r-2 border-white/30 rounded-tr-lg group-hover:border-white/60 transition-colors duration-500" />
                         </motion.div>
                     ))}
                 </div>

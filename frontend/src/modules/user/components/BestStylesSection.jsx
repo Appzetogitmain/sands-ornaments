@@ -101,18 +101,18 @@ const BestStylesSection = ({ sectionData = null }) => {
     return (
         <section className="pt-2 pb-2 md:pt-4 md:pb-4 bg-white overflow-hidden">
             <div className="container mx-auto px-4 max-w-[1450px]">
-                <div className="relative mb-4 md:mb-6 flex flex-col items-center">
+                <div className="relative mb-3 md:mb-5 flex flex-col items-center">
                     <div className="flex flex-col items-center text-center">
-                        <h2 className="text-[24px] md:text-[40px] font-serif text-gray-900 tracking-tight leading-tight mb-2">
+                        <h2 className="text-[20px] md:text-[32px] font-cinzel text-gray-900 tracking-wide font-medium leading-tight mb-1">
                             {sectionTitle}
                         </h2>
                         {sectionSubtitle ? (
-                            <p className="text-[13px] md:text-[15px] text-gray-500 mb-3">{sectionSubtitle}</p>
+                            <p className="text-[10px] md:text-[11px] font-lato font-bold uppercase tracking-[0.25em] text-gray-400 mb-2">{sectionSubtitle}</p>
                         ) : null}
-                        <Link to={ctaPath} className="text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] text-[#8E4A50] hover:text-[#5B1E26] transition-all flex items-center gap-2 group">
+                        <Link to={ctaPath} className="text-[9px] md:text-[11px] font-bold uppercase tracking-[0.2em] text-[#8E4A50] hover:text-[#5B1E26] transition-all flex items-center gap-1.5 group">
                             {ctaLabel}
-                            <div className="w-4 h-4 rounded-full bg-[#8E4A50]/10 flex items-center justify-center group-hover:bg-[#8E4A50] group-hover:text-white transition-all">
-                                <ChevronRight className="w-2.5 h-2.5" />
+                            <div className="w-3.5 h-3.5 rounded-full bg-[#8E4A50]/10 flex items-center justify-center group-hover:bg-[#8E4A50] group-hover:text-white transition-all">
+                                <ChevronRight className="w-2 h-2" />
                             </div>
                         </Link>
                     </div>
