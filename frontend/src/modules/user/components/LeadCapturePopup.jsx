@@ -1,8 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { X, Mail, Phone, ArrowRight, Gift, ShoppingBag } from 'lucide-react';
 import { useAnalytics } from '../../../hooks/useAnalytics';
 import { useShop } from '../../../context/ShopContext';
 import { useAuth } from '../../../context/AuthContext';
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const THIRTY_DAYS_MS = 30 * 24 * 60 * 60 * 1000;
+const PAGE_GRACE_PERIOD_MS = 15000; // 15 seconds grace period after load
+
+const isDismissed = () => {
+    try {
+        const dismissedUntil = localStorage.getItem('lead_capture_dismissed_until');
+        if (!dismissedUntil) return false;
+        const exp = parseInt(dismissedUntil, 10);
+        return !isNaN(exp) && Date.now() < exp;
+    } catch {
+        return false;
+    }
+};
 
 const LeadCapturePopup = () => {
     const [isOpen, setIsOpen] = useState(false);
@@ -12,29 +27,43 @@ const LeadCapturePopup = () => {
     const { cart } = useShop();
     const { user, loading: authLoading } = useAuth();
     const { captureLead, track } = useAnalytics();
+    const loadedAtRef = useRef(Date.now());
 
     useEffect(() => {
         if (authLoading) return;
 
-        // Only show for guests with items in cart
+        // Never show for logged in users, empty cart, or if dismissed in last 7 days
         const isGuest = !user;
         const hasItems = cart.length > 0;
-        const hasShown = sessionStorage.getItem('lead_capture_shown');
+        const hasShownSession = sessionStorage.getItem('lead_capture_shown');
+        const alreadyDismissed = isDismissed();
 
-        if (isGuest && hasItems && !hasShown) {
+        if (isGuest && hasItems && !hasShownSession && !alreadyDismissed) {
+            // 45 seconds timer (non-intrusive)
             const timer = setTimeout(() => {
-                setIsOpen(true);
-                sessionStorage.setItem('lead_capture_shown', 'true');
-                track('lead_prompt_show', { cartCount: cart.length });
-            }, 30000); // Show after 30 seconds
-
-            // Also show on exit intent
-            const handleMouseOut = (e) => {
-                if (e.clientY < 0) {
+                if (!isDismissed()) {
                     setIsOpen(true);
                     sessionStorage.setItem('lead_capture_shown', 'true');
+                    track('lead_prompt_show', { cartCount: cart.length });
+                }
+            }, 45000);
+
+            // Refined exit intent mouse listener
+            const handleMouseOut = (e) => {
+                // Must have spent at least 15s on page before exit intent triggers
+                const timeOnPage = Date.now() - loadedAtRef.current;
+                if (timeOnPage < PAGE_GRACE_PERIOD_MS) return;
+
+                // Only trigger if mouse physically leaves window from the top (e.clientY <= 0 and e.relatedTarget is null)
+                if (e.clientY <= 0 && (!e.relatedTarget || e.relatedTarget.nodeName === 'HTML')) {
+                    if (!isDismissed() && !sessionStorage.getItem('lead_capture_shown')) {
+                        setIsOpen(true);
+                        sessionStorage.setItem('lead_capture_shown', 'true');
+                        track('lead_prompt_show', { cartCount: cart.length, trigger: 'exit_intent' });
+                    }
                 }
             };
+
             document.addEventListener('mouseleave', handleMouseOut);
 
             return () => {
@@ -42,13 +71,24 @@ const LeadCapturePopup = () => {
                 document.removeEventListener('mouseleave', handleMouseOut);
             };
         }
-    }, [authLoading, cart, track, user]);
+    }, [authLoading, cart.length, track, user]);
 
     useEffect(() => {
         if (user && isOpen) {
             setIsOpen(false);
         }
     }, [isOpen, user]);
+
+    const handleClose = () => {
+        setIsOpen(false);
+        try {
+            // Remember dismissal for 7 days
+            localStorage.setItem('lead_capture_dismissed_until', String(Date.now() + SEVEN_DAYS_MS));
+            sessionStorage.setItem('lead_capture_shown', 'true');
+        } catch (e) {
+            console.warn("Could not save dismissal state:", e);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -63,6 +103,15 @@ const LeadCapturePopup = () => {
             }))
         });
         track('lead_capture_success', { email, phone });
+        
+        try {
+            // Success -> don't show for 30 days
+            localStorage.setItem('lead_capture_dismissed_until', String(Date.now() + THIRTY_DAYS_MS));
+            sessionStorage.setItem('lead_capture_shown', 'true');
+        } catch (e) {
+            console.warn("Could not save success dismissal:", e);
+        }
+
         setStep(3);
         setTimeout(() => setIsOpen(false), 3000);
     };
@@ -73,8 +122,9 @@ const LeadCapturePopup = () => {
         <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300">
             <div className="bg-white rounded-[2.5rem] overflow-hidden max-w-lg w-full shadow-2xl relative">
                 <button 
-                    onClick={() => setIsOpen(false)}
+                    onClick={handleClose}
                     className="absolute top-6 right-6 p-2 hover:bg-gray-100 rounded-full transition-colors z-10"
+                    title="Close"
                 >
                     <X size={20} className="text-gray-400" />
                 </button>
