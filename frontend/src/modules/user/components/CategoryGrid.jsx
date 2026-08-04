@@ -2,15 +2,51 @@ import React, { useMemo, useRef, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight } from 'lucide-react';
 import { useHomepageCms } from '../hooks/useHomepageCms';
+import { useShop } from '../../../context/ShopContext';
 import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
 import { homeCategoryGridDefaults } from '../utils/homeCategoryGridDefaults';
 
-const normalizeItems = (items = []) => items
-    .filter((item) => Boolean(item?.name && item?.image && item?.path))
+const resolveItemImage = (item, liveCategories = []) => {
+    const rawImage = String(item?.image || '').trim();
+
+    // 1. If it's an explicitly uploaded remote/Cloudinary image on the section item, use it
+    if (
+        /^(https?:)?\/\//i.test(rawImage) ||
+        rawImage.startsWith('data:') ||
+        rawImage.startsWith('blob:') ||
+        rawImage.startsWith('/uploads/') ||
+        rawImage.startsWith('/media/')
+    ) {
+        return rawImage;
+    }
+
+    // 2. Try to match live Category database record from Admin -> Categories
+    const categoryId = item?.categoryId || item?.id;
+    const itemName = String(item?.name || '').trim().toLowerCase();
+    const itemPath = String(item?.path || '').trim().toLowerCase();
+
+    const matched = liveCategories.find((cat) => {
+        if (!cat) return false;
+        if (categoryId && String(cat._id || cat.id) === String(categoryId)) return true;
+        if (cat.name && String(cat.name).trim().toLowerCase() === itemName) return true;
+        if (cat.slug && itemPath.includes(String(cat.slug).trim().toLowerCase())) return true;
+        return false;
+    });
+
+    if (matched?.image && /^(https?:)?\/\//i.test(matched.image)) {
+        return matched.image;
+    }
+
+    // 3. Fallback to legacy asset map or raw image
+    return resolveLegacyCmsAsset(rawImage, rawImage);
+};
+
+const normalizeItems = (items = [], liveCategories = []) => items
+    .filter((item) => Boolean(item?.name && item?.path))
     .map((item, index) => ({
         id: item.itemId || item.id || `category-grid-item-${index + 1}`,
         name: item.name,
-        image: resolveLegacyCmsAsset(item.image, item.image),
+        image: resolveItemImage(item, liveCategories),
         path: item.path,
         badge: item.badge || ''
     }));
@@ -18,17 +54,18 @@ const normalizeItems = (items = []) => items
 const CategoryGrid = () => {
     const scrollRef = useRef(null);
     const { data: homepageSections = {} } = useHomepageCms();
+    const { categories: liveCategories = [] } = useShop();
     const sectionData = homepageSections?.['category-grid'];
     const [activeIndex, setActiveIndex] = useState(0);
     const [totalDots, setTotalDots] = useState(0);
 
     const categories = useMemo(() => {
-        const dynamicItems = normalizeItems(sectionData?.items || []);
-        if (dynamicItems.length > 0) {
-            return dynamicItems;
+        const rawItems = sectionData?.items || [];
+        if (rawItems.length > 0) {
+            return normalizeItems(rawItems, liveCategories);
         }
-        return normalizeItems(homeCategoryGridDefaults);
-    }, [sectionData?.items]);
+        return normalizeItems(homeCategoryGridDefaults, liveCategories);
+    }, [sectionData?.items, liveCategories]);
 
     useEffect(() => {
         const updateDots = () => {
