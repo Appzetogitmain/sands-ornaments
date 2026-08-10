@@ -26,11 +26,12 @@ import {
 } from 'lucide-react';
 import logo from '@assets/sands-logo.png';
 import logoName from '@assets/sands-logoname.png';
-import { sellerService } from '../services/sellerService';
+import { useAuth } from '../../../context/AuthContext';
 
 const SellerSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const location = useLocation();
     const navigate = useNavigate();
+    const { logout } = useAuth();
 
     const isPathMatch = (pathname, targetPath) => (
         pathname === targetPath || pathname.startsWith(`${targetPath}/`)
@@ -98,7 +99,7 @@ const SellerSidebar = ({ isSidebarOpen, setIsSidebarOpen }) => {
     });
 
     const handleLogout = () => {
-        sellerService.logout();
+        logout();
         navigate('/seller/login');
     };
 

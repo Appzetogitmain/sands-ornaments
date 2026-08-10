@@ -101,8 +101,9 @@ const CheckoutPage = () => {
       try {
         const res = await api.get("user/addresses");
         if (res.data.success) {
-          setAddresses(res.data.addresses);
-          const defaultAddr = res.data.addresses.find((a) => a.isDefault);
+          const addressList = res.data.data?.addresses || res.data.addresses || [];
+          setAddresses(addressList);
+          const defaultAddr = addressList.find((a) => a.isDefault);
           if (defaultAddr) {
             setFormData({
               fullName: `${defaultAddr.firstName} ${defaultAddr.lastName}`,

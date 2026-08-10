@@ -28,7 +28,7 @@ export const OrderProvider = ({ children, showNotification = () => {} }) => {
         try {
             const res = await api.get('user/addresses');
             if (res.data.success) {
-                const list = res.data.addresses || [];
+                const list = res.data.data?.addresses || res.data.addresses || [];
                 const normalized = list.map(addr => ({ ...addr, id: addr._id || addr.id }));
                 setAddresses(normalized);
                 localStorage.setItem('addresses', JSON.stringify(normalized));
@@ -94,18 +94,13 @@ export const OrderProvider = ({ children, showNotification = () => {} }) => {
                 }
             } catch (apiErr) {
                 console.error('Backend API failed to save address:', apiErr);
-                // Roll back optimistic update if it failed due to server/validation error
-                const isNetworkError = !apiErr.response;
-                if (!isNetworkError) {
-                    setAddresses(addresses);
-                    localStorage.setItem('addresses', JSON.stringify(addresses));
-                    const { toast } = await import('react-hot-toast');
-                    toast.error(apiErr.response?.data?.message || 'Failed to save address to server');
-                    return false;
-                }
+                // A future-order address must be persisted to the user's account.
+                // Never report success for a local-only optimistic copy.
+                setAddresses(addresses);
+                localStorage.setItem('addresses', JSON.stringify(addresses));
                 const { toast } = await import('react-hot-toast');
-                toast.success('Address saved locally (offline mode)');
-                return true;
+                toast.error(apiErr.response?.data?.message || 'Failed to save address to server');
+                return false;
             }
         } catch (err) {
             console.error('Failed to add address:', err);

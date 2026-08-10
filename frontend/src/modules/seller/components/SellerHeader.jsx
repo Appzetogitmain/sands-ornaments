@@ -3,31 +3,36 @@ import { Bell, User, LogOut, ShoppingBag, XCircle, RotateCcw, RefreshCw, AlertTr
 import { useNavigate, useLocation } from 'react-router-dom';
 import { sellerService } from '../services/sellerService';
 import { sellerOrderService } from '../services/sellerOrderService';
-
+import { useAuth } from '../../../context/AuthContext';
 const SellerHeader = ({ isSidebarOpen, setIsSidebarOpen }) => {
     const navigate = useNavigate();
     const location = useLocation();
-    const [seller, setSeller] = useState(null);
+    const { user: seller, logout, refreshUser } = useAuth();
     const [showNotifications, setShowNotifications] = useState(false);
     const [notifications, setNotifications] = useState([]);
     const [unreadCount, setUnreadCount] = useState(0);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
     useEffect(() => {
-        const refreshSeller = () => setSeller(sellerService.getCurrentSeller());
-        refreshSeller();
         loadNotifications();
+        if (typeof refreshUser === 'function') {
+            refreshUser();
+        }
 
         // Production hardening: poll less frequently and avoid background-tab noise.
-        const interval = setInterval(loadNotifications, 30000);
-        window.addEventListener('seller-profile-updated', refreshSeller);
+        const interval = setInterval(() => {
+            loadNotifications();
+            if (typeof refreshUser === 'function') refreshUser();
+        }, 30000);
         const onVisibility = () => {
-            if (!document.hidden) loadNotifications();
+            if (!document.hidden) {
+                loadNotifications();
+                if (typeof refreshUser === 'function') refreshUser();
+            }
         };
         document.addEventListener('visibilitychange', onVisibility);
         return () => {
             clearInterval(interval);
-            window.removeEventListener('seller-profile-updated', refreshSeller);
             document.removeEventListener('visibilitychange', onVisibility);
         };
     }, []);
@@ -42,7 +47,7 @@ const SellerHeader = ({ isSidebarOpen, setIsSidebarOpen }) => {
     };
 
     const handleLogout = () => {
-        sellerService.logout();
+        logout();
         navigate('/seller/login');
     };
 
@@ -96,14 +101,18 @@ const SellerHeader = ({ isSidebarOpen, setIsSidebarOpen }) => {
         try {
             setIsRefreshing(true);
             await loadNotifications();
+            if (typeof refreshUser === 'function') await refreshUser();
         } finally {
             setIsRefreshing(false);
         }
     };
 
     const getStatusMeta = () => {
-        switch (seller?.status) {
+        const rawStatus = String(seller?.status || '').trim().toUpperCase();
+        switch (rawStatus) {
             case 'APPROVED':
+            case 'ACTIVE':
+            case 'VERIFIED':
                 return { label: 'Verified Merchant', tone: 'text-emerald-600' };
             case 'REJECTED':
                 return { label: 'Rejected Account', tone: 'text-red-600' };

@@ -106,7 +106,7 @@ const SellerProfile = () => {
 
   const loadProfile = async () => {
     const data = await sellerService.getProfile();
-    const resolved = data || sellerService.getCurrentSeller();
+    const resolved = data || user;
     if (!resolved) return;
     setSeller(resolved);
     
@@ -146,8 +146,6 @@ const SellerProfile = () => {
       diamondCertificateUrl: resolved.documents?.diamondCertificateUrl || ""
     });
 
-    sellerService.setCurrentSeller(resolved);
-    
     // Sync React Auth user context state if status has changed (e.g. approved)
     if (resolved && resolved.status !== user?.status) {
       refreshUser();
@@ -360,7 +358,6 @@ const SellerProfile = () => {
     try {
       const res = await sellerService.deleteAccount();
       if (res?.success) {
-        sellerService.logout();
         logout({ silent: true });
         toast.success("Seller account deleted successfully");
         navigate("/seller/login");

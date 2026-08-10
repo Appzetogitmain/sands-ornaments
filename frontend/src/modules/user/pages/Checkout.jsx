@@ -200,7 +200,7 @@ const Checkout = () => {
         setLoading(true);
 
         if ((addressSelection === 'new' || addresses.length === 0) && saveNewAddress) {
-            await addAddress({
+            const addressSaved = await addAddress({
                 name: `${formData.firstName} ${formData.lastName}`,
                 phone: formData.phone,
                 flatNo: formData.flatNo,
@@ -211,6 +211,11 @@ const Checkout = () => {
                 pincode: formData.pincode,
                 type: 'Home'
             });
+
+            if (!addressSaved) {
+                setLoading(false);
+                return;
+            }
         }
 
         const shippingAddress = {
