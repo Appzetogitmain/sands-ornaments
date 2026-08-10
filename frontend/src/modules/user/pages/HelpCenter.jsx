@@ -130,23 +130,40 @@ const HelpCenter = () => {
     const [prefilledOrder, setPrefilledOrder] = useState('');
     const [faqs, setFaqs] = useState(DEFAULT_FAQS);
     const [isLoadingFaqs, setIsLoadingFaqs] = useState(true);
+    const [contactDetails, setContactDetails] = useState({
+        phone: '+91 9608811487',
+        email: 'care@sandsjewels.com'
+    });
 
     useEffect(() => {
         let isMounted = true;
-        const fetchFaqs = async () => {
+        const fetchData = async () => {
             try {
-                const res = await api.get('public/faqs');
-                const fetchedFaqs = res.data?.data?.faqs || res.data?.faqs;
-                if (isMounted && Array.isArray(fetchedFaqs) && fetchedFaqs.length > 0) {
-                    setFaqs(fetchedFaqs);
+                const [faqRes, settingsRes] = await Promise.all([
+                    api.get('public/faqs').catch(() => null),
+                    api.get('public/settings').catch(() => null)
+                ]);
+
+                if (isMounted && faqRes?.data) {
+                    const fetchedFaqs = faqRes.data?.data?.faqs || faqRes.data?.faqs;
+                    if (Array.isArray(fetchedFaqs) && fetchedFaqs.length > 0) {
+                        setFaqs(fetchedFaqs);
+                    }
+                }
+
+                if (isMounted && settingsRes?.data) {
+                    const s = settingsRes.data?.data?.settings || settingsRes.data?.settings || settingsRes.data;
+                    const phone = s?.contactPhone || s?.phone || '+91 9608811487';
+                    const email = s?.contactEmail || s?.email || 'care@sandsjewels.com';
+                    setContactDetails({ phone, email });
                 }
             } catch (err) {
-                console.error("Failed to fetch public FAQs:", err);
+                console.error("Failed to fetch public help center data:", err);
             } finally {
                 if (isMounted) setIsLoadingFaqs(false);
             }
         };
-        fetchFaqs();
+        fetchData();
         return () => { isMounted = false; };
     }, []);
 
@@ -310,7 +327,7 @@ const HelpCenter = () => {
                                             </div>
                                             <div>
                                                 <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-widest font-bold">Call us</p>
-                                                <p>+91 91 1334 4051</p>
+                                                <p>{contactDetails.phone}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4 text-xs md:text-sm font-medium">
@@ -319,7 +336,7 @@ const HelpCenter = () => {
                                             </div>
                                             <div>
                                                 <p className="text-white/60 text-[10px] md:text-xs uppercase tracking-widest font-bold">Email us</p>
-                                                <p>care@sandsjewels.com</p>
+                                                <p>{contactDetails.email}</p>
                                             </div>
                                         </div>
                                     </div>
