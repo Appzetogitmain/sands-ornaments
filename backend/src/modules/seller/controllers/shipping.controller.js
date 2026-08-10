@@ -66,13 +66,18 @@ const updateOrderShippingStatus = async (orderId) => {
       .map((s) => String(s.sellerId))
   );
 
-  const allDelivered = shipments.length > 0 &&
-    shipments.every((s) => s.status === "DELIVERED" || s.status === "CANCELLED");
+  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
+  const allDelivered = activeShipments.length > 0 &&
+    activeShipments.every((s) => s.status === "DELIVERED");
+  const allCancelled = shipments.length > 0 &&
+    shipments.every((s) => s.status === "CANCELLED");
   const allShipped = sellerIdsInOrder.length > 0 &&
     sellerIdsInOrder.every((sid) => shippedSellers.has(sid));
 
   if (allDelivered) {
     order.status = "Delivered";
+  } else if (allCancelled) {
+    order.status = "Cancelled";
   } else if (allShipped) {
     order.status = "Shipped";
   } else if (shippedSellers.size > 0) {

@@ -9,7 +9,7 @@
 const Shipment = require("../../models/Shipment");
 const Order = require("../../models/Order");
 const { mapStatus } = require("../../services/shipping/shippingStatusMapper");
-const { confirmCommissionsForOrder } = require("../../services/commissionService");
+const { confirmCommissionsForOrder, reverseCommissionsForOrder } = require("../../services/commissionService");
 
 // ── Duplicate prevention: in-memory dedup for last N events ──────────────────
 const SEEN_EVENTS = new Set();
@@ -41,24 +41,42 @@ const _updateOrderFromShipments = async (orderId) => {
     status: s.status,
   }));
 
-  const allDelivered = shipments.length > 0 &&
-    shipments.every((s) => s.status === "DELIVERED" || s.status === "CANCELLED");
+  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
+  const allDelivered = activeShipments.length > 0 &&
+    activeShipments.every((s) => s.status === "DELIVERED");
+  const allCancelled = shipments.length > 0 &&
+    shipments.every((s) => s.status === "CANCELLED");
   const anyShipped = shipments.some((s) =>
     ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
   );
 
-  if (allDelivered) order.status = "Delivered";
-  else if (anyShipped) order.status = "Shipped";
+  if (allDelivered) {
+    order.status = "Delivered";
+  } else if (allCancelled) {
+    order.status = "Cancelled";
+  } else if (anyShipped) {
+    order.status = "Shipped";
+  }
 
   order.sellerShipments = sellerShipments;
   await order.save();
 
-  // ── Platform commission: confirm pending accruals on the Delivered transition ──
+  // ── Platform commission lifecycle ───────────────────────────────────────────
   if (previousStatus !== "Delivered" && order.status === "Delivered") {
     try {
       await confirmCommissionsForOrder(order._id, { safe: true });
     } catch (e) {
       console.error("[Commission] Shiprocket-webhook delivery-confirm error:", e.message);
+    }
+  } else if (previousStatus !== "Cancelled" && order.status === "Cancelled") {
+    try {
+      await reverseCommissionsForOrder(order._id, {
+        triggeredBy: "shipment_cancelled",
+        reasonNote: "All shipments cancelled via courier webhook",
+        safe: true,
+      });
+    } catch (e) {
+      console.error("[Commission] Shiprocket-webhook cancel-reverse error:", e.message);
     }
   }
 };
