@@ -1,8 +1,32 @@
-import React, { useState } from 'react';
-import { Search, HelpCircle, ShoppingBag, Truck, CreditCard, RefreshCw, MessageCircle, ChevronRight, Phone, Mail, Clock, Send, Ticket, ArrowLeft, History, User } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, HelpCircle, ShoppingBag, Truck, CreditCard, RefreshCw, MessageCircle, ChevronRight, Phone, Mail, Clock, Send, Ticket, ArrowLeft, History, User, Loader2 } from 'lucide-react';
 import { useShop } from '../../../context/ShopContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { useResetScroll } from '../../../hooks/useResetScroll';
+import api from '../../../services/api';
+
+const DEFAULT_FAQS = [
+    {
+        category: 'orders',
+        question: 'How can I track my order?',
+        answer: 'You can track your order by visiting the "My Orders" section in your profile or by using the tracking link sent to your email.'
+    },
+    {
+        category: 'returns',
+        question: 'What is your return policy?',
+        answer: 'We offer a 7-day easy return policy for most items. The product must be unused and in its original packaging.'
+    },
+    {
+        category: 'payments',
+        question: 'What payment methods do you accept?',
+        answer: 'We accept all major credit/debit cards, UPI, Wallets, and Net Banking. Cash on Delivery is also available for selected locations.'
+    },
+    {
+        category: 'shopping',
+        question: 'Are your silver ornaments hallmarked?',
+        answer: 'Yes, all our 925 Silver ornaments are hallmarked and come with an authenticity certificate.'
+    }
+];
 
 const SupportForm = ({ onCancel, initialOrder = '' }) => {
     const { createTicket, user } = useShop();
@@ -104,6 +128,27 @@ const HelpCenter = () => {
     const [activeCategory, setActiveCategory] = useState('all');
     const [view, setView] = useState('home'); // home, contact
     const [prefilledOrder, setPrefilledOrder] = useState('');
+    const [faqs, setFaqs] = useState(DEFAULT_FAQS);
+    const [isLoadingFaqs, setIsLoadingFaqs] = useState(true);
+
+    useEffect(() => {
+        let isMounted = true;
+        const fetchFaqs = async () => {
+            try {
+                const res = await api.get('public/faqs');
+                const fetchedFaqs = res.data?.data?.faqs || res.data?.faqs;
+                if (isMounted && Array.isArray(fetchedFaqs) && fetchedFaqs.length > 0) {
+                    setFaqs(fetchedFaqs);
+                }
+            } catch (err) {
+                console.error("Failed to fetch public FAQs:", err);
+            } finally {
+                if (isMounted) setIsLoadingFaqs(false);
+            }
+        };
+        fetchFaqs();
+        return () => { isMounted = false; };
+    }, []);
 
     const categories = [
         { id: 'orders', icon: <ShoppingBag className="w-6 h-6" />, title: 'Orders', description: 'Tracking, shipping, and delivery details' },
@@ -112,34 +157,22 @@ const HelpCenter = () => {
         { id: 'shopping', icon: <Truck className="w-6 h-6" />, title: 'Shopping', description: 'Product info, stock, and sizing' },
     ];
 
-    const faqs = [
-        {
-            category: 'orders',
-            question: 'How can I track my order?',
-            answer: 'You can track your order by visiting the "My Orders" section in your profile or by using the tracking link sent to your email.'
-        },
-        {
-            category: 'returns',
-            question: 'What is your return policy?',
-            answer: 'We offer a 7-day easy return policy for most items. The product must be unused and in its original packaging.'
-        },
-        {
-            category: 'payments',
-            question: 'What payment methods do you accept?',
-            answer: 'We accept all major credit/debit cards, UPI, Wallets, and Net Banking. Cash on Delivery is also available for selected locations.'
-        },
-        {
-            category: 'shopping',
-            question: 'Are your silver ornaments hallmarked?',
-            answer: 'Yes, all our 925 Silver ornaments are hallmarked and come with an authenticity certificate.'
-        }
-    ];
+    const matchesCategory = (faqCategory, targetCatId) => {
+        if (targetCatId === 'all') return true;
+        if (!faqCategory) return false;
+        const normFaq = faqCategory.toLowerCase().trim();
+        const normTarget = targetCatId.toLowerCase().trim();
+        return normFaq === normTarget || normFaq.includes(normTarget) || normTarget.includes(normFaq);
+    };
 
-    const filteredFaqs = searchQuery
-        ? faqs.filter(f => f.question.toLowerCase().includes(searchQuery.toLowerCase()))
-        : activeCategory === 'all'
-            ? faqs
-            : faqs.filter(f => f.category === activeCategory);
+    const filteredFaqs = faqs.filter(f => {
+        const matchesSearch = searchQuery
+            ? (f.question?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+               f.answer?.toLowerCase().includes(searchQuery.toLowerCase()))
+            : true;
+        const matchesCat = matchesCategory(f.category, activeCategory);
+        return matchesSearch && matchesCat;
+    });
 
     const handleNeedHelpWithOrder = (orderId) => {
         if (!user) {

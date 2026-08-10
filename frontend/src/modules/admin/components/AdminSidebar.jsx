@@ -38,6 +38,7 @@ import {
   FileBarChart2,
   SlidersHorizontal,
   ShieldCheck,
+  HelpCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../../context/AuthContext";
@@ -162,6 +163,9 @@ const AdminSidebar = () => {
   const secondaryMenuItems = [
     { icon: Ticket, label: "Coupons", path: "/admin/coupons" },
     { icon: Monitor, label: "Banners", path: "/admin/banners" },
+    { icon: FileText, label: "Blogs", path: "/admin/blogs" },
+    { icon: HelpCircle, label: "FAQ Management", path: "/admin/faq" },
+    { icon: FileText, label: "Page Management", path: "/admin/pages" },
     { icon: Share2, label: "Referrals", path: "/admin/referrals" },
     { icon: FileText, label: "Seller Terms", path: "/admin/seller-terms" },
   ];

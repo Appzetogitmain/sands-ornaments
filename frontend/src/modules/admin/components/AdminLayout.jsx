@@ -101,6 +101,7 @@ const AdminLayout = ({ children }) => {
             icon: FileText,
             path: '/admin/pages',
             subItems: [
+                { name: 'All Pages Overview', path: '/admin/pages', icon: List },
                 { name: 'Privacy Policy', path: '/admin/pages/privacy-policy', icon: FileText },
                 { name: 'Terms & Conditions', path: '/admin/pages/terms-conditions', icon: FileText },
                 { name: 'Return & Refund', path: '/admin/pages/return-refund-policy', icon: FileText },
@@ -114,6 +115,7 @@ const AdminLayout = ({ children }) => {
                 { name: 'Seller Terms', path: '/admin/seller-terms', icon: FileText },
             ]
         },
+        { name: 'FAQ Management', icon: HelpCircle, path: '/admin/faq' },
         { name: 'Blogs', icon: BookOpen, path: '/admin/blogs' },
         { name: 'Homepage Sections', icon: LayoutDashboard, path: '/admin/sections' },
         { name: 'Metal Pricing', icon: RefreshCcw, path: '/admin/metal-pricing' },
