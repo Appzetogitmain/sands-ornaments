@@ -53,26 +53,30 @@ exports.getSettings = async (req, res) => {
 
 exports.updateSettings = async (req, res) => {
   try {
-    let settings = await Setting.findOne();
-    const before = settings ? { ...settings.toObject() } : null;
-    if (!settings) {
-      settings = await Setting.create(req.body);
-    } else {
-      Object.assign(settings, req.body);
-      await settings.save();
-    }
+    const payload = { ...req.body };
+    delete payload._id;
+    delete payload.__v;
+
+    const before = await Setting.findOne().lean();
+
+    const settings = await Setting.findOneAndUpdate(
+      {},
+      { $set: payload },
+      { new: true, upsert: true, runValidators: true }
+    );
+
     auditLogger.log(req, {
       action: "SETTINGS_UPDATE",
       entity: "Settings",
       entityId: String(settings._id),
       entityLabel: "Global Settings",
       before: before
-        ? Object.keys(req.body || {}).reduce((acc, key) => {
+        ? Object.keys(payload || {}).reduce((acc, key) => {
             acc[key] = before[key];
             return acc;
           }, {})
         : null,
-      after: { ...req.body }
+      after: { ...payload }
     });
     return success(res, { settings }, "Settings updated successfully");
   } catch (err) { return error(res, err.message); }
