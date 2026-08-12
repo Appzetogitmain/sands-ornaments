@@ -110,7 +110,7 @@ exports.getRequest = async (req, res) => {
 // ─────────────────────────────────────────────────────────────────────────────
 exports.processRequest = async (req, res) => {
   try {
-    const adminId = req.user._id || req.user.id;
+    const adminId = req.user.userId || req.user._id || req.user.id;
 
     // Atomic: only transition from PENDING → PROCESSING
     const payout = await PayoutRequest.findOneAndUpdate(
@@ -144,7 +144,7 @@ exports.approveRequest = async (req, res) => {
   session.startTransaction();
 
   try {
-    const adminId = req.user._id || req.user.id;
+    const adminId = req.user.userId || req.user._id || req.user.id;
 
     // Atomic idempotency: only PENDING or PROCESSING can be approved
     const payout = await PayoutRequest.findOneAndUpdate(
@@ -216,7 +216,7 @@ exports.rejectRequest = async (req, res) => {
   session.startTransaction();
 
   try {
-    const adminId = req.user._id || req.user.id;
+    const adminId = req.user.userId || req.user._id || req.user.id;
 
     // Atomic: only PENDING or PROCESSING can be rejected
     const payout = await PayoutRequest.findOneAndUpdate(

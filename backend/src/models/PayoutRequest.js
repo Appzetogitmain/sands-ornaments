@@ -69,7 +69,8 @@ const payoutRequestSchema = new mongoose.Schema(
     // ── Admin action ─────────────────────────────────────────────────────
     processedBy: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Admin",
+      // Administrators are stored in the User collection with role: "admin".
+      ref: "User",
       default: null,
     },
     processedAt: { type: Date, default: null },

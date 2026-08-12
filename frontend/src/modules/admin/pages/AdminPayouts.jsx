@@ -129,13 +129,26 @@ const ActionModal = ({ payout, action, onClose, onDone }) => {
 const DetailDrawer = ({ id, onClose, onRefresh }) => {
     const [data,    setData]    = useState(null);
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState('');
     const [modal,   setModal]   = useState(null); // 'process' | 'approve' | 'reject'
 
     const load = useCallback(async () => {
         setLoading(true);
-        const res = await adminPayoutService.getRequest(id);
-        if (res.success) setData(res.data);
-        setLoading(false);
+        setLoadError('');
+        try {
+            const res = await adminPayoutService.getRequest(id);
+            if (res.success) {
+                setData(res.data);
+            } else {
+                setData(null);
+                setLoadError(res.message || 'Unable to load payout details.');
+            }
+        } catch (err) {
+            setData(null);
+            setLoadError(err.response?.data?.message || 'Unable to load payout details.');
+        } finally {
+            setLoading(false);
+        }
     }, [id]);
 
     useEffect(() => { load(); }, [load]);
@@ -174,8 +187,19 @@ const DetailDrawer = ({ id, onClose, onRefresh }) => {
                         <div className="flex justify-center items-center h-40">
                             <div className="w-8 h-8 border-4 border-gray-200 border-t-gray-600 rounded-full animate-spin" />
                         </div>
+                    ) : loadError ? (
+                        <div className="p-6 space-y-4">
+                            <p className="text-sm text-rose-600">{loadError}</p>
+                            <button
+                                type="button"
+                                onClick={load}
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                            >
+                                Try again
+                            </button>
+                        </div>
                     ) : !p ? (
-                        <p className="p-6 text-gray-500 text-sm">Not found</p>
+                        <p className="p-6 text-gray-500 text-sm">Payout request not found.</p>
                     ) : (
                         <div className="p-6 space-y-6">
                             {/* Status */}
