@@ -57,8 +57,6 @@ const SellerOrders = () => {
                 'orderId',
                 'formattedDate',
                 'customerName',
-                'customerEmail',
-                'formattedPhone',
                 'paymentMethod',
                 'paymentStatus',
                 'itemCount',
@@ -71,8 +69,6 @@ const SellerOrders = () => {
                 'Order ID',
                 'Date',
                 'Customer Name',
-                'Email',
-                'Phone',
                 'Payment Method',
                 'Payment Status',
                 'Items Count',
@@ -82,10 +78,19 @@ const SellerOrders = () => {
                 'Tracking ID'
             ];
 
+            // Export only the seller's operational order data. Customer email
+            // and phone are intentionally excluded from the CSV/Excel file.
             const formattedOrders = exportOrders.map(order => ({
-                ...order,
+                orderId: order.orderId,
                 formattedDate: order.createdAt ? new Date(order.createdAt).toISOString().split('T')[0] : '',
-                formattedPhone: order.customerPhone ? `\t${order.customerPhone}` : ''
+                customerName: order.customerName || 'Customer',
+                paymentMethod: order.paymentMethod || '',
+                paymentStatus: order.paymentStatus || '',
+                itemCount: order.quantity || 0,
+                totalAmount: Number(order.sellerSubtotal || 0),
+                orderStatus: order.orderStatus || order.status || '',
+                shippingCarrier: order.shippingInfo?.carrier || '',
+                trackingId: order.shippingInfo?.trackingId || ''
             }));
 
             exportToExcelCSV(formattedOrders, headers, columnNames, 'Seller_Orders_Report');
