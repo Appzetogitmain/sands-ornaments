@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import {
     ArrowLeft, ShoppingBag, User, MapPin, CreditCard,
-    Box, CheckCircle, XCircle, Truck, PackageCheck
+    Box, CheckCircle, XCircle, Truck, PackageCheck, FileText
 } from 'lucide-react';
 import { sellerOrderService } from '../services/sellerOrderService';
 import SellerShipmentPanel from '../components/SellerShipmentPanel';
@@ -136,6 +136,14 @@ const SellerOrderDetail = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-3 w-full md:w-auto">
+                    {['Confirmed', 'Packed', 'Partially Shipped', 'Shipped', 'Out for Delivery', 'Delivered'].includes(currentStatus) && (
+                        <button
+                            onClick={() => navigate(`/seller/order-details/${id}/invoice`)}
+                            className="px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest border border-[#3E2723]/20 text-[#3E2723] hover:bg-[#3E2723]/5 transition-all flex items-center gap-2"
+                        >
+                            <FileText size={16} /> Invoice
+                        </button>
+                    )}
                     {canManage && currentStatus === 'Processing' && (
                         <>
                             <button

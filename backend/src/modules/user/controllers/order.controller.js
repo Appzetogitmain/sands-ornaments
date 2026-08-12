@@ -30,6 +30,65 @@ const {
 const toIdSet = (values = []) =>
   new Set((Array.isArray(values) ? values : []).map((value) => String(value)));
 
+const roundCurrency = (value) =>
+  Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+
+const isCouponItem = (coupon, item) => {
+  if (!coupon || coupon.applicabilityType === "all") return Boolean(coupon);
+
+  const categoryIdSet = toIdSet(coupon.applicableCategories);
+  const productIdSet = toIdSet(coupon.applicableProducts);
+  const itemCategoryId = String(item?.categoryId || "");
+  const itemProductId = String(item?.productId || item?.id || "");
+
+  if (coupon.applicabilityType === "category") return categoryIdSet.has(itemCategoryId);
+  if (coupon.applicabilityType === "product") return productIdSet.has(itemProductId);
+  return false;
+};
+
+/**
+ * Persist the seller-owned portion of a new order while checkout facts are
+ * still available. This is used later to issue an immutable seller invoice.
+ * Shipping is a platform charge and gift-card redemption is a payment tender,
+ * so neither is represented as seller revenue on the seller document.
+ */
+const buildSellerInvoiceAllocations = (items, coupon, discount) => {
+  const sellerRows = new Map();
+  const applicableTotal = coupon
+    ? items
+        .filter((item) => isCouponItem(coupon, item))
+        .reduce((sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 0), 0)
+    : 0;
+
+  for (const item of items) {
+    if (!item?.sellerId || item.isGiftCard) continue;
+
+    const key = String(item.sellerId);
+    const row = sellerRows.get(key) || {
+      sellerId: item.sellerId,
+      itemSubtotal: 0,
+      giftWrapCharge: 0,
+      applicableSubtotal: 0,
+    };
+
+    const lineTotal = Number(item.price || 0) * Number(item.quantity || 0);
+    row.itemSubtotal += lineTotal;
+    if (item.giftWrap) row.giftWrapCharge += 50;
+    if (coupon && isCouponItem(coupon, item)) row.applicableSubtotal += lineTotal;
+    sellerRows.set(key, row);
+  }
+
+  return Array.from(sellerRows.values()).map((row) => ({
+    sellerId: row.sellerId,
+    itemSubtotal: roundCurrency(row.itemSubtotal),
+    giftWrapCharge: roundCurrency(row.giftWrapCharge),
+    couponDiscount:
+      applicableTotal > 0
+        ? roundCurrency((Number(discount || 0) * row.applicableSubtotal) / applicableTotal)
+        : 0,
+  }));
+};
+
 const ensureProductOrderable = async (product) => {
   if (!product || product.status !== "Active" || product.active === false) {
     throw new Error(`Product ${product?._id || ""} is currently unavailable`);
@@ -346,6 +405,11 @@ const _calculateOrderData = async (
     0,
     subtotal - discount + giftWrapCharge + shipping - giftCardDiscount,
   );
+  const sellerInvoiceAllocations = buildSellerInvoiceAllocations(
+    orderItems,
+    appliedCoupon,
+    discount,
+  );
 
   return {
     orderId: generateOrderId(),
@@ -363,6 +427,7 @@ const _calculateOrderData = async (
     discount,
     shipping,
     giftWrapCharge,
+    sellerInvoiceAllocations,
     total,
     status: paymentMethod === "cod" ? "Processing" : "Pending",
     paymentStatus: paymentMethod === "cod" ? "cod" : "pending",

@@ -45,6 +45,15 @@ const orderSchema = new mongoose.Schema({
     amountUsed: { type: Number, default: 0 },
     _id:        false
   }],
+  // Exact per-seller amounts at checkout, retained for seller invoice snapshots.
+  // Older orders do not have this and are handled with a documented pro-rata fallback.
+  sellerInvoiceAllocations: [{
+    sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller" },
+    itemSubtotal: { type: Number, default: 0 },
+    giftWrapCharge: { type: Number, default: 0 },
+    couponDiscount: { type: Number, default: 0 },
+    _id: false,
+  }],
   status: {
     type: String,
     enum: ["Pending", "Processing", "Confirmed", "Packed", "Partially Shipped", "Shipped", "Out for Delivery", "Delivered", "Cancelled", "Return Requested", "Returned", "Partially Returned"],

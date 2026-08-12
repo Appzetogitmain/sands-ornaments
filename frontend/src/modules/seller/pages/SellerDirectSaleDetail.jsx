@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, BadgeIndianRupee, Hash, User, Phone, CreditCard, XCircle } from 'lucide-react';
+import { ArrowLeft, BadgeIndianRupee, Hash, User, Phone, CreditCard, XCircle, Printer } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { sellerDirectSaleService } from '../services/sellerDirectSaleService';
 
@@ -36,8 +36,24 @@ const SellerDirectSaleDetail = () => {
   }
 
   return (
-    <div className="space-y-8 font-sans animate-in fade-in duration-500">
-      <div className="flex items-center gap-4">
+    <>
+      <style>{`
+        @media print {
+          body * { visibility: hidden !important; }
+          #direct-sale-receipt, #direct-sale-receipt * { visibility: visible !important; }
+          #direct-sale-receipt { position: absolute; left: 0; top: 0; width: 100%; margin: 0; box-shadow: none !important; border: 0 !important; }
+          .direct-sale-no-print { display: none !important; }
+          .direct-sale-print-title { display: block !important; }
+          @page { size: A4; margin: 14mm; }
+        }
+      `}</style>
+      <div id="direct-sale-receipt" className="space-y-8 font-sans animate-in fade-in duration-500">
+      <div className="direct-sale-print-title hidden pb-5 border-b border-gray-200">
+        <p className="text-xs font-bold tracking-[0.2em] text-[#8D6E63] uppercase">Sands Jewels Marketplace</p>
+        <h1 className="mt-2 text-2xl font-black text-gray-900 uppercase tracking-tight">Direct Sale Receipt</h1>
+      </div>
+      <div className="flex items-center justify-between gap-4 direct-sale-no-print">
+        <div className="flex items-center gap-4">
         <button
           onClick={() => navigate('/seller/direct-sales')}
           className="p-2.5 hover:bg-white rounded-xl border border-gray-100 shadow-sm transition-all"
@@ -48,6 +64,13 @@ const SellerDirectSaleDetail = () => {
           <p className="text-[10px] font-black text-gray-400 uppercase tracking-[0.3em] mb-1">DIRECT SALES RECEIPT</p>
           <h1 className="text-2xl font-black text-gray-900 uppercase tracking-tight">Transaction Detail</h1>
         </div>
+        </div>
+        <button
+          onClick={() => window.print()}
+          className="px-4 py-2 bg-[#3E2723] text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm active:scale-95 flex items-center gap-2"
+        >
+          <Printer size={14} /> Print / Save PDF
+        </button>
       </div>
 
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-6">
@@ -145,7 +168,8 @@ const SellerDirectSaleDetail = () => {
           </div>
         ) : null}
       </div>
-    </div>
+      </div>
+    </>
   );
 };
 

@@ -105,6 +105,16 @@ export const sellerOrderService = {
         return order ? mapSellerOrder(order) : null;
     },
 
+    getSellerInvoice: async (id) => {
+        const res = await api.get(`seller/orders/${id}/invoice`);
+        return res.data?.data?.invoice || null;
+    },
+
+    issueSellerInvoice: async (id) => {
+        const res = await api.post(`seller/orders/${id}/invoice`);
+        return res.data?.data?.invoice || null;
+    },
+
     updateOrderStatus: async (orderId, status, note = '', shippingInfo = null, itemVoidTags = []) => {
         try {
             const res = await api.patch(`seller/orders/${orderId}/status`, { status, note, shippingInfo, itemVoidTags });
