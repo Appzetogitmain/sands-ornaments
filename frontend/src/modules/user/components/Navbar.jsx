@@ -1,7 +1,7 @@
 import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Search, Heart, ShoppingCart, User, Users, BookOpen, Menu, X, ChevronDown, ChevronRight, Bell, Sparkles, Coins, Gem, Droplet, LifeBuoy, Sun, Hexagon, Gift, MoreHorizontal, ShoppingBag } from 'lucide-react';
+import { Search, Heart, ShoppingCart, User, Users, BookOpen, Menu, X, ChevronDown, ChevronRight, Bell, Sparkles, Coins, Gem, Droplet, LifeBuoy, Sun, Hexagon, Gift, MoreHorizontal, ShoppingBag, Info } from 'lucide-react';
 import { useShop } from '../../../context/ShopContext';
 import { useNotification } from '../../../context/NotificationContext';
 import logo from '@assets/logooo.jpg';
@@ -714,7 +714,7 @@ const Navbar = () => {
                                         { label: 'Gifts for Her', path: '/category/women', icon: Gift },
                                         { label: 'Gifts for Family', path: '/category/family', icon: Users },
                                         { label: 'Blogs', path: '/blogs', icon: BookOpen },
-                                        { label: 'More', path: '/shop', icon: MoreHorizontal }
+                                        { label: 'About Us', path: '/about', icon: Info }
                                     ].map((item, index) => (
                                         <Link
                                             key={index}
