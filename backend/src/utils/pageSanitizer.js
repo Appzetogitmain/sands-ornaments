@@ -15,7 +15,8 @@ const ALLOWED_TAGS = new Set([
   "ul",
   "ol",
   "li",
-  "a"
+  "a",
+  "span"
 ]);
 
 const DISALLOWED_BLOCKS = /<(script|style|iframe|object|embed|form|input|button|textarea|select|option|meta|link|base)[^>]*>[\s\S]*?<\/\1>/gi;
@@ -49,17 +50,43 @@ const sanitizePageHtml = (html = "") => {
   value = value.replace(DISALLOWED_SELF_CLOSING, "");
   value = value.replace(EVENT_HANDLERS, "");
 
+  // Remove soft hyphens (&shy; and \u00AD) that cause awkward mid-word breaks
+  value = value.replace(/&shy;/gi, "").replace(/\u00AD/g, "");
+
   value = value.replace(/<([a-z0-9-]+)([^>]*)>/gi, (full, tagName, attrs = "") => {
     const tag = String(tagName || "").toLowerCase();
     if (!ALLOWED_TAGS.has(tag)) return "";
 
-    if (tag === "a") {
-      const href = normalizeHref(extractLinkHref(attrs));
-      if (!href) return "<a>";
-      return `<a href="${escapeHtmlAttr(href)}" rel="noopener noreferrer">`;
+    let safeAttrs = "";
+
+    // Preserve safe Quill formatting classes (ql-*)
+    const classMatch = attrs.match(/\sclass\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    if (classMatch) {
+      const classVal = classMatch[2] || classMatch[3] || classMatch[4] || "";
+      const safeClasses = classVal
+        .split(/\s+/)
+        .filter(c => /^ql-[a-z0-9-]+$/i.test(c) || /^text-[a-z0-9-]+$/i.test(c))
+        .join(" ");
+      if (safeClasses) {
+        safeAttrs += ` class="${escapeHtmlAttr(safeClasses)}"`;
+      }
     }
 
-    return `<${tag}>`;
+    // Preserve data-list attribute for Quill lists
+    const dataListMatch = attrs.match(/\sdata-list\s*=\s*("([^"]*)"|'([^']*)'|([^\s>]+))/i);
+    if (dataListMatch) {
+      const dataListVal = dataListMatch[2] || dataListMatch[3] || dataListMatch[4] || "";
+      safeAttrs += ` data-list="${escapeHtmlAttr(dataListVal)}"`;
+    }
+
+    if (tag === "a") {
+      const href = normalizeHref(extractLinkHref(attrs));
+      if (href) {
+        safeAttrs += ` href="${escapeHtmlAttr(href)}" rel="noopener noreferrer"`;
+      }
+    }
+
+    return `<${tag}${safeAttrs}>`;
   });
 
   value = value.replace(/<\/([a-z0-9-]+)>/gi, (full, tagName) => {

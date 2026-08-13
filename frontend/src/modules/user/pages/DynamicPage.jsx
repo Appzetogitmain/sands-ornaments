@@ -65,7 +65,7 @@ const DynamicPage = ({ slug: propSlug }) => {
 
   return (
     <div className="min-h-screen bg-[#FDF5F6] selection:bg-[#3E2723] selection:text-white pb-20">
-      <div className="container mx-auto px-4 max-w-4xl pt-12 md:pt-20">
+      <div className="container mx-auto px-4 max-w-5xl pt-10 md:pt-16">
         <button
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-black/40 hover:text-black transition-all group font-bold uppercase tracking-widest text-[10px] mb-8"
@@ -74,8 +74,8 @@ const DynamicPage = ({ slug: propSlug }) => {
           Back
         </button>
 
-        <div className="text-center mb-16 md:mb-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-display text-black mb-6 leading-tight break-words">
+        <div className="text-center mb-12 md:mb-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-display text-black mb-6 leading-tight break-words">
             {page.title}
           </h1>
           <div className="w-24 h-0.5 bg-[#3E2723]/10 mx-auto mb-6"></div>
@@ -91,14 +91,10 @@ const DynamicPage = ({ slug: propSlug }) => {
           )}
         </div>
 
-        <div className="bg-white rounded-2xl md:rounded-[2.5rem] p-5 sm:p-8 md:p-16 shadow-sm border border-[#3E2723]/5 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
+        <div className="bg-white rounded-2xl md:rounded-[2rem] p-6 sm:p-10 md:p-12 shadow-sm border border-[#3E2723]/5 animate-in fade-in slide-in-from-bottom-8 duration-700 delay-200">
           {hasContent ? (
             <div
-              className="prose prose-stone max-w-none md:prose-lg break-words
-                            prose-headings:font-display prose-headings:text-black 
-                            prose-p:text-gray-600 prose-p:leading-relaxed prose-p:font-serif
-                            prose-li:text-gray-600 prose-li:font-serif
-                            prose-strong:text-black prose-strong:font-bold"
+              className="rich-text-content text-gray-700"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(page.content) }}
             />
           ) : (

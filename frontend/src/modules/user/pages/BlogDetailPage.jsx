@@ -110,11 +110,7 @@ const BlogDetailPage = () => {
 
           <div className="p-5 sm:p-8 md:p-14">
             <div
-              className="prose prose-lg prose-stone max-w-none break-words
-              prose-headings:font-display prose-headings:text-black 
-              prose-p:text-gray-600 prose-p:leading-relaxed prose-p:font-serif
-              prose-li:text-gray-600 prose-li:font-serif
-              prose-strong:text-black prose-strong:font-bold"
+              className="rich-text-content text-gray-700"
               dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }}
             />
           </div>
