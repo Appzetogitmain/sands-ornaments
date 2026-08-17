@@ -8,11 +8,15 @@ import CouponsModal from '../components/CouponsModal';
 import { useResetScroll } from '../../../hooks/useResetScroll';
 
 const Cart = () => {
-    const { cart, removeFromCart, updateQuantity, coupons, applyCoupon, appliedCoupon, couponDiscount, clearAppliedCoupon, toggleGiftWrap, updateGiftMessage } = useShop();
+    const { cart, removeFromCart, updateQuantity, coupons, applyCoupon, appliedCoupon, couponDiscount, clearAppliedCoupon, toggleGiftWrap, updateGiftMessage, siteSettings } = useShop();
     const navigate = useNavigate();
     const [showCouponModal, setShowCouponModal] = React.useState(false);
     const [couponSectionExpanded, setCouponSectionExpanded] = React.useState(true);
     const [showBreakdown, setShowBreakdown] = React.useState(false);
+
+    const warrantyLabel = siteSettings?.warrantyText || "6-Month Warranty";
+    const platingLabel = siteSettings?.platingText || "Lifetime Plating";
+    const returnLabel = siteSettings?.returnPolicy || "15-Day Returns";
     const currencyText = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
     const couponSaveText = (coupon) => {
         const type = coupon.type || coupon.discountType;
@@ -183,9 +187,9 @@ const Cart = () => {
 
                                     {/* Trust Banner */}
                                     <div className="bg-[#FFF8F9] border-t border-[#FDF2F4] flex divide-x divide-[#FDF2F4] py-2.5 px-3">
-                                        <div className="flex-1 text-center text-[9px] font-normal text-gray-500 uppercase tracking-[0.1em]">6-Month Warranty</div>
-                                        <div className="flex-1 text-center text-[9px] font-normal text-gray-500 uppercase tracking-[0.1em]">Lifetime Plating</div>
-                                        <div className="flex-1 text-center text-[9px] font-normal text-gray-500 uppercase tracking-[0.1em]">15-Day Returns</div>
+                                        <div className="flex-1 text-center text-[9px] font-normal text-gray-500 uppercase tracking-[0.1em]">{warrantyLabel}</div>
+                                        <div className="flex-1 text-center text-[9px] font-normal text-gray-500 uppercase tracking-[0.1em]">{platingLabel}</div>
+                                        <div className="flex-1 text-center text-[9px] font-normal text-gray-500 uppercase tracking-[0.1em]">{returnLabel}</div>
                                     </div>
 
                                     {/* Gift Wrap */}

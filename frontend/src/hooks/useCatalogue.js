@@ -88,6 +88,16 @@ export const useCatalogue = () => {
     });
 
 
+    // Fetch Public Settings (Value propositions & policies)
+    const settingsQuery = useQuery({
+        queryKey: ['publicSettings'],
+        queryFn: async () => {
+            const res = await api.get('public/settings');
+            return res.data.data?.settings || {};
+        },
+        staleTime: 5 * 60 * 1000,
+    });
+
     // Fetch Coupons
     const couponsQuery = useQuery({
         queryKey: ['coupons'],
@@ -102,12 +112,14 @@ export const useCatalogue = () => {
         categories: categoriesQuery.data || [],
         products: productsQuery.data || [],
         coupons: couponsQuery.data || [],
-        isLoading: categoriesQuery.isLoading || productsQuery.isLoading || couponsQuery.isLoading,
-        isError: categoriesQuery.isError || productsQuery.isError || couponsQuery.isError,
+        siteSettings: settingsQuery.data || {},
+        isLoading: categoriesQuery.isLoading || productsQuery.isLoading || couponsQuery.isLoading || settingsQuery.isLoading,
+        isError: categoriesQuery.isError || productsQuery.isError || couponsQuery.isError || settingsQuery.isError,
         refetch: () => {
             categoriesQuery.refetch();
             productsQuery.refetch();
             couponsQuery.refetch();
+            settingsQuery.refetch();
         }
     };
 };

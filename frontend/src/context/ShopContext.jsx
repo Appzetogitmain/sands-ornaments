@@ -111,7 +111,7 @@ export const ShopProvider = ({ children }) => {
     }, [notification]);
 
     // ── Catalogue ────────────────────────────────────────────────────────────
-    const { products, categories, coupons: apiCoupons, isLoading: isCatalogueLoading } = useCatalogue();
+    const { products, categories, coupons: apiCoupons, siteSettings, isLoading: isCatalogueLoading } = useCatalogue();
 
     useEffect(() => {
         localStorage.setItem('sands_products', JSON.stringify(products));
@@ -287,6 +287,7 @@ export const ShopProvider = ({ children }) => {
         // Catalogue (read-only from useCatalogue)
         products,
         categories,
+        siteSettings,
         isLoading: isCatalogueLoading,
     }), [
         // Cart
