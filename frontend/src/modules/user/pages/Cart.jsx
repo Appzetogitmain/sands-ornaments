@@ -3,6 +3,7 @@ import { useShop } from '../../../context/ShopContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { Trash2, ShoppingBag, Gift, ShieldCheck, ArrowLeft, Plus, Minus, X, Truck, Info, Tag, ChevronDown, Lock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import toast from 'react-hot-toast';
 import CouponsModal from '../components/CouponsModal';
 import { useResetScroll } from '../../../hooks/useResetScroll';
 
@@ -42,7 +43,11 @@ const Cart = () => {
 
     const handleApplyCoupon = async (code) => {
         const result = await applyCoupon(code, subtotal, cart);
-        if (!result.valid) return;
+        if (!result.valid) {
+            toast.error(result.error || 'Failed to apply coupon');
+            return;
+        }
+        toast.success('Coupon applied successfully!');
         setShowCouponModal(false);
     };
 
@@ -389,6 +394,7 @@ const Cart = () => {
                 onClose={() => setShowCouponModal(false)}
                 coupons={availableCoupons}
                 onApply={handleApplyCoupon}
+                cartTotal={subtotal}
             />
         </div>
     );

@@ -183,6 +183,11 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
                                 Most Gifted
                             </div>
                         )}
+                        {(product.isPremium || product.tags?.isPremium) && (
+                            <div className="bg-gradient-to-r from-purple-700 to-indigo-800 text-white text-[7px] md:text-[9px] font-bold md:font-black px-1.5 md:px-2 py-0.5 md:py-1 uppercase tracking-widest shadow-sm">
+                                Premium
+                            </div>
+                        )}
                     </div>
 
                     <button
