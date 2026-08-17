@@ -43,6 +43,8 @@ const extractLinkHref = (attrs = "") => {
   return match ? (match[2] || match[3] || match[4] || "") : "";
 };
 
+const SOFT_HYPHEN_REGEX = /&shy;|&#173;|&#x0*ad;|\u00AD|&#8203;|&#x200b;|&ZeroWidthSpace;|\u200B|\u200C|\u200D/gi;
+
 const sanitizePageHtml = (html = "") => {
   let value = String(html || "");
 
@@ -50,8 +52,11 @@ const sanitizePageHtml = (html = "") => {
   value = value.replace(DISALLOWED_SELF_CLOSING, "");
   value = value.replace(EVENT_HANDLERS, "");
 
-  // Remove soft hyphens (&shy; and \u00AD) that cause awkward mid-word breaks
-  value = value.replace(/&shy;/gi, "").replace(/\u00AD/g, "");
+  // Remove all forms of soft hyphens & zero-width spaces that cause mid-word breaks
+  value = value.replace(SOFT_HYPHEN_REGEX, "");
+
+  // Convert non-breaking spaces (&nbsp; and \u00A0) to normal spaces so browser wraps words naturally
+  value = value.replace(/&nbsp;/gi, " ").replace(/\u00A0/g, " ");
 
   value = value.replace(/<([a-z0-9-]+)([^>]*)>/gi, (full, tagName, attrs = "") => {
     const tag = String(tagName || "").toLowerCase();
@@ -94,6 +99,35 @@ const sanitizePageHtml = (html = "") => {
     if (!ALLOWED_TAGS.has(tag)) return "";
     return `</${tag}>`;
   });
+
+  // Repair inline formatting tags that split words across tag boundaries (e.g. <strong>video</strong>s -> <strong>videos</strong>)
+  const inlineTags = new Set(["strong", "em", "b", "i", "u", "s", "span", "a"]);
+  for (let pass = 0; pass < 2; pass++) {
+    value = value.replace(/<([a-z0-9-]+)([^>]*)>([^<]+)<\/\1>([a-zA-Z0-9_-]+)/gi, (match, tag, attrs, content, trailing) => {
+      if (inlineTags.has(tag.toLowerCase())) {
+        return `<${tag}${attrs}>${content}${trailing}</${tag}>`;
+      }
+      return match;
+    });
+    value = value.replace(/([a-zA-Z0-9_-]+)<([a-z0-9-]+)([^>]*)>([^<]+)<\/\2>/gi, (match, leading, tag, attrs, content) => {
+      if (inlineTags.has(tag.toLowerCase())) {
+        return `<${tag}${attrs}>${leading}${content}</${tag}>`;
+      }
+      return match;
+    });
+  }
+
+  // Repair accidental &nbsp; split words inserted by rich text copy-pasting
+  value = value
+    .replace(/\bth&nbsp;e\b/gi, "the")
+    .replace(/\brelationshi&nbsp;p\b/gi, "relationship")
+    .replace(/\bthe&nbsp;s&nbsp;ystems\b/gi, "the systems")
+    .replace(/\bvideo&nbsp;s\b/gi, "videos")
+    .replace(/technology-&nbsp;driven/gi, "technology-driven")
+    .replace(/\bthr&nbsp;oughout\b/gi, "throughout")
+    .replace(/\bw&nbsp;ithin\b/gi, "within")
+    .replace(/\btransparanc&nbsp;y\b/gi, "transparency")
+    .replace(/\btechno&nbsp;logy/gi, "technology");
 
   return value.trim();
 };

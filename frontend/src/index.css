@@ -397,7 +397,11 @@ input:-webkit-autofill:active {
 }
 
 .rich-text-content strong,
-.rich-text-content b {
+.rich-text-content b,
+.rich-text-content em,
+.rich-text-content span,
+.rich-text-content a {
+    display: inline !important;
     font-weight: 700;
     color: #111827;
 }
