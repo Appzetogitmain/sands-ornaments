@@ -4,7 +4,6 @@ import { ChevronRight } from 'lucide-react';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import { useShop } from '../../../context/ShopContext';
 import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
-import { homeCategoryGridDefaults } from '../utils/homeCategoryGridDefaults';
 
 const resolveItemImage = (item, liveCategories = []) => {
     const rawImage = String(item?.image || '').trim();
@@ -53,8 +52,8 @@ const normalizeItems = (items = [], liveCategories = []) => items
 
 const CategoryGrid = () => {
     const scrollRef = useRef(null);
-    const { data: homepageSections = {} } = useHomepageCms();
-    const { categories: liveCategories = [] } = useShop();
+    const { data: homepageSections = {}, isLoading: isCmsLoading } = useHomepageCms();
+    const { categories: liveCategories = [], isLoading: isShopLoading } = useShop();
     const sectionData = homepageSections?.['category-grid'];
     const [activeIndex, setActiveIndex] = useState(0);
     const [totalDots, setTotalDots] = useState(0);
@@ -64,7 +63,16 @@ const CategoryGrid = () => {
         if (rawItems.length > 0) {
             return normalizeItems(rawItems, liveCategories);
         }
-        return normalizeItems(homeCategoryGridDefaults, liveCategories);
+        if (liveCategories.length > 0) {
+            return liveCategories.map((cat, idx) => ({
+                id: cat._id || cat.id || `live-cat-${idx}`,
+                name: cat.name,
+                image: cat.image || '',
+                path: `/category/${cat.slug || cat.path || ''}`,
+                badge: ''
+            })).filter(c => Boolean(c.name && c.image));
+        }
+        return [];
     }, [sectionData?.items, liveCategories]);
 
     useEffect(() => {
@@ -91,6 +99,30 @@ const CategoryGrid = () => {
             setActiveIndex(index);
         }
     };
+
+    if ((isCmsLoading && !sectionData) || (categories.length === 0 && (isCmsLoading || isShopLoading))) {
+        return (
+            <div className="w-full bg-white py-3 md:py-6 relative">
+                <div className="container mx-auto px-4">
+                    <div className="flex overflow-x-auto scrollbar-hide gap-4 md:gap-7 pb-2 md:pb-4 px-1 md:px-2">
+                        {[1, 2, 3, 4, 5, 6].map((idx) => (
+                            <div
+                                key={idx}
+                                className="flex flex-col shrink-0 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden w-[120px] md:w-[160px] animate-pulse"
+                            >
+                                <div className="w-full aspect-square bg-gray-100 flex items-center justify-center">
+                                    <div className="w-8 h-8 rounded-full bg-gray-200/60" />
+                                </div>
+                                <div className="p-3 bg-white border-t border-gray-50 flex items-center justify-center">
+                                    <div className="h-3 w-16 bg-gray-200/80 rounded-full" />
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (categories.length === 0) {
         return null;

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 import api from '../../../services/api';
 
-const toHomepageSectionsMap = (res) => {
-  const sections = res?.data?.data?.sections || res?.data?.sections || [];
+const toHomepageSectionsMap = (resOrData) => {
+  const sections = resOrData?.data?.data?.sections || resOrData?.data?.sections || resOrData?.sections || [];
   return (sections || []).reduce((acc, section) => {
     const key = section.sectionId || section.sectionKey;
     if (!key) return acc;
@@ -22,16 +22,37 @@ const toHomepageSectionsMap = (res) => {
   }, {});
 };
 
+const getCachedHomepageCms = () => {
+  try {
+    const raw = localStorage.getItem('sands_homepage_cms_cache');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { data: parsed };
+    }
+  } catch (e) {
+    // ignore
+  }
+  return undefined;
+};
+
 export const useHomepageCms = () => {
   return useQuery({
     queryKey: ['public-cms', 'homepage'],
-    // Align homepage CMS with the centralized page endpoint used by men/women/family/gold.
-    // Backend `/public/cms/homepage` is a convenience wrapper (includes banners), but the UI
-    // only needs sections; `/public/cms/pages/home` keeps the contract consistent.
-    queryFn: async () => api.get('public/cms/pages/home'),
+    queryFn: async () => {
+      const res = await api.get('public/cms/pages/home');
+      try {
+        if (res?.data) {
+          localStorage.setItem('sands_homepage_cms_cache', JSON.stringify(res.data));
+        }
+      } catch (e) {
+        // ignore
+      }
+      return res;
+    },
     select: toHomepageSectionsMap,
-    staleTime: 30 * 1000, // 30 seconds — keep it responsive for admin updates
-    gcTime:   5 * 60 * 1000,  // 5 minutes — keep in cache across page changes
+    placeholderData: getCachedHomepageCms,
+    staleTime: 60 * 1000, // 1 minute
+    gcTime:   15 * 60 * 1000,  // 15 minutes
     retry: 1,
   });
 };
