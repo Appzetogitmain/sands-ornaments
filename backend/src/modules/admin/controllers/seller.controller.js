@@ -2,6 +2,12 @@ const mongoose = require("mongoose");
 const Seller = require("../../../models/Seller");
 const Product = require("../../../models/Product");
 const Order = require("../../../models/Order");
+const SellerProduct = require("../../../models/SellerProduct");
+const PickupLocation = require("../../../models/PickupLocation");
+const Notification = require("../../../models/Notification");
+const StockLog = require("../../../models/StockLog");
+const SellerMetalRateLog = require("../../../models/SellerMetalRateLog");
+const SellerSupportTicket = require("../../../models/SellerSupportTicket");
 const { success, error } = require("../../../utils/apiResponse");
 const { sendEmail } = require("../../../services/emailService");
 const auditLogger = require("../../../utils/auditLogger");
@@ -331,3 +337,79 @@ exports.updateSellerStatus = async (req, res) => {
     return error(res, err.message);
   }
 };
+
+exports.deleteSeller = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    if (!isValidObjectId(id)) {
+      return error(res, "Invalid seller id", 400);
+    }
+
+    const seller = await Seller.findById(id);
+    if (!seller) return error(res, "Seller not found", 404);
+
+    // Check for active/in-progress orders containing items from this seller
+    const activeOrdersCount = await Order.countDocuments({
+      "items.sellerId": seller._id,
+      status: { $in: ["Pending", "Confirmed", "Processing", "Shipped"] }
+    });
+
+    if (activeOrdersCount > 0) {
+      return error(
+        res,
+        `Cannot delete seller: This seller has ${activeOrdersCount} active order(s) in progress. Please resolve or cancel active orders before deleting the account.`,
+        400
+      );
+    }
+
+    const sellerDataBefore = {
+      _id: seller._id,
+      fullName: seller.fullName,
+      shopName: seller.shopName,
+      email: seller.email,
+      mobileNumber: seller.mobileNumber,
+      status: seller.status
+    };
+
+    // Cascade delete operational data
+    await Promise.all([
+      Product.deleteMany({ sellerId: seller._id }),
+      SellerProduct.deleteMany({ sellerId: seller._id }),
+      PickupLocation.deleteMany({ sellerId: seller._id }),
+      Notification.deleteMany({ sellerId: seller._id }),
+      StockLog.deleteMany({ sellerId: seller._id }),
+      SellerMetalRateLog.deleteMany({ sellerId: seller._id }),
+      SellerSupportTicket.deleteMany({ sellerId: seller._id }),
+      Seller.deleteOne({ _id: seller._id }),
+    ]);
+
+    // Audit log
+    auditLogger.log(req, {
+      action: "DELETE",
+      entity: "Seller",
+      entityId: String(seller._id),
+      entityLabel: seller.shopName || seller.fullName || seller.email || "",
+      before: sellerDataBefore,
+      after: null
+    });
+
+    // Notify seller via email if email exists
+    if (seller.email) {
+      try {
+        await sendEmail({
+          to: seller.email,
+          subject: "Seller account deleted",
+          html: `Hi ${seller.fullName}, your seller account for ${seller.shopName} has been permanently deleted by the administrator.`
+        });
+      } catch (mailErr) {
+        console.error("Seller deletion email failed:", mailErr.message);
+      }
+    }
+
+    return success(res, {}, "Seller account and associated products deleted successfully");
+  } catch (err) {
+    return error(res, err.message);
+  }
+};
+

@@ -742,6 +742,21 @@ export const adminService = {
       };
     }
   },
+  deleteSeller: async (id) => {
+    try {
+      const res = await api.delete(`admin/sellers/${id}`);
+      return {
+        success: res.data.success,
+        message: res.data.message || "Seller account deleted successfully"
+      };
+    } catch (err) {
+      console.error("Admin delete seller failed:", err);
+      return {
+        success: false,
+        message: err.response?.data?.message || "Failed to delete seller"
+      };
+    }
+  },
 
   // User Management
   getUsers: async (params = {}) => {

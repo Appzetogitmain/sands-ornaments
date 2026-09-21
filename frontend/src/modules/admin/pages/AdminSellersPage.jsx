@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Eye, CheckCircle, XCircle, FileText, ShieldCheck, Search, Users, UserCheck, UserX, Clock, Package, IndianRupee } from 'lucide-react';
+import { Store, Eye, CheckCircle, XCircle, FileText, ShieldCheck, Search, Users, UserCheck, UserX, Clock, Package, IndianRupee, Trash2, AlertTriangle } from 'lucide-react';
 import AdminTable from '../components/AdminTable';
 import AdminStatsCard from '../components/AdminStatsCard';
 import { adminService } from '../services/adminService';
@@ -13,6 +13,8 @@ const AdminSellersPage = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [activeFilter, setActiveFilter] = useState('ALL');
+    const [sellerToDelete, setSellerToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const handleExport = () => {
         const headers = [
@@ -74,6 +76,26 @@ const AdminSellersPage = () => {
             fetchSellers();
         } else {
             toast.error(response?.message || "Failed to update seller");
+        }
+    };
+
+    const handleDeleteSeller = async () => {
+        if (!sellerToDelete) return;
+        setDeleting(true);
+        try {
+            const response = await adminService.deleteSeller(sellerToDelete._id || sellerToDelete.id);
+            if (response?.success) {
+                toast.success(response.message || "Seller account deleted successfully");
+                setSellerToDelete(null);
+                fetchSellers();
+            } else {
+                toast.error(response?.message || "Failed to delete seller");
+            }
+        } catch (err) {
+            console.error("Delete seller error:", err);
+            toast.error("Failed to delete seller");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -244,9 +266,9 @@ const AdminSellersPage = () => {
         },
         {
             header: 'ACTIONS',
-            className: 'w-[15%] text-right',
+            className: 'w-[16%] text-right',
             render: (row) => (
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-1.5">
                     <button 
                         onClick={() => navigate(`/admin/seller-details/${row._id || row.id}`)}
                         className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-400 hover:text-[#3E2723] transition-all"
@@ -272,6 +294,13 @@ const AdminSellersPage = () => {
                             <XCircle size={18} />
                         </button>
                     )}
+                    <button 
+                        onClick={() => setSellerToDelete(row)}
+                        className="p-1.5 hover:bg-red-50 rounded-lg text-gray-400 hover:text-red-600 transition-all"
+                        title="Delete Seller"
+                    >
+                        <Trash2 size={18} />
+                    </button>
                 </div>
             )
         }
@@ -348,6 +377,41 @@ const AdminSellersPage = () => {
                     emptyMessage={loading ? "Loading sellers..." : `No ${activeFilter.toLowerCase()} sellers found matching your search.`}
                 />
             </div>
+
+            {/* Delete Seller Modal */}
+            {sellerToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="w-12 h-12 rounded-2xl bg-red-50 text-red-600 flex items-center justify-center mb-4 border border-red-100">
+                            <AlertTriangle size={24} />
+                        </div>
+                        <h3 className="text-lg font-black text-gray-900 uppercase tracking-tight mb-2">DELETE SELLER ACCOUNT</h3>
+                        <p className="text-xs text-gray-500 font-medium leading-relaxed mb-4">
+                            Are you sure you want to permanently delete seller <strong className="text-gray-900 font-bold">{sellerToDelete.shopName || sellerToDelete.fullName}</strong> ({sellerToDelete.email})?
+                        </p>
+                        <div className="bg-amber-50 border border-amber-200/60 rounded-xl p-3 text-[11px] text-amber-800 font-medium mb-6 leading-relaxed">
+                            ⚠️ This action will permanently remove their products, locations, stock logs, and account profile. Historical orders and financial records are preserved for audit purposes.
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setSellerToDelete(null)}
+                                disabled={deleting}
+                                className="flex-1 py-3 bg-gray-50 text-gray-400 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-gray-100 transition-all disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                onClick={handleDeleteSeller}
+                                disabled={deleting}
+                                className="flex-1 py-3 bg-red-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-lg shadow-red-200 hover:bg-red-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                            >
+                                {deleting ? "Deleting..." : "Delete Account"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

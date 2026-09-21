@@ -8,5 +8,6 @@ router.use(authenticate, requireRole("admin"));
 router.get("/", sellerController.getSellers);
 router.get("/:id", sellerController.getSellerDetail);
 router.patch("/:id/status", sellerController.updateSellerStatus);
+router.delete("/:id", sellerController.deleteSeller);
 
 module.exports = router;
