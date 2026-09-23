@@ -29,6 +29,8 @@ import HeerCustomisationBanner from "../components/HeerCustomisationBanner";
 import Loader from "../../shared/components/Loader";
 import { resolveLegacyCmsAsset } from "../utils/legacyCmsAssets";
 import { usePublicCmsPage } from "../hooks/usePublicCmsPage";
+import { useShop } from "../../../context/ShopContext";
+import GoldComingSoon from "./GoldComingSoon";
 
 import heroGold from "@assets/hero/bridal_royal.png";
 
@@ -45,6 +47,8 @@ const TRUST_BADGES = [
 ];
 
 const GoldJewelleryPage = () => {
+  const { siteSettings } = useShop();
+  const isComingSoon = siteSettings?.goldComingSoon?.enabled !== false;
   const [currentHeroIndex, setCurrentHeroIndex] = useState(0);
   const {
     data: sections = [],
@@ -55,8 +59,14 @@ const GoldJewelleryPage = () => {
   } = usePublicCmsPage("gold-collection");
 
   useEffect(() => {
-    document.title = "Shop Gold Jewellery | Sands Jewels";
-  }, []);
+    document.title = isComingSoon
+      ? "Sands Gold Collection | Coming Soon"
+      : "Shop Gold Jewellery | Sands Jewels";
+  }, [isComingSoon]);
+
+  if (isComingSoon) {
+    return <GoldComingSoon config={siteSettings?.goldComingSoon} />;
+  }
 
   const sectionMap = useMemo(
     () =>

@@ -136,6 +136,14 @@ const DEFAULT_SETTINGS = {
 
   footerDeliveryText: "Safe & Insured Express Worldwide Delivery",
   footerCopyrightText: "Sands Jewels Pvt Ltd. All Rights Reserved.",
+
+  goldComingSoon: {
+    enabled: true,
+    badgeText: "The Grand Unveil",
+    title: "SANDS GOLD COLLECTION",
+    subtitle:
+      "Indulge in the timeless allure of 18K and 22K pure gold. Handcrafted masterpieces and bespoke designs are being perfected for your most cherished moments.",
+  },
 };
 
 const GlobalSettings = () => {
@@ -153,6 +161,10 @@ const GlobalSettings = () => {
           setSettings((prev) => ({
             ...DEFAULT_SETTINGS,
             ...fetched,
+            goldComingSoon: {
+              ...DEFAULT_SETTINGS.goldComingSoon,
+              ...(fetched.goldComingSoon || {}),
+            },
             socialLinks: {
               ...DEFAULT_SETTINGS.socialLinks,
               ...(fetched.socialLinks || {}),
@@ -346,6 +358,104 @@ const GlobalSettings = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-5">
+        {/* Gold Section Storefront Mode */}
+        <div className="lg:col-span-2 bg-gradient-to-br from-[#FFFDF8] via-white to-[#FBF8EF] p-5 md:p-6 rounded-2xl border border-[#D4AF37]/30 shadow-sm space-y-6">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#D4AF37] to-[#AA8C2C] flex items-center justify-center text-white font-serif font-black shadow-md shadow-[#D4AF37]/20">
+                Au
+              </div>
+              <div>
+                <h3 className="text-xl font-serif font-bold text-[#3E2723] flex items-center gap-2">
+                  Gold Section Storefront Mode
+                  <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+                </h3>
+                <p className="text-xs text-gray-500 font-medium tracking-wide mt-0.5">
+                  Control whether storefront visitors switching to Gold see the luxury "Coming Soon" teaser or the live product catalog.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-xl border border-gray-200 shadow-sm self-start md:self-auto">
+              <span className="text-xs font-bold uppercase tracking-wider text-gray-500">Mode:</span>
+              <button
+                type="button"
+                disabled={!isEditing}
+                onClick={() =>
+                  handleNestedChange(
+                    "goldComingSoon",
+                    "enabled",
+                    !settings.goldComingSoon?.enabled,
+                  )
+                }
+                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed ${
+                  settings.goldComingSoon?.enabled ? "bg-[#AA8C2C]" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    settings.goldComingSoon?.enabled ? "translate-x-5" : "translate-x-0"
+                  }`}
+                />
+              </button>
+              <span
+                className={`text-xs font-black uppercase tracking-widest ${
+                  settings.goldComingSoon?.enabled ? "text-[#AA8C2C]" : "text-emerald-600"
+                }`}
+              >
+                {settings.goldComingSoon?.enabled ? "Coming Soon (Active)" : "Live Catalog"}
+              </span>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+            <div>
+              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <span>Badge / Tagline</span>
+              </label>
+              <input
+                className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#AA8C2C]/20 disabled:bg-gray-50 disabled:text-gray-500 transition-all"
+                value={settings.goldComingSoon?.badgeText || ""}
+                onChange={(e) => handleNestedChange("goldComingSoon", "badgeText", e.target.value)}
+                disabled={!isEditing}
+                placeholder="The Grand Unveil"
+              />
+            </div>
+            <div>
+              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <span>Section Headline</span>
+              </label>
+              <input
+                className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#AA8C2C]/20 disabled:bg-gray-50 disabled:text-gray-500 transition-all"
+                value={settings.goldComingSoon?.title || ""}
+                onChange={(e) => handleNestedChange("goldComingSoon", "title", e.target.value)}
+                disabled={!isEditing}
+                placeholder="SANDS GOLD COLLECTION"
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-2">
+                <span>Teaser Description</span>
+              </label>
+              <textarea
+                rows={2}
+                className="w-full p-3 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-900 focus:outline-none focus:ring-2 focus:ring-[#AA8C2C]/20 disabled:bg-gray-50 disabled:text-gray-500 transition-all resize-none"
+                value={settings.goldComingSoon?.subtitle || ""}
+                onChange={(e) => handleNestedChange("goldComingSoon", "subtitle", e.target.value)}
+                disabled={!isEditing}
+                placeholder="Indulge in the timeless allure of 18K and 22K pure gold..."
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-xs text-amber-900 flex items-start gap-2">
+            <Sparkles className="w-4 h-4 text-amber-600 mt-0.5 shrink-0" />
+            <span>
+              <strong>Note:</strong> When <em>Coming Soon</em> is active, all admin gold products, daily metal rates, seller inventory, and CMS sections remain completely active in the background. Turn off Coming Soon whenever you are ready to reveal the live store.
+            </span>
+          </div>
+        </div>
+
         {/* Product Highlights Section */}
         <div className="bg-white p-4 md:p-5 rounded-2xl border border-gray-200 shadow-sm space-y-6">
           <div>

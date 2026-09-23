@@ -230,6 +230,20 @@ const settingSchema = new mongoose.Schema(
     },
     commissionUpdatedAt: { type: Date, default: null },
     commissionBackfilledAt: { type: Date, default: null },
+
+    // ── Gold section storefront mode ─────────────────────────────────────
+    // When enabled, the user storefront displays the luxury Coming Soon section
+    // on /gold-collection. Admin, pricing, inventory, and CMS remain active.
+    goldComingSoon: {
+      enabled: { type: Boolean, default: true },
+      badgeText: { type: String, default: "The Grand Unveil" },
+      title: { type: String, default: "SANDS GOLD COLLECTION" },
+      subtitle: {
+        type: String,
+        default:
+          "Indulge in the timeless allure of 18K and 22K pure gold. Handcrafted masterpieces and bespoke designs are being perfected for your most cherished moments.",
+      },
+    },
   },
   { timestamps: true },
 );
