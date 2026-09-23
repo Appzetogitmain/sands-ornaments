@@ -49,7 +49,7 @@ const {
  */
 const getActiveTiers = async () => {
   const setting = await Setting.findOne().lean();
-  const enabled = setting ? setting.commissionEnabled !== false : true;
+  const enabled = true; // Always enabled to protect order accrual & seller wallet payouts
 
   if (setting && Array.isArray(setting.commissionTiers) && setting.commissionTiers.length > 0) {
     const tiers = setting.commissionTiers.map((t) => ({

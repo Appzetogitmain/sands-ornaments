@@ -8,8 +8,7 @@ import {
     Percent,
     AlertTriangle,
     Calculator,
-    ToggleLeft,
-    ToggleRight,
+    CheckCircle2,
 } from 'lucide-react';
 import PageHeader from '../components/common/PageHeader';
 import adminCommissionService, {
@@ -138,18 +137,6 @@ const CommissionTiersPage = () => {
         setSaving(false);
     };
 
-    const handleToggle = async () => {
-        const next = !enabled;
-        setEnabled(next);
-        const res = await adminCommissionService.toggleEnabled(next);
-        if (!res?.success) {
-            setEnabled(!next);
-            toast.error(res?.message || 'Failed to toggle');
-        } else {
-            toast.success(`Commission ${next ? 'enabled' : 'disabled'}`);
-        }
-    };
-
     const handleRestoreDefaults = async () => {
         if (!window.confirm('Replace current tiers with the default chart values?')) return;
         setSaving(true);
@@ -172,25 +159,23 @@ const CommissionTiersPage = () => {
 
             {/* KPI cards */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-                    <div className="flex items-center justify-between">
-                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">Status</p>
-                        {enabled ? <ToggleRight className="w-5 h-5 text-emerald-500" /> : <ToggleLeft className="w-5 h-5 text-gray-400" />}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col justify-between">
+                    <div>
+                        <div className="flex items-center justify-between">
+                            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400">Status</p>
+                            <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                        </div>
+                        <p className="text-3xl font-black mt-3 text-emerald-600">
+                            Enabled
+                        </p>
+                        <p className="text-sm text-gray-500 mt-2">
+                            New orders accrue platform commission per the tiers below.
+                        </p>
                     </div>
-                    <p className={`text-3xl font-black mt-3 ${enabled ? 'text-emerald-600' : 'text-gray-500'}`}>
-                        {enabled ? 'Enabled' : 'Disabled'}
-                    </p>
-                    <p className="text-sm text-gray-500 mt-2">
-                        {enabled
-                            ? 'New orders accrue platform commission per the tiers below.'
-                            : 'Commission ledger writes are paused. Existing entries are untouched.'}
-                    </p>
-                    <button
-                        onClick={handleToggle}
-                        className="mt-4 px-4 py-2 rounded-lg bg-[#3E2723] text-white text-[11px] font-black uppercase tracking-widest"
-                    >
-                        {enabled ? 'Disable Commission' : 'Enable Commission'}
-                    </button>
+                    <div className="mt-4 pt-3 border-t border-gray-100 flex items-center gap-2">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <span className="text-[11px] font-black uppercase tracking-wider text-emerald-700">Platform Commission Active</span>
+                    </div>
                 </div>
 
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">

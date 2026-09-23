@@ -58,7 +58,7 @@ exports.getTiers = async (req, res) => {
         : DEFAULT_COMMISSION_TIERS.map((t) => ({ ...t }));
     return success(res, {
       tiers,
-      enabled:         settings.commissionEnabled !== false,
+      enabled:         true,
       updatedAt:       settings.commissionUpdatedAt || null,
       backfilledAt:    settings.commissionBackfilledAt || null,
       usingDefaults:   !(Array.isArray(settings.commissionTiers) && settings.commissionTiers.length > 0),
@@ -81,7 +81,7 @@ exports.updateTiers = async (req, res) => {
 
     return success(res, {
       tiers:     settings.commissionTiers,
-      enabled:   settings.commissionEnabled !== false,
+      enabled:   true,
       updatedAt: settings.commissionUpdatedAt,
     }, "Commission tiers updated");
   } catch (err) { return error(res, err.message); }
@@ -89,13 +89,11 @@ exports.updateTiers = async (req, res) => {
 
 exports.toggleEnabled = async (req, res) => {
   try {
-    const { enabled } = req.body || {};
-    if (typeof enabled !== "boolean") return error(res, "enabled must be a boolean", 400);
     const settings = await getOrCreateSettings();
-    settings.commissionEnabled   = enabled;
+    settings.commissionEnabled   = true;
     settings.commissionUpdatedAt = new Date();
     await settings.save();
-    return success(res, { enabled: settings.commissionEnabled }, `Commission ${enabled ? "enabled" : "disabled"}`);
+    return success(res, { enabled: true }, "Commission is permanently enabled");
   } catch (err) { return error(res, err.message); }
 };
 
