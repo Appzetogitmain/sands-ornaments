@@ -96,15 +96,46 @@ exports.getProducts = async (req, res) => {
 
     // 2. Category Filter
     if (category) {
-      let categoryId = category;
-      if (!mongoose.isValidObjectId(category)) {
-        const resolved = await Category.findOne({
+      const categoryConditions = [];
+      let resolvedCategory = null;
+
+      if (mongoose.isValidObjectId(category)) {
+        categoryConditions.push(
+          { categories: category },
+          { categoryId: category },
+          { navShopByCategory: category }
+        );
+        resolvedCategory = await Category.findById(category).select("_id slug name subcategories").lean();
+      } else {
+        resolvedCategory = await Category.findOne({
           $or: [{ slug: category }, { name: new RegExp(`^${category}$`, "i") }],
           isActive: true
-        }).select("_id");
-        categoryId = resolved?._id || new mongoose.Types.ObjectId("000000000000000000000000");
+        }).select("_id slug name subcategories").lean();
+        
+        categoryConditions.push(
+          { categorySlug: category },
+          { category: new RegExp(`^${category}$`, "i") }
+        );
       }
-      query.categories = categoryId;
+
+      if (resolvedCategory) {
+        const catIds = [resolvedCategory._id, ...(resolvedCategory.subcategories || [])];
+        categoryConditions.push(
+          { categories: { $in: catIds } },
+          { categoryId: { $in: catIds } },
+          { navShopByCategory: { $in: catIds } }
+        );
+        if (resolvedCategory.slug) {
+          categoryConditions.push({ categorySlug: resolvedCategory.slug });
+        }
+        if (resolvedCategory.name) {
+          categoryConditions.push({ category: new RegExp(`^${resolvedCategory.name}$`, "i") });
+        }
+      }
+
+      if (categoryConditions.length > 0) {
+        andFilters.push({ $or: categoryConditions });
+      }
     }
 
     // 3. Price Range Filter (matches any variant price)
@@ -150,10 +181,15 @@ exports.getProducts = async (req, res) => {
         .map((v) => String(v || "").trim().toLowerCase())
         .filter(Boolean);
       if (requested.length > 0) {
-        // If requesting men/women, include unisex too (matches frontend logic).
-        const expanded = new Set(requested);
-        expanded.add("unisex");
-        query.audience = { $in: Array.from(expanded) };
+        // For family gifting flow, gifts encompass women, men, unisex, and family pieces.
+        if (requested.includes("family")) {
+          // Don't over-restrict family gift searches
+        } else {
+          // If requesting men or women, include unisex too (matches frontend logic).
+          const expanded = new Set(requested);
+          expanded.add("unisex");
+          query.audience = { $in: Array.from(expanded) };
+        }
       }
     }
 

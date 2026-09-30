@@ -15,7 +15,7 @@ const createBannerItem = () => ({
     mobileImage: '',
     path: '/shop',
     tag: '',
-    ctaLabel: 'Shop Collection',
+    ctaLabel: '',
     sortOrder: 0
 });
 
@@ -45,8 +45,11 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                 id: item.itemId || item.id || `${Date.now()}_${index}`,
                 ...item,
                 sortOrder: item.sortOrder ?? index,
+                name: item.name || '',
+                tag: item.tag || '',
+                label: item.label || '',
                 subtitle: item.subtitle || item.price || '',
-                ctaLabel: item.ctaLabel || 'Shop Collection'
+                ctaLabel: item.ctaLabel || ''
             }));
         }
 
@@ -56,8 +59,11 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                 id: item.itemId || item.id || `${Date.now()}_${index}`,
                 ...item,
                 sortOrder: item.sortOrder ?? index,
+                name: item.name || '',
+                tag: item.tag || '',
+                label: item.label || '',
                 subtitle: item.subtitle || item.price || '',
-                ctaLabel: item.ctaLabel || 'Shop Collection'
+                ctaLabel: item.ctaLabel || ''
             }));
         }
 
@@ -163,17 +169,12 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
     };
 
     const handleSave = async () => {
-        const invalid = items.find((item) => !item.label?.trim() || !item.image?.trim() || !item.mobileImage?.trim());
+        const invalid = items.find((item) => !item.image?.trim() || !item.mobileImage?.trim());
         if (invalid) {
-            toast.error('Each banner requires a title, a desktop image, and a mobile image before saving.');
+            toast.error('Each banner requires both a desktop image and a mobile image before saving.');
             return;
         }
         if (isFamilyPromoBanner) {
-            const missingSubtitle = items.find((item) => !item.subtitle?.trim());
-            if (missingSubtitle) {
-                toast.error('Add a subtitle before saving this banner.');
-                return;
-            }
             const missingCategory = items.find((item) => !item.categoryId);
             if (missingCategory) {
                 toast.error('Select a category before saving this banner.');
@@ -191,9 +192,12 @@ const BannerSectionEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                     ...item,
                     itemId: item.itemId || item.id,
                     sortOrder: index,
+                    name: item.name || '',
+                    tag: item.tag || '',
+                    label: item.label || '',
                     subtitle: item.subtitle || '',
                     mobileImage: item.mobileImage || '',
-                    ctaLabel: item.ctaLabel || 'Shop Collection',
+                    ctaLabel: item.ctaLabel || '',
                     price: item.price || '',
                     categoryId: isFamilyPromoBanner ? (item.categoryId || null) : item.categoryId,
                     path: isFamilyPromoBanner

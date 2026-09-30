@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 
@@ -31,15 +30,15 @@ const AutoBannerSection = () => {
     const dynamicBanners = useMemo(() => {
         const items = Array.isArray(sectionData?.items) ? sectionData.items : [];
         return items
-            .filter((item) => Boolean(item?.image && item?.label))
+            .filter((item) => Boolean(item?.image))
             .map((item, index) => ({
                 id: item.itemId || item.id || `auto-banner-${index + 1}`,
                 image: resolveLegacyCmsAsset(item.image, item.image),
                 mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, item.mobileImage) : null,
-                title: item.label,
+                title: item.label || item.title || '',
                 subtitle: item.subtitle || '',
                 link: item.path || '/shop',
-                ctaLabel: item.ctaLabel || 'Explore Collection'
+                ctaLabel: item.ctaLabel || ''
             }));
     }, [sectionData?.items]);
     const slides = dynamicBanners.length > 0 ? dynamicBanners : banners;
@@ -101,72 +100,72 @@ const AutoBannerSection = () => {
                             }
                         }}
                     >
-                        <div className="w-full h-full relative group">
-                            {/* Banner Image with subtle zoom */}
-                            {slides[currentIndex].mobileImage && (
+                        <Link to={slides[currentIndex]?.link || '/shop'} className="w-full h-full block">
+                            <div className="w-full h-full relative group">
+                                {/* Banner Image with subtle zoom */}
+                                {slides[currentIndex].mobileImage && (
+                                    <motion.img 
+                                        key={`img-mob-${currentIndex}`}
+                                        initial={{ scale: 1.1 }}
+                                        animate={{ scale: 1 }}
+                                        transition={{ duration: 5 }}
+                                        src={slides[currentIndex].mobileImage} 
+                                        alt={slides[currentIndex].title || 'Banner Mobile'}
+                                        loading="lazy"
+                                        decoding="async"
+                                        className="w-full h-full object-cover block md:hidden"
+                                    />
+                                )}
                                 <motion.img 
-                                    key={`img-mob-${currentIndex}`}
+                                    key={`img-${currentIndex}`}
                                     initial={{ scale: 1.1 }}
                                     animate={{ scale: 1 }}
                                     transition={{ duration: 5 }}
-                                    src={slides[currentIndex].mobileImage} 
-                                    alt={`${slides[currentIndex].title} Mobile`}
+                                    src={slides[currentIndex].image} 
+                                    alt={slides[currentIndex].title || 'Banner'}
                                     loading="lazy"
                                     decoding="async"
-                                    className="w-full h-full object-cover block md:hidden"
+                                    className={`w-full h-full object-cover ${slides[currentIndex].mobileImage ? 'hidden md:block' : 'block'}`}
                                 />
-                            )}
-                            <motion.img 
-                                key={`img-${currentIndex}`}
-                                initial={{ scale: 1.1 }}
-                                animate={{ scale: 1 }}
-                                transition={{ duration: 5 }}
-                                src={slides[currentIndex].image} 
-                                alt={slides[currentIndex].title}
-                                loading="lazy"
-                                decoding="async"
-                                className={`w-full h-full object-cover ${slides[currentIndex].mobileImage ? 'hidden md:block' : 'block'}`}
-                            />
-                            
-                            {/* Premium Content Overlay - allows clicks to pass through */}
-                            <div className="absolute inset-0 bg-black/20 flex flex-col justify-center items-center text-center px-4 pointer-events-none">
-                                <div className="max-w-4xl space-y-4 md:space-y-6 pointer-events-auto">
-                                    <motion.p
-                                        key={`subtitle-${currentIndex}`}
-                                        initial={{ opacity: 0, y: -20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.3 }}
-                                        className="text-[#D9C4B1] text-[9px] md:text-sm font-bold uppercase tracking-[0.4em]"
-                                    >
-                                        {slides[currentIndex].subtitle}
-                                    </motion.p>
+                                
+                                {/* Premium Content Overlay (only if subtitle or title exists) */}
+                                {(slides[currentIndex]?.title || slides[currentIndex]?.subtitle) && (
+                                    <>
+                                        <div className="absolute inset-0 bg-black/20 flex flex-col justify-center items-center text-center px-4 pointer-events-none">
+                                            <div className="max-w-4xl space-y-4 md:space-y-6 pointer-events-auto">
+                                                {slides[currentIndex].subtitle && (
+                                                    <motion.p
+                                                        key={`subtitle-${currentIndex}`}
+                                                        initial={{ opacity: 0, y: -20 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: 0.3 }}
+                                                        className="text-[#D9C4B1] text-[9px] md:text-sm font-bold uppercase tracking-[0.4em]"
+                                                    >
+                                                        {slides[currentIndex].subtitle}
+                                                    </motion.p>
+                                                )}
 
-                                    <motion.h2
-                                        key={`title-${currentIndex}`}
-                                        initial={{ opacity: 0, y: 20 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        transition={{ delay: 0.5 }}
-                                        className="text-white text-3xl md:text-7xl font-serif italic leading-tight drop-shadow-2xl pointer-events-none"
-                                    >
-                                        {slides[currentIndex].title}
-                                    </motion.h2>
+                                                {slides[currentIndex].title && (
+                                                    <motion.h2
+                                                        key={`title-${currentIndex}`}
+                                                        initial={{ opacity: 0, y: 20 }}
+                                                        animate={{ opacity: 1, y: 0 }}
+                                                        transition={{ delay: 0.5 }}
+                                                        className="text-white text-3xl md:text-7xl font-serif italic leading-tight drop-shadow-2xl pointer-events-none"
+                                                    >
+                                                        {slides[currentIndex].title}
+                                                    </motion.h2>
+                                                )}
+                                            </div>
+                                        </div>
 
-
-                                </div>
+                                        <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-black/0 pointer-events-none" />
+                                    </>
+                                )}
                             </div>
-
-                            {/* Overlay for readability - doesn't block clicks */}
-                            <div className="absolute inset-0 bg-black/5 transition-colors group-hover:bg-black/0 pointer-events-none" />
-
-                            {/* Carousel Navigation Arrows */}
-                            
-
-                            
-
-                        </div>
+                        </Link>
                     </motion.div>
                 </AnimatePresence>
-
             </div>
 
             {/* Sliding Line Indicators - Below Carousel */}
@@ -194,4 +193,3 @@ const AutoBannerSection = () => {
 };
 
 export default AutoBannerSection;
-

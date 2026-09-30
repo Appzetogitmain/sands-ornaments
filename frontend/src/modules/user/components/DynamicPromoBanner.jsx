@@ -21,11 +21,11 @@ const DynamicPromoBanner = () => {
                 image: resolveLegacyCmsAsset(item.image, item.image),
                 mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, item.mobileImage) : null,
                 link: item.path || '/shop',
-                title: item.label || 'Promo Banner',
+                title: item.label || item.title || '',
                 name: item.name || '',
                 tag: item.tag || '',
                 subtitle: item.subtitle || '',
-                ctaLabel: item.ctaLabel || 'Shop Collection'
+                ctaLabel: item.ctaLabel || ''
             }));
     }, [sectionData?.items]);
 
@@ -51,6 +51,7 @@ const DynamicPromoBanner = () => {
     }
 
     const renderBannerItem = (banner, idx) => {
+        const hasOverlayText = Boolean(banner.tag || banner.title || banner.subtitle || banner.ctaLabel);
         const aspectClass = banner.mobileImage ? 'aspect-[2/1] md:aspect-[3.5/1] md:min-h-[350px]' : 'aspect-[4/1] md:aspect-[3.5/1] md:min-h-[350px]';
         return (
             <Link to={banner.link} className="block w-full">
@@ -60,7 +61,7 @@ const DynamicPromoBanner = () => {
                     {banner.mobileImage && (
                         <img
                             src={banner.mobileImage}
-                            alt={banner.title}
+                            alt={banner.title || 'Promo Banner'}
                             className="absolute inset-0 w-full h-full object-cover block md:hidden"
                             loading={idx === 0 ? "eager" : "lazy"}
                             decoding="async"
@@ -70,44 +71,51 @@ const DynamicPromoBanner = () => {
                     {/* Desktop Image */}
                     <img
                         src={banner.image}
-                        alt={banner.title}
+                        alt={banner.title || 'Promo Banner'}
                         className={`absolute inset-0 w-full h-full object-cover ${banner.mobileImage ? 'hidden md:block' : 'block'}`}
                         loading={idx === 0 ? "eager" : "lazy"}
                         decoding="async"
                     />
 
-                    {/* Professional Gradient Overlay for Left-aligned Text Readability */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent pointer-events-none z-[5]" />
+                    {/* Text Overlay & Gradient (only if overlay text is present) */}
+                    {hasOverlayText && (
+                        <>
+                            {/* Professional Gradient Overlay for Left-aligned Text Readability */}
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent pointer-events-none z-[5]" />
 
-                    {/* Text Overlay - Left-aligned and Mobile Scale Friendly */}
-                    <div className="absolute inset-y-0 left-0 w-full md:w-[65%] flex flex-col justify-center px-6 md:px-20 z-10 text-white text-left">
-                        {banner.tag && (
-                            <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-4">
-                                <div className="w-4 md:w-8 h-[1px] md:h-[2px] bg-[#9C5B61]"></div>
-                                <span className="text-[8px] sm:text-[10px] md:text-sm text-[#9C5B61] font-bold uppercase tracking-[0.3em]">
-                                    {banner.tag}
-                                </span>
+                            {/* Text Overlay - Left-aligned and Mobile Scale Friendly */}
+                            <div className="absolute inset-y-0 left-0 w-full md:w-[65%] flex flex-col justify-center px-6 md:px-20 z-10 text-white text-left">
+                                {banner.tag && (
+                                    <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-4">
+                                        <div className="w-4 md:w-8 h-[1px] md:h-[2px] bg-[#9C5B61]"></div>
+                                        <span className="text-[8px] sm:text-[10px] md:text-sm text-[#9C5B61] font-bold uppercase tracking-[0.3em]">
+                                            {banner.tag}
+                                        </span>
+                                    </div>
+                                )}
+
+                                {banner.title && (
+                                    <h2 className="font-serif text-sm sm:text-2xl md:text-5xl font-bold leading-normal md:leading-tight mb-1 md:mb-3 drop-shadow-lg max-w-[95%] md:max-w-xl text-left">
+                                        {banner.title}
+                                    </h2>
+                                )}
+
+                                {banner.subtitle && (
+                                    <p className="text-white/80 text-[8px] sm:text-xs md:text-base font-light leading-relaxed mb-2 md:mb-6 max-w-[90%] md:max-w-md tracking-wide line-clamp-2 md:line-clamp-none text-left">
+                                        {banner.subtitle}
+                                    </p>
+                                )}
+
+                                {banner.ctaLabel && (
+                                    <span
+                                        className="relative group inline-flex items-center justify-center bg-[#9C5B61] text-white hover:bg-white hover:text-[#9C5B61] font-bold text-[8px] sm:text-xs md:text-sm uppercase tracking-[0.2em] px-4 py-1.5 md:px-12 md:py-4 transition-all duration-300 overflow-hidden shadow-xl w-max"
+                                    >
+                                        <span className="relative z-10">{banner.ctaLabel}</span>
+                                    </span>
+                                )}
                             </div>
-                        )}
-
-                        {banner.title && (
-                            <h2 className="font-serif text-sm sm:text-2xl md:text-5xl font-bold leading-normal md:leading-tight mb-1 md:mb-3 drop-shadow-lg max-w-[95%] md:max-w-xl text-left">
-                                {banner.title}
-                            </h2>
-                        )}
-
-                        {banner.subtitle && (
-                            <p className="text-white/80 text-[8px] sm:text-xs md:text-base font-light leading-relaxed mb-2 md:mb-6 max-w-[90%] md:max-w-md tracking-wide line-clamp-2 md:line-clamp-none text-left">
-                                {banner.subtitle}
-                            </p>
-                        )}
-
-                        <span
-                            className="relative group inline-flex items-center justify-center bg-[#9C5B61] text-white hover:bg-white hover:text-[#9C5B61] font-bold text-[8px] sm:text-xs md:text-sm uppercase tracking-[0.2em] px-4 py-1.5 md:px-12 md:py-4 transition-all duration-300 overflow-hidden shadow-xl w-max"
-                        >
-                            <span className="relative z-10">{banner.ctaLabel}</span>
-                        </span>
-                    </div>
+                        </>
+                    )}
                 </div>
             </Link>
         );

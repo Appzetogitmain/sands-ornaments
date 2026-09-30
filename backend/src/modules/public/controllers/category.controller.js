@@ -22,7 +22,11 @@ exports.getCategories = async (req, res) => {
 exports.getCategoryDetail = async (req, res) => {
   try {
     const { slug } = req.params;
-    const category = await Category.findOne({ slug, isActive: true });
+    const mongoose = require("mongoose");
+    const query = mongoose.isValidObjectId(slug)
+      ? { $or: [{ _id: slug }, { slug }], isActive: true }
+      : { slug, isActive: true };
+    const category = await Category.findOne(query);
 
     if (!category) return error(res, "Category not found", 404);
 

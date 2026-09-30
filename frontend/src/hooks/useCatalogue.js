@@ -23,9 +23,11 @@ export const useCatalogue = () => {
                 showInCollection: cat.showInCollection,
                 isActive: cat.isActive,
                 subcategories: (cat.subcategories || []).map(sub => ({
-                    id: sub._id,
+                    id: sub._id || sub.id,
+                    _id: sub._id || sub.id,
                     name: sub.name,
-                    path: sub.slug,
+                    slug: sub.slug || sub.path || '',
+                    path: sub.slug || sub.path || '',
                     image: sub.image
                 }))
             }));

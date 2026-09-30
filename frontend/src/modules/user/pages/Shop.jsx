@@ -156,6 +156,47 @@ const Shop = () => {
   const [pinnedProducts, setPinnedProducts] = useState([]);
   const [isPinnedLoading, setIsPinnedLoading] = useState(false);
 
+  const findCategoryInList = (catList, token) => {
+    if (!token || !Array.isArray(catList) || catList.length === 0) return null;
+    const raw = String(token).trim();
+    const lowered = raw.toLowerCase();
+
+    // 1. Direct top-level match
+    for (const c of catList) {
+      if (!c) continue;
+      if (String(c._id) === raw || String(c.id) === raw) return c;
+      if (String(c.slug || "").toLowerCase() === lowered) return c;
+      if (String(c.path || "").toLowerCase() === lowered) return c;
+      if (String(c.name || "").toLowerCase() === lowered) return c;
+    }
+
+    // 2. Search nested subcategories
+    for (const c of catList) {
+      if (!c || !Array.isArray(c.subcategories)) continue;
+      for (const sub of c.subcategories) {
+        if (!sub) continue;
+        if (String(sub._id || sub.id) === raw) return { ...sub, parentCategory: c };
+        if (String(sub.slug || sub.path || "").toLowerCase() === lowered) return { ...sub, parentCategory: c };
+        if (String(sub.name || "").toLowerCase() === lowered) return { ...sub, parentCategory: c };
+      }
+    }
+
+    return null;
+  };
+
+  const isObjectId = (str) => /^[0-9a-fA-F]{24}$/.test(String(str || "").trim());
+
+  const formatCategoryTitle = (token, catObj, flowPrefix = "") => {
+    if (catObj && catObj.name) {
+      return `${flowPrefix}${catObj.name}`;
+    }
+    const cleanToken = String(token || "").trim();
+    if (!cleanToken || isObjectId(cleanToken)) {
+      return flowPrefix ? `${flowPrefix}Jewellery` : "All Jewellery";
+    }
+    return `${flowPrefix}${cleanToken.charAt(0).toUpperCase() + cleanToken.slice(1)}`;
+  };
+
   const activeCategoryHint = useMemo(() => {
     const qp = new URLSearchParams(location.search);
     const fromQuery = normalizeCategoryToken(qp.get("category") || "");
@@ -173,20 +214,7 @@ const Shop = () => {
 
   const activeCategory = useMemo(() => {
     if (!activeCategoryHint) return null;
-    if (!Array.isArray(categories) || categories.length === 0) return null;
-
-    const raw = String(activeCategoryHint).trim();
-    const byId = categories.find((c) => String(c?._id) === raw);
-    if (byId) return byId;
-    const lowered = raw.toLowerCase();
-    const bySlug = categories.find(
-      (c) => String(c?.slug || "").toLowerCase() === lowered,
-    );
-    if (bySlug) return bySlug;
-    const byName = categories.find(
-      (c) => String(c?.name || "").toLowerCase() === lowered,
-    );
-    return byName || null;
+    return findCategoryInList(categories, activeCategoryHint);
   }, [activeCategoryHint, categories]);
 
   const requestedPinnedIds = useMemo(() => {
@@ -544,14 +572,7 @@ const Shop = () => {
     };
 
     const categoryQueryObj = categoryQuery
-      ? categories.find(
-          (c) =>
-            c._id === categoryQuery ||
-            c.id === categoryQuery ||
-            c.name === categoryQuery ||
-            c.slug === categoryQuery ||
-            c.path === categoryQuery,
-        ) || null
+      ? findCategoryInList(categories, categoryQuery)
       : null;
 
     const matchesCategory = (product, value, cat) => {
@@ -567,6 +588,11 @@ const Shop = () => {
       const navCategoryIds = (product.navShopByCategory || []).map((id) =>
         String(id),
       );
+      const productCategoryIds = (Array.isArray(product.categories) ? product.categories : [])
+        .map((c) => String(c?._id || c?.id || c));
+
+      if (valueStr && productCategoryIds.includes(valueStr)) return true;
+      if (catId && productCategoryIds.includes(String(catId))) return true;
 
       if (
         productCategoryId &&
@@ -594,7 +620,7 @@ const Shop = () => {
         productCategorySlug.toLowerCase() === valueLower
       )
         return true;
-      if (productCategory && catName && productCategory === catName)
+      if (productCategory && catName && productCategory.toLowerCase() === catName.toLowerCase())
         return true;
       if (
         productCategory &&
@@ -699,12 +725,8 @@ const Shop = () => {
             : title;
       }
     } else if (category) {
-      const currentCat = categories.find(
-        (c) => c.path === category || c.slug === category,
-      );
-      title = currentCat
-        ? currentCat.name
-        : category.charAt(0).toUpperCase() + category.slice(1);
+      const currentCat = findCategoryInList(categories, category);
+      title = formatCategoryTitle(category, currentCat);
       baseProducts = products.filter((p) =>
         matchesCategory(p, category, currentCat),
       );
@@ -718,12 +740,12 @@ const Shop = () => {
       baseProducts = baseProducts.filter((p) =>
         matchesCategory(p, categoryQuery, categoryQueryObj),
       );
-      if (!title || title === "All Jewellery" || title === "Men's Jewellery" || title === "Women's Jewellery") {
+      if (!title || title === "All Jewellery" || title === "Men's Jewellery" || title === "Women's Jewellery" || title === "Family Collection") {
         let prefix = "";
         if (isMenFlow) prefix = "Men's ";
         else if (isWomenFlow) prefix = "Women's ";
-        const catName = categoryQueryObj ? categoryQueryObj.name : categoryQuery.charAt(0).toUpperCase() + categoryQuery.slice(1);
-        title = `${prefix}${catName}`;
+        else if (sourceQuery === "family") prefix = "Family ";
+        title = formatCategoryTitle(categoryQuery, categoryQueryObj, prefix);
       }
     }
 
