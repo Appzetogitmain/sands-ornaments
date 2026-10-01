@@ -342,6 +342,7 @@ const ProductDetails = () => {
     pincodeData,
     pincodeLoading,
     checkPincodeServiceability,
+    siteSettings,
   } = useShop();
   const { user } = useAuth();
   const [localPincode, setLocalPincode] = useState(pincode || "");
@@ -361,46 +362,25 @@ const ProductDetails = () => {
   );
   const [detailProduct, setDetailProduct] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [settings, setSettings] = useState({
-    productHeader: "ESTIMATED DELIVERY DATE",
-    returnPolicy: "7-Day Returns",
-    exchangePolicy: "10 Days Exchange",
-    codPolicy: "Cash On Delivery",
-    warrantyText: "Lifetime Warranty",
-    safetyText: "Skin Safe Jewellery",
-    platingText: "18k Gold Tone Plated",
-  });
-
-  useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const res = await api.get("public/settings");
-        if (res.data.success && res.data.data?.settings) {
-          setSettings(res.data.data.settings);
-          return;
-        }
-      } catch (err) {
-        console.warn(
-          "Failed to fetch public settings from API, falling back to localStorage/defaults:",
-          err.message,
-        );
-      }
-
+  const settings = useMemo(() => {
+    let localSaved = {};
+    try {
       const saved = localStorage.getItem("siteSettings");
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          setSettings((prev) => ({ ...prev, ...parsed }));
-        } catch (e) {
-          console.error("Failed to parse siteSettings from localStorage", e);
-        }
-      }
-    };
+      if (saved) localSaved = JSON.parse(saved);
+    } catch (e) {}
 
-    loadSettings();
-    window.addEventListener("storage", loadSettings);
-    return () => window.removeEventListener("storage", loadSettings);
-  }, []);
+    return {
+      productHeader: "ESTIMATED DELIVERY DATE",
+      returnPolicy: "7-Day Returns",
+      exchangePolicy: "10 Days Exchange",
+      codPolicy: "Cash On Delivery",
+      warrantyText: "Lifetime Warranty",
+      safetyText: "Skin Safe Jewellery",
+      platingText: "18k Gold Tone Plated",
+      ...localSaved,
+      ...(siteSettings || {}),
+    };
+  }, [siteSettings]);
 
   // Production-safe priority: API detail -> catalogue.
   const product = useMemo(() => {

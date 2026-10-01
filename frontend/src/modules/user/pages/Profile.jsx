@@ -81,25 +81,6 @@ const Profile = () => {
         }
     }, [user]);
 
-    // Fetch addresses when component mounts
-    useEffect(() => {
-        if (user && user.id) {
-            // Trigger address fetch from context
-            const fetchAddressesData = async () => {
-                try {
-                    const api = (await import('../../../services/api')).default;
-                    const res = await api.get('user/addresses');
-                    if (res.data.success) {
-                        // Addresses should be updated in context
-                    }
-                } catch (err) {
-                    console.log('Addresses loaded from context');
-                }
-            };
-            fetchAddressesData();
-        }
-    }, [user?.id]);
-
     if (!user) {
         return (
             <div className="container mx-auto px-4 py-32 text-center">

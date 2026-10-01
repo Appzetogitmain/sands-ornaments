@@ -102,24 +102,38 @@ const Navbar = () => {
 
     // Predictive Search Logic
     useEffect(() => {
+        let isCancelled = false;
         const fetchResults = async () => {
-            if (searchTerm.trim().length < 2) {
+            const query = searchTerm.trim();
+            if (query.length < 2) {
                 setSearchResults([]);
+                setIsSearching(false);
                 return;
             }
             setIsSearching(true);
             try {
-                const response = await api.get(`/public/products?search=${searchTerm}&limit=6`);
-                setSearchResults(response.data.products || []);
+                const response = await api.get(`/public/products?search=${encodeURIComponent(query)}&limit=6`);
+                if (!isCancelled) {
+                    const products = response.data?.data?.products || response.data?.products || [];
+                    setSearchResults(products);
+                }
             } catch (err) {
-                console.error("Search failed:", err);
+                if (!isCancelled) {
+                    console.error("Search failed:", err);
+                    setSearchResults([]);
+                }
             } finally {
-                setIsSearching(false);
+                if (!isCancelled) {
+                    setIsSearching(false);
+                }
             }
         };
 
         const timer = setTimeout(fetchResults, 300);
-        return () => clearTimeout(timer);
+        return () => {
+            isCancelled = true;
+            clearTimeout(timer);
+        };
     }, [searchTerm]);
 
     const submitSearch = useCallback(() => {
