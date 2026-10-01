@@ -5,22 +5,7 @@ const mongoose = require("mongoose");
 const { success, error } = require("../../../utils/apiResponse");
 const { normalizeProductForResponse } = require("../../../utils/productCompatibility");
 
-const getApprovedSellerScope = async () => {
-  const approvedSellers = await Seller.find({ status: "APPROVED" }).select("_id").lean();
-  const approvedSellerIds = approvedSellers.map((seller) => seller._id);
-
-  return approvedSellerIds.length
-    ? {
-        $or: [
-          { sellerId: null },
-          { sellerId: { $exists: false } },
-          { sellerId: { $in: approvedSellerIds } }
-        ]
-      }
-    : {
-        $or: [{ sellerId: null }, { sellerId: { $exists: false } }]
-      };
-};
+const { getApprovedSellerScope } = require("../../../services/sellerScopeService");
 
 const clampInt = (value, fallback, { min, max } = {}) => {
   const parsed = Number.parseInt(String(value ?? ""), 10);

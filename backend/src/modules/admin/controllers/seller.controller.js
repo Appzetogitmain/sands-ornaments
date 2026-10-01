@@ -11,6 +11,7 @@ const SellerSupportTicket = require("../../../models/SellerSupportTicket");
 const { success, error } = require("../../../utils/apiResponse");
 const { sendEmail } = require("../../../services/emailService");
 const auditLogger = require("../../../utils/auditLogger");
+const { invalidateApprovedSellerScope } = require("../../../services/sellerScopeService");
 
 const escapeRegex = (value = "") => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value || ""));
@@ -301,6 +302,7 @@ exports.updateSellerStatus = async (req, res) => {
       seller.status = status;
       seller.rejectionReason = status === "REJECTED" ? trimmedReason : null;
       await seller.save();
+      invalidateApprovedSellerScope();
 
       // Audit log — non-blocking
       auditLogger.log(req, {
@@ -383,6 +385,7 @@ exports.deleteSeller = async (req, res) => {
       SellerSupportTicket.deleteMany({ sellerId: seller._id }),
       Seller.deleteOne({ _id: seller._id }),
     ]);
+    invalidateApprovedSellerScope();
 
     // Audit log
     auditLogger.log(req, {

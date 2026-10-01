@@ -10,6 +10,7 @@ const StockLog = require("../../../models/StockLog");
 const { computeVariantPricing, normalizeChargeBearer } = require("../../../utils/metalPricing");
 const { normalizeMetalRates, hasNegativeRate } = require("../../../utils/metalRateNormalization");
 const SellerMetalRateLog = require("../../../models/SellerMetalRateLog");
+const { invalidateApprovedSellerScope } = require("../../../services/sellerScopeService");
 
 exports.getProfile = async (req, res) => {
   try {
@@ -205,6 +206,7 @@ exports.updateProfile = async (req, res) => {
     seller.rejectionReason = undefined;
 
     await seller.save();
+    invalidateApprovedSellerScope();
 
     // Create Admin Notification
     const adminNotification = await Notification.create({
@@ -430,6 +432,7 @@ exports.deleteAccount = async (req, res) => {
       SellerMetalRateLog.deleteMany({ sellerId }),
       Seller.deleteOne({ _id: sellerId }),
     ]);
+    invalidateApprovedSellerScope();
 
     return success(res, {}, "Seller account deleted successfully");
   } catch (err) { return error(res, err.message); }
