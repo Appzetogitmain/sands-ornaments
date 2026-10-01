@@ -144,7 +144,6 @@ export const ShopProvider = ({ children }) => {
             orderCtx.fetchOrders();
             orderCtx.fetchReturns();
             orderCtx.fetchReplacements();
-            orderCtx.fetchSupportTickets();
         } else if (!authLoading && !user) {
             // Clear server-bound data on logout
             orderCtx.setOrders([]);
