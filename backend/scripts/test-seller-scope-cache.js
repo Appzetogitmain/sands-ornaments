@@ -20,10 +20,14 @@ async function runTests() {
   let mockQueryDelayMs = 0;
   let mockShouldReject = false;
   let mockPendingResolve = null;
+  let customFindResolver = null;
 
   // Setup mock Seller.find
   Seller.find = function (filter) {
     findCallCount++;
+    if (customFindResolver) {
+      return customFindResolver(filter, findCallCount);
+    }
     return {
       select: function (fields) {
         return {
@@ -54,6 +58,7 @@ async function runTests() {
     mockQueryDelayMs = 0;
     mockShouldReject = false;
     mockPendingResolve = null;
+    customFindResolver = null;
     invalidateApprovedSellerScope();
   };
 
@@ -236,8 +241,213 @@ async function runTests() {
       Date.now = originalDateNow;
     }
 
+    // -------------------------------------------------------------
+    // TEST 10: MANDATORY RACE TEST #1 (Repeated Invalidations & Fail-Closed)
+    // -------------------------------------------------------------
+    console.log("\n[TEST 10A] Repeated Invalidations Settle within Retry Limit");
+    resetMock();
+    const sellerG0 = new mongoose.Types.ObjectId();
+    const sellerG1 = new mongoose.Types.ObjectId();
+    const sellerG2 = new mongoose.Types.ObjectId();
+
+    let queryResolvers = [];
+    customFindResolver = () => ({
+      select: () => ({
+        lean: () =>
+          new Promise((resolve) => {
+            queryResolvers.push(resolve);
+          }),
+      }),
+    });
+
+    // 1. Query G0 starts
+    const p10A = getApprovedSellerScope();
+    assert.strictEqual(findCallCount, 1, "First query started");
+
+    // 2. Invalidation 1 occurs (G0 -> G1)
+    invalidateApprovedSellerScope();
+
+    // 3. Resolve G0 with sellerG0 (stale!)
+    queryResolvers[0]([{ _id: sellerG0 }]);
+
+    // Give microtasks a turn to process retry
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(findCallCount, 2, "Second query started on retry");
+
+    // 4. Invalidation 2 occurs (G1 -> G2)
+    invalidateApprovedSellerScope();
+
+    // 5. Resolve G1 with sellerG1 (stale!)
+    queryResolvers[1]([{ _id: sellerG1 }]);
+
+    // Give microtasks a turn to process second retry
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(findCallCount, 3, "Third query started on retry");
+
+    // 6. Resolve G2 with sellerG2 (valid!)
+    queryResolvers[2]([{ _id: sellerG2 }]);
+
+    // 7. Await result
+    const res10A = await p10A;
+    assert.deepStrictEqual(res10A.$or[2].sellerId.$in, [sellerG2], "Must return ONLY current G2 seller IDs");
+    const cache10A = _getCacheStateForTesting();
+    assert.deepStrictEqual(cache10A.cachedApprovedSellerIds, [sellerG2], "Cache must contain ONLY G2 seller IDs");
+    console.log("✔ PASS: Stale G0 and G1 results discarded; clean resolution to latest valid generation G2");
+
+    console.log("\n[TEST 10B] Sustained Invalidations Exceeding MAX_RETRIES -> Fail-Closed");
+    resetMock();
+    queryResolvers = [];
+    customFindResolver = () => ({
+      select: () => ({
+        lean: () =>
+          new Promise((resolve) => {
+            queryResolvers.push(resolve);
+          }),
+      }),
+    });
+
+    // 1. Initial query starts (attempt 1)
+    const p10B = getApprovedSellerScope();
+    assert.strictEqual(findCallCount, 1);
+
+    // Invalidation 1
+    invalidateApprovedSellerScope();
+    queryResolvers[0]([{ _id: new mongoose.Types.ObjectId() }]); // resolve stale 1
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(findCallCount, 2);
+
+    // Invalidation 2
+    invalidateApprovedSellerScope();
+    queryResolvers[1]([{ _id: new mongoose.Types.ObjectId() }]); // resolve stale 2
+    await new Promise((r) => setImmediate(r));
+    assert.strictEqual(findCallCount, 3);
+
+    // Invalidation 3
+    invalidateApprovedSellerScope();
+    queryResolvers[2]([{ _id: new mongoose.Types.ObjectId() }]); // resolve stale 3
+
+    // Exceeded MAX_RETRIES (2 retries / 3 attempts) -> must reject with error, NEVER stale data
+    await assert.rejects(
+      async () => {
+        await p10B;
+      },
+      /Approved seller scope resolution exceeded retry limit/,
+      "Expected controlled error when retry limit is exhausted"
+    );
+
+    const cache10B = _getCacheStateForTesting();
+    assert.strictEqual(cache10B.cachedApprovedSellerIds, null, "Cache must remain empty on retry exhaustion");
+    assert.strictEqual(cache10B.hasInFlightPromise, false, "inFlightPromise must be cleared");
+    console.log("✔ PASS: Exhausted retries failed-closed cleanly with zero stale data returned or cached");
+
+    // -------------------------------------------------------------
+    // TEST 11: MANDATORY RACE TEST #2 (Old-Promise Cleanup vs New-Promise Ownership)
+    // -------------------------------------------------------------
+    console.log("\n[TEST 11] Old-Promise Cleanup vs New-Promise Ownership");
+    resetMock();
+    const sellerQA = new mongoose.Types.ObjectId();
+    const sellerQB = new mongoose.Types.ObjectId();
+
+    let resolveQueryA, resolveQueryB;
+    customFindResolver = (filter, callIndex) => ({
+      select: () => ({
+        lean: () =>
+          new Promise((resolve) => {
+            if (callIndex === 1) resolveQueryA = resolve;
+            if (callIndex === 2) resolveQueryB = resolve;
+          }),
+      }),
+    });
+
+    // 1. Request A starts Query A
+    const promiseA = getApprovedSellerScope();
+    assert.strictEqual(findCallCount, 1, "Query A started");
+
+    // 2. Invalidation occurs mid-flight
+    invalidateApprovedSellerScope();
+
+    // 3. Request B starts Query B (new generation)
+    const promiseB = getApprovedSellerScope();
+    assert.strictEqual(findCallCount, 2, "Query B started");
+
+    // 4. Query A now finishes and resolves its stale result
+    resolveQueryA([{ _id: sellerQA }]);
+
+    // Give Query A's finally block a chance to execute
+    await new Promise((r) => setImmediate(r));
+
+    // 5. Query B is STILL pending. Request C arrives!
+    const promiseC = getApprovedSellerScope();
+
+    // ASSERT: Request C must join Query B's in-flight Promise! It must NOT start Query C!
+    assert.strictEqual(findCallCount, 2, "Request C must coalesce into Query B without triggering Query C");
+
+    // 6. Now resolve Query B
+    resolveQueryB([{ _id: sellerQB }]);
+
+    const resQB = await promiseB;
+    const resQC = await promiseC;
+
+    assert.deepStrictEqual(resQB.$or[2].sellerId.$in, [sellerQB], "Request B received Query B result");
+    assert.deepStrictEqual(resQC.$or[2].sellerId.$in, [sellerQB], "Request C received Query B result");
+    console.log("✔ PASS: Query A's finally did not wipe out Query B's inFlight slot; Request C joined Query B");
+
+    // -------------------------------------------------------------
+    // TEST 12: MANDATORY RACE TEST #3 (Multi-Generation Cache Settlement)
+    // -------------------------------------------------------------
+    console.log("\n[TEST 12] Multi-Generation Cache Settlement");
+    resetMock();
+    const sellerGen0 = new mongoose.Types.ObjectId();
+    const sellerGen1 = new mongoose.Types.ObjectId();
+    const sellerGen2 = new mongoose.Types.ObjectId();
+
+    let resolverList = [];
+    customFindResolver = () => ({
+      select: () => ({
+        lean: () =>
+          new Promise((resolve) => {
+            resolverList.push(resolve);
+          }),
+      }),
+    });
+
+    // 1. Query A starts at G0
+    const reqA = getApprovedSellerScope();
+
+    // 2. Invalidation -> G1
+    invalidateApprovedSellerScope();
+
+    // 3. Query B starts at G1
+    const reqB = getApprovedSellerScope();
+
+    // 4. Invalidation -> G2
+    invalidateApprovedSellerScope();
+
+    // 5. Query C starts at G2
+    const reqC = getApprovedSellerScope();
+
+    assert.strictEqual(findCallCount, 3, "3 distinct queries started across 3 generations");
+
+    // 6. Resolve Query A (G0) with stale data
+    resolverList[0]([{ _id: sellerGen0 }]);
+    await new Promise((r) => setImmediate(r));
+
+    // 7. Resolve Query B (G1) with stale data
+    resolverList[1]([{ _id: sellerGen1 }]);
+    await new Promise((r) => setImmediate(r));
+
+    // 8. Resolve Query C (G2) with valid latest data
+    resolverList[2]([{ _id: sellerGen2 }]);
+
+    const resC_final = await reqC;
+    assert.deepStrictEqual(resC_final.$or[2].sellerId.$in, [sellerGen2], "Req C received valid G2 data");
+
+    const finalState = _getCacheStateForTesting();
+    assert.deepStrictEqual(finalState.cachedApprovedSellerIds, [sellerGen2], "Only latest generation G2 populated cache");
+    console.log("✔ PASS: Stale earlier generations could not overwrite cache; only valid latest generation populated cache");
+
     console.log("\n=======================================================");
-    console.log("ALL 9 AUTOMATED TESTS PASSED SUCCESSFULLY (0 FAILURES)");
+    console.log("ALL 12 AUTOMATED TESTS PASSED SUCCESSFULLY (0 FAILURES)");
     console.log("=======================================================");
   } finally {
     // Restore original unmocked Seller.find
