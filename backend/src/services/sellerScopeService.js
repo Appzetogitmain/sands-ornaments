@@ -1,6 +1,7 @@
 const Seller = require("../models/Seller");
 
 const TTL_MS = 10 * 1000; // 10 seconds
+const MAX_RETRIES = 2; // Bounded retries for mid-flight generation invalidations
 
 let cacheGeneration = 0;
 let cachedApprovedSellerIds = null;
@@ -34,8 +35,9 @@ const buildScopeFilter = (ids) => {
  * 1. 10-second TTL
  * 2. In-flight Promise deduplication (coalescing simultaneous concurrent calls)
  * 3. Generation guard (prevents stale in-flight results from overwriting newer invalidations)
- * 4. Immutability guarantee (fresh filter object returned per invocation)
- * 5. Fail-closed error propagation (no stale-while-error)
+ * 4. Safe Promise ownership (old promises cannot clear new inFlightPromise slots)
+ * 5. Call-site immutability guarantee (fresh filter object returned per invocation)
+ * 6. Fail-closed error propagation & stale-rejection (no stale fallback, bounded retry error)
  *
  * @param {number} [retryCount=0] - Recursion guard for race resolution
  * @returns {Promise<Object>} The MongoDB sellerId query filter
@@ -55,37 +57,39 @@ const getApprovedSellerScope = async (retryCount = 0) => {
 
   const queryGeneration = cacheGeneration;
 
-  inFlightPromise = (async () => {
-    try {
-      const approvedSellers = await Seller.find({ status: "APPROVED" })
-        .select("_id")
-        .lean();
+  const currentPromise = (async () => {
+    const approvedSellers = await Seller.find({ status: "APPROVED" })
+      .select("_id")
+      .lean();
 
-      const approvedSellerIds = (approvedSellers || []).map((seller) => seller._id);
+    const approvedSellerIds = (approvedSellers || []).map((seller) => seller._id);
 
-      // Concurrency guard: Only populate cache if no invalidation occurred during execution
-      if (queryGeneration === cacheGeneration) {
-        cachedApprovedSellerIds = approvedSellerIds;
-        cacheExpiresAt = Date.now() + TTL_MS;
-        return buildScopeFilter(cachedApprovedSellerIds);
-      }
+    // Concurrency guard: Only populate cache if no invalidation occurred during execution
+    if (queryGeneration === cacheGeneration) {
+      cachedApprovedSellerIds = approvedSellerIds;
+      cacheExpiresAt = Date.now() + TTL_MS;
+      return buildScopeFilter(cachedApprovedSellerIds);
+    }
 
-      // If generation changed while query was running, this result is stale.
-      // Do NOT populate cache with stale data.
-      // Retry once against the current generation to ensure correctness for the waiting request.
-      if (retryCount < 2) {
-        return getApprovedSellerScope(retryCount + 1);
-      }
+    // Generation mismatch: result came from an invalidated generation.
+    // NEVER populate cache and NEVER return approvedSellerIds to the caller.
+    if (retryCount < MAX_RETRIES) {
+      return getApprovedSellerScope(retryCount + 1);
+    }
 
-      // Safety fallback if rapid successive mutations occur: return fresh query non-cached
-      return buildScopeFilter(approvedSellerIds);
-    } finally {
-      // Clear in-flight promise reference
+    // Fail-closed: Never return stale seller IDs when retry limit is exhausted
+    throw new Error(
+      "Approved seller scope resolution exceeded retry limit due to rapid concurrent seller updates"
+    );
+  })().finally(() => {
+    // Only the Promise that currently owns the inFlight slot may clear it
+    if (inFlightPromise === currentPromise) {
       inFlightPromise = null;
     }
-  })();
+  });
 
-  return inFlightPromise;
+  inFlightPromise = currentPromise;
+  return currentPromise;
 };
 
 /**
