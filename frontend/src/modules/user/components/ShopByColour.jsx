@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useHomepageCms } from '../hooks/useHomepageCms';
+import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
 
 import silverHeartImg from '@assets/categories/gold_pendants.png';
 import goldRingImg from '@assets/categories/rings.png';
@@ -68,15 +69,17 @@ const ShopByColour = () => {
     const cards = useMemo(() => {
         const configuredItems = Array.isArray(sectionData?.items) ? sectionData.items : [];
         const normalizedConfigured = configuredItems
-            .filter((item) => Boolean(item?.image && item?.metalKey))
+            .filter((item) => Boolean(item?.image))
             .map((item, index) => {
-                const metalStyle = METAL_STYLES[item.metalKey] || METAL_STYLES.silver;
+                const defaultFallback = DEFAULT_COLOUR_CATEGORIES[index % DEFAULT_COLOUR_CATEGORIES.length];
+                const metalKey = item.metalKey || item.metal || defaultFallback.metalKey;
+                const metalStyle = METAL_STYLES[metalKey] || METAL_STYLES.silver;
 
                 return {
                     id: item.itemId || item.id || `shop-by-colour-${index + 1}`,
-                    name: item.name || 'Shop by Colour',
+                    name: item.name || item.label || defaultFallback.name,
                     tag: item.tag || '',
-                    image: item.image,
+                    image: resolveLegacyCmsAsset(item.image, defaultFallback.image),
                     ...metalStyle
                 };
             });
@@ -85,6 +88,7 @@ const ShopByColour = () => {
 
         return DEFAULT_COLOUR_CATEGORIES.map((item) => ({
             ...item,
+            image: resolveLegacyCmsAsset(item.image, item.image),
             ...METAL_STYLES[item.metalKey]
         }));
     }, [sectionData?.items]);
@@ -119,13 +123,15 @@ const ShopByColour = () => {
                                         />
                                     </div>
 
-                                    <div className="absolute top-0 left-5 z-20">
-                                        <div className={`${item.badgeBg} backdrop-blur-sm px-3 py-1 rounded-b-xl flex items-center gap-1 shadow-sm border-x border-b border-black/5`}>
-                                            <span className="text-[8px] md:text-[10px] font-bold text-gray-800 tracking-tight whitespace-nowrap">
-                                                {item.tag}
-                                            </span>
+                                    {item.tag && (
+                                        <div className="absolute top-0 left-5 z-20">
+                                            <div className={`${item.badgeBg} backdrop-blur-sm px-3 py-1 rounded-b-xl flex items-center gap-1 shadow-sm border-x border-b border-black/5`}>
+                                                <span className="text-[8px] md:text-[10px] font-bold text-gray-800 tracking-tight whitespace-nowrap">
+                                                    {item.tag}
+                                                </span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
 
                                     <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 z-30">
                                         <div className="w-14 h-14 md:w-[64px] md:h-[64px] rounded-full bg-white p-1.5 shadow-[0_8px_25px_rgba(0,0,0,0.1)] flex items-center justify-center">
@@ -147,4 +153,3 @@ const ShopByColour = () => {
 };
 
 export default ShopByColour;
-
