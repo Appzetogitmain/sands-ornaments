@@ -90,31 +90,24 @@ const GoldJewelleryPage = () => {
     const configuredItems = Array.isArray(heroSection?.items)
       ? heroSection.items
       : [];
-    const slides = configuredItems
-      .filter((item) => item?.label || item?.name || item?.image)
-      .filter((item) => {
-        const title = String(item?.label || item?.title || '').toLowerCase();
-        return !title.includes('unique story in golds') && !title.includes('unique story in gold');
-      })
-      .map((item, index) => ({
-        id: item.itemId || item.id || `gold-hero-${index + 1}`,
-        image: resolveLegacyCmsAsset(item.image, heroGold),
-        mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, heroGold) : null,
-        title:
-          String(item?.label || item?.title || "Akshaya Tritiya").trim() ||
-          "Akshaya Tritiya",
-        subtitle:
-          String(
-            item?.subtitle || item?.description || "On all gold jewellery",
-          ).trim() || "On all gold jewellery",
-        tag:
-          String(item?.name || item?.tag || item?.eyebrow || "Shubh").trim() ||
-          "Shubh",
-        ctaLabel: String(item?.ctaLabel || "Shop Now").trim() || "Shop Now",
-        link: ensureGoldPath(item?.path || "/shop?metal=gold"),
-      }));
-
-    if (slides.length > 0) return slides;
+    if (configuredItems.length > 0) {
+      return configuredItems
+        .filter((item) => Boolean(item?.image || item?.mobileImage))
+        .filter((item) => {
+          const title = String(item?.label || item?.title || '').toLowerCase();
+          return !title.includes('unique story in golds') && !title.includes('unique story in gold');
+        })
+        .map((item, index) => ({
+          id: item.itemId || item.id || `gold-hero-${index + 1}`,
+          image: resolveLegacyCmsAsset(item.image, heroGold),
+          mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, heroGold) : null,
+          title: item?.label || item?.title || "",
+          subtitle: item?.subtitle || item?.description || "",
+          tag: item?.tag || item?.name || item?.eyebrow || "",
+          ctaLabel: item?.ctaLabel || "",
+          link: ensureGoldPath(item?.path || "/shop?metal=gold"),
+        }));
+    }
 
     return [
       {

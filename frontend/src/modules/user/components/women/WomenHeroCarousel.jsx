@@ -9,6 +9,7 @@ import heroRadiance from "@assets/women_hero_radiance.png";
 const defaultSlides = [
   {
     id: "women-hero-default",
+    tag: "Sands Jewels Exclusive",
     title: "Eternal ",
     titleItalic: "Radiance",
     subtitle: "Diamonds that capture the light and her heart.",
@@ -21,7 +22,7 @@ const defaultSlides = [
 
 const splitTitle = (label = "") => {
   const source = String(label || "").trim();
-  if (!source) return { title: "Eternal ", titleItalic: "Radiance" };
+  if (!source) return { title: "", titleItalic: "" };
   const parts = source.split(" ");
   if (parts.length < 2) return { title: `${source} `, titleItalic: "" };
   const italic = parts.pop();
@@ -37,26 +38,28 @@ const WomenHeroCarousel = ({ sectionData }) => {
     const configured = Array.isArray(sectionData?.items)
       ? sectionData.items
       : [];
-    const mapped = configured
-      .filter((item) => item?.label || item?.name || item?.image)
-      .map((item, index) => {
-        const { title, titleItalic } = splitTitle(
-          item.label || item.name || defaultSlides[0].title.trim(),
-        );
-        return {
-          id: item.itemId || item.id || `women-hero-${index + 1}`,
-          title,
-          titleItalic,
-          subtitle: item.subtitle || defaultSlides[0].subtitle,
-          image: resolveLegacyCmsAsset(item.image, defaultSlides[0].image),
-          mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, defaultSlides[0].image) : null,
-          cta: item.ctaLabel || defaultSlides[0].cta,
-          path: item.path || buildWomenShopPath({ category: "women" }),
-          accent: defaultSlides[0].accent,
-        };
-      });
+    if (configured.length > 0) {
+      return configured
+        .filter((item) => Boolean(item?.image || item?.mobileImage))
+        .map((item, index) => {
+          const rawTitle = item.label || item.name || "";
+          const { title, titleItalic } = splitTitle(rawTitle);
+          return {
+            id: item.itemId || item.id || `women-hero-${index + 1}`,
+            tag: item.tag || "",
+            title,
+            titleItalic,
+            subtitle: item.subtitle || "",
+            image: resolveLegacyCmsAsset(item.image, defaultSlides[0].image),
+            mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, defaultSlides[0].image) : null,
+            cta: item.ctaLabel || "",
+            path: item.path || buildWomenShopPath({ category: "women" }),
+            accent: defaultSlides[0].accent,
+          };
+        });
+    }
 
-    return mapped.length > 0 ? mapped : defaultSlides;
+    return defaultSlides;
   }, [sectionData]);
 
   useEffect(() => {
@@ -79,9 +82,10 @@ const WomenHeroCarousel = ({ sectionData }) => {
     : slide.image;
 
   const sliderAspect = slide.mobileImage ? 'aspect-[2/1] md:aspect-[4/1]' : 'aspect-[4/1]';
+  const hasText = Boolean(slide.tag || slide.title || slide.titleItalic || slide.subtitle || slide.cta);
 
   return (
-    <section className={`relative w-full overflow-hidden select-none transition-all duration-300 ${sliderAspect}`}>
+    <section className={`relative w-full overflow-hidden select-none transition-all duration-300 cursor-pointer ${sliderAspect}`} onClick={() => slide.path && navigate(slide.path)}>
       <div className="absolute inset-0 w-full h-full">
         {slide.mobileImage && (
             <div
@@ -107,44 +111,62 @@ const WomenHeroCarousel = ({ sectionData }) => {
             setBrokenSlideIds((prev) => ({ ...prev, [slide.id]: true }))
           }
         />
-        <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/20 to-transparent" />
 
-        <div className="relative h-full container mx-auto px-2 md:px-20 flex flex-col justify-center items-end text-right">
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.8, delay: 0.3 }}
-            className="max-w-xl"
-          >
-            <span className="inline-block text-[4px] sm:text-[6px] md:text-xs text-white/50 tracking-[0.3em] md:tracking-[0.5em] uppercase mb-0 md:mb-4 font-bold border-r-[1px] md:border-r-2 border-white/30 pr-1 md:pr-4">
-              Sands Jewels Exclusive
-            </span>
+        {hasText && (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/20 to-transparent pointer-events-none" />
 
-            <h1 className="text-sm sm:text-2xl md:text-8xl font-serif text-white tracking-tight font-light leading-none md:leading-[1] transition-all">
-              {slide.title}
-              <span className="italic" style={{ color: slide.accent }}>
-                {slide.titleItalic}
-              </span>
-            </h1>
-
-            <p className="text-[5px] sm:text-[8px] md:text-lg text-white/80 font-light mt-0 mb-1 md:mt-4 md:mb-8 tracking-wide italic">
-              {slide.subtitle}
-            </p>
-
-            <div className="flex flex-wrap gap-4 justify-end">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => navigate(slide.path)}
-                className="px-1.5 py-0.5 md:px-8 md:py-4 bg-white text-black text-[4px] sm:text-[6px] md:text-xs font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] rounded-none hover:bg-black hover:text-white transition-all shadow-2xl flex items-center gap-1 md:gap-3 group"
+            <div className="relative h-full container mx-auto px-2 md:px-20 flex flex-col justify-center items-end text-right">
+              <motion.div
+                initial={{ opacity: 0, x: 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+                className="max-w-xl"
               >
-                <ShoppingBag className="w-[6px] h-[6px] md:w-4 md:h-4" />
-                {slide.cta}
-              </motion.button>
+                {slide.tag && (
+                  <span className="inline-block text-[4px] sm:text-[6px] md:text-xs text-white/70 tracking-[0.3em] md:tracking-[0.5em] uppercase mb-0 md:mb-4 font-bold border-r-[1px] md:border-r-2 border-white/30 pr-1 md:pr-4">
+                    {slide.tag}
+                  </span>
+                )}
+
+                {(slide.title || slide.titleItalic) && (
+                  <h1 className="text-sm sm:text-2xl md:text-8xl font-serif text-white tracking-tight font-light leading-none md:leading-[1] transition-all">
+                    {slide.title}
+                    {slide.titleItalic && (
+                      <span className="italic" style={{ color: slide.accent }}>
+                        {slide.titleItalic}
+                      </span>
+                    )}
+                  </h1>
+                )}
+
+                {slide.subtitle && (
+                  <p className="text-[5px] sm:text-[8px] md:text-lg text-white/80 font-light mt-0 mb-1 md:mt-4 md:mb-8 tracking-wide italic">
+                    {slide.subtitle}
+                  </p>
+                )}
+
+                {slide.cta && (
+                  <div className="flex flex-wrap gap-4 justify-end">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate(slide.path);
+                      }}
+                      className="px-1.5 py-0.5 md:px-8 md:py-4 bg-white text-black text-[4px] sm:text-[6px] md:text-xs font-bold uppercase tracking-[0.2em] md:tracking-[0.3em] rounded-none hover:bg-black hover:text-white transition-all shadow-2xl flex items-center gap-1 md:gap-3 group"
+                    >
+                      <ShoppingBag className="w-[6px] h-[6px] md:w-4 md:h-4" />
+                      {slide.cta}
+                    </motion.button>
+                  </div>
+                )}
+              </motion.div>
             </div>
-          </motion.div>
-        </div>
+          </>
+        )}
 
         <div className="absolute inset-0 opacity-5 pointer-events-none mix-blend-overlay bg-[url('https://www.transparenttextures.com/patterns/dust.png')]" />
       </div>
@@ -157,7 +179,10 @@ const WomenHeroCarousel = ({ sectionData }) => {
             return (
               <button
                 key={index}
-                onClick={() => setCurrentIndex(index)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setCurrentIndex(index);
+                }}
                 className={`transition-all duration-500 rounded-full ${
                   isActive
                     ? "w-8 md:w-10 h-1 bg-white"

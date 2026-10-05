@@ -21,7 +21,7 @@ const defaultSlides = [
 
 const splitTitle = (label = '') => {
     const source = String(label || '').trim();
-    if (!source) return { title: 'Masterpiece ', titleItalic: 'Gifting' };
+    if (!source) return { title: '', titleItalic: '' };
     const parts = source.split(' ');
     if (parts.length < 2) return { title: `${source} `, titleItalic: '' };
     const italic = parts.pop();
@@ -35,24 +35,27 @@ const FamilyHeroCarousel = ({ sectionData }) => {
 
     const slides = useMemo(() => {
         const configuredItems = Array.isArray(sectionData?.items) ? sectionData.items : [];
-        const mapped = configuredItems
-            .filter((item) => item?.label || item?.name || item?.image)
-            .map((item, index) => {
-                const { title, titleItalic } = splitTitle(item.label || item.name || defaultSlides[0].title.trim());
-                return {
-                    id: item.itemId || item.id || `family-hero-${index + 1}`,
-                    tag: String(item.tag || defaultSlides[0].tag).trim() || defaultSlides[0].tag,
-                    title,
-                    titleItalic,
-                    subtitle: String(item.subtitle || defaultSlides[0].subtitle).trim() || defaultSlides[0].subtitle,
-                    image: resolveLegacyCmsAsset(item.image, defaultSlides[0].image),
-                    mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, defaultSlides[0].image) : null,
-                    ctaLabel: String(item.ctaLabel || defaultSlides[0].ctaLabel).trim() || defaultSlides[0].ctaLabel,
-                    path: item.path || buildFamilyShopPath()
-                };
-            });
+        if (configuredItems.length > 0) {
+            return configuredItems
+                .filter((item) => Boolean(item?.image || item?.mobileImage))
+                .map((item, index) => {
+                    const rawTitle = item.label || item.name || '';
+                    const { title, titleItalic } = splitTitle(rawTitle);
+                    return {
+                        id: item.itemId || item.id || `family-hero-${index + 1}`,
+                        tag: item.tag || '',
+                        title,
+                        titleItalic,
+                        subtitle: item.subtitle || '',
+                        image: resolveLegacyCmsAsset(item.image, defaultSlides[0].image),
+                        mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, defaultSlides[0].image) : null,
+                        ctaLabel: item.ctaLabel || '',
+                        path: item.path || buildFamilyShopPath()
+                    };
+                });
+        }
 
-        return mapped.length > 0 ? mapped : defaultSlides;
+        return defaultSlides;
     }, [sectionData]);
 
     useEffect(() => {
@@ -72,9 +75,13 @@ const FamilyHeroCarousel = ({ sectionData }) => {
     const activeSlide = slides[currentIndex] || defaultSlides[0];
     const activeImage = brokenSlideIds[activeSlide.id] ? defaultSlides[0].image : activeSlide.image;
     const sliderAspect = activeSlide.mobileImage ? 'aspect-[2/1] md:aspect-[4/1]' : 'aspect-[4/1]';
+    const hasText = Boolean(activeSlide.tag || activeSlide.title || activeSlide.titleItalic || activeSlide.subtitle || activeSlide.ctaLabel);
 
     return (
-        <section className={`relative w-full overflow-hidden select-none bg-[#111] transition-all duration-300 ${sliderAspect}`}>
+        <section 
+            className={`relative w-full overflow-hidden select-none bg-[#111] transition-all duration-300 cursor-pointer ${sliderAspect}`}
+            onClick={() => activeSlide.path && navigate(activeSlide.path)}
+        >
             <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -107,47 +114,67 @@ const FamilyHeroCarousel = ({ sectionData }) => {
                     onError={() => setBrokenSlideIds((prev) => ({ ...prev, [activeSlide.id]: true }))}
                 />
                 
-                {/* Dark & Elegant Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-r from-[#2a0e16]/80 via-[#2a0e16]/40 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
-                <div className="absolute inset-0 bg-[#FFD9E0]/5 mix-blend-overlay" />
+                {hasText && (
+                    <>
+                        {/* Dark & Elegant Overlays */}
+                        <div className="absolute inset-0 bg-gradient-to-r from-[#2a0e16]/80 via-[#2a0e16]/40 to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent pointer-events-none" />
+                        <div className="absolute inset-0 bg-[#FFD9E0]/5 mix-blend-overlay pointer-events-none" />
 
-                {/* Content Overlay */}
-                <div className="relative h-full container mx-auto px-2 md:px-20 flex flex-col justify-center items-start text-left">
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.8, delay: 0.3 }}
-                        className="max-w-xl"
-                    >
-                        <span className="inline-block text-[4px] sm:text-[6px] md:text-[10px] text-[#FFD9E0] tracking-[0.3em] md:tracking-[0.4em] uppercase mb-0 md:mb-4 font-black border-l-[1px] md:border-l-2 border-[#FFD9E0]/50 pl-1 md:pl-3">
-                            {activeSlide.tag}
-                        </span>
-
-                        <h1 className="text-sm sm:text-2xl md:text-6xl font-serif text-white tracking-tight font-light leading-none md:leading-[1.1] mb-0.5 md:mb-2 drop-shadow-lg">
-                            {activeSlide.title}<br />
-                            <span className="italic text-[#FFD9E0]">
-                                {activeSlide.titleItalic}
-                            </span>
-                        </h1>
-
-                        <p className="text-[5px] sm:text-[7px] md:text-sm text-white/80 font-light mt-0 mb-1 md:mt-4 md:mb-8 tracking-wider max-w-sm leading-tight md:leading-relaxed italic drop-shadow-md">
-                            "{activeSlide.subtitle}"
-                        </p>
-
-                        <div className="flex flex-wrap gap-4">
-                            <motion.button
-                                whileHover={{ scale: 1.05 }}
-                                whileTap={{ scale: 0.95 }}
-                                onClick={() => navigate(activeSlide.path)}
-                                className="px-1.5 py-0.5 md:px-8 md:py-3 bg-[#FFD9E0] text-[#8E2B45] text-[4px] sm:text-[6px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] rounded-none hover:bg-white transition-all shadow-2xl flex items-center gap-1 md:gap-3 backdrop-blur-sm"
+                        {/* Content Overlay */}
+                        <div className="relative h-full container mx-auto px-2 md:px-20 flex flex-col justify-center items-start text-left pointer-events-none">
+                            <motion.div
+                                initial={{ opacity: 0, y: 20 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.8, delay: 0.3 }}
+                                className="max-w-xl"
                             >
-                                <ShoppingBag className="w-[6px] h-[6px] md:w-3.5 md:h-3.5" />
-                                {activeSlide.ctaLabel}
-                            </motion.button>
+                                {activeSlide.tag && (
+                                    <span className="inline-block text-[4px] sm:text-[6px] md:text-[10px] text-[#FFD9E0] tracking-[0.3em] md:tracking-[0.4em] uppercase mb-0 md:mb-4 font-black border-l-[1px] md:border-l-2 border-[#FFD9E0]/50 pl-1 md:pl-3">
+                                        {activeSlide.tag}
+                                    </span>
+                                )}
+
+                                {(activeSlide.title || activeSlide.titleItalic) && (
+                                    <h1 className="text-sm sm:text-2xl md:text-6xl font-serif text-white tracking-tight font-light leading-none md:leading-[1.1] mb-0.5 md:mb-2 drop-shadow-lg">
+                                        {activeSlide.title}
+                                        {activeSlide.titleItalic && (
+                                            <>
+                                                <br />
+                                                <span className="italic text-[#FFD9E0]">
+                                                    {activeSlide.titleItalic}
+                                                </span>
+                                            </>
+                                        )}
+                                    </h1>
+                                )}
+
+                                {activeSlide.subtitle && (
+                                    <p className="text-[5px] sm:text-[7px] md:text-sm text-white/80 font-light mt-0 mb-1 md:mt-4 md:mb-8 tracking-wider max-w-sm leading-tight md:leading-relaxed italic drop-shadow-md">
+                                        "{activeSlide.subtitle}"
+                                    </p>
+                                )}
+
+                                {activeSlide.ctaLabel && (
+                                    <div className="flex flex-wrap gap-4 pointer-events-auto">
+                                        <motion.button
+                                            whileHover={{ scale: 1.05 }}
+                                            whileTap={{ scale: 0.95 }}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                navigate(activeSlide.path);
+                                            }}
+                                            className="px-1.5 py-0.5 md:px-8 md:py-3 bg-[#FFD9E0] text-[#8E2B45] text-[4px] sm:text-[6px] md:text-[10px] font-black uppercase tracking-[0.15em] md:tracking-[0.2em] rounded-none hover:bg-white transition-all shadow-2xl flex items-center gap-1 md:gap-3 backdrop-blur-sm"
+                                        >
+                                            <ShoppingBag className="w-[6px] h-[6px] md:w-3.5 md:h-3.5" />
+                                            {activeSlide.ctaLabel}
+                                        </motion.button>
+                                    </div>
+                                )}
+                            </motion.div>
                         </div>
-                    </motion.div>
-                </div>
+                    </>
+                )}
             </motion.div>
 
             {/* Subtle Texture Overlay */}
@@ -161,7 +188,10 @@ const FamilyHeroCarousel = ({ sectionData }) => {
                         return (
                             <button
                                 key={index}
-                                onClick={() => setCurrentIndex(index)}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    setCurrentIndex(index);
+                                }}
                                 className={`transition-all duration-500 rounded-full ${
                                     isActive 
                                         ? 'w-8 md:w-10 h-1 bg-white' 
@@ -190,4 +220,3 @@ const FamilyHeroCarousel = ({ sectionData }) => {
 };
 
 export default FamilyHeroCarousel;
-

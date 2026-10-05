@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 
 // Hero Banner Fallback Images (AI-generated premium jewellery scenes)
@@ -40,20 +39,21 @@ const SLIDES = [
 ];
 
 const PromoSlider = ({ externalSlides, autoplayInterval }) => {
+    const navigate = useNavigate();
     const { data: homepageSections = {} } = useHomepageCms();
     const sectionData = homepageSections?.['hero-banners'];
-    const dynamicSlides = Array.isArray(sectionData?.items)
+    const dynamicSlides = Array.isArray(sectionData?.items) && sectionData.items.length > 0
         ? sectionData.items
-            .filter((item) => Boolean(item?.image && item?.label))
+            .filter((item) => Boolean(item?.image || item?.mobileImage))
             .map((item, index) => ({
                 id: item.itemId || item.id || `hero-slide-${index + 1}`,
                 image: item.image,
                 mobileImage: item.mobileImage || null,
-                title: item.label,
+                title: item.label || item.title || '',
                 subtitle: item.subtitle || '',
                 tag: item.tag || item.name || '',
                 link: item.path || '/shop',
-                ctaLabel: item.ctaLabel || 'Shop Collection'
+                ctaLabel: item.ctaLabel || ''
             }))
         : [];
     const slides = (externalSlides && externalSlides.length > 0) ? externalSlides : (dynamicSlides.length > 0 ? dynamicSlides : SLIDES);
@@ -89,11 +89,11 @@ const PromoSlider = ({ externalSlides, autoplayInterval }) => {
     }, [isTransitioning]);
 
     useEffect(() => {
-        if (!isSuspended) {
+        if (!isSuspended && slides.length > 1) {
             autoPlayRef.current = setInterval(nextSlide, autoplayMs);
         }
         return () => clearInterval(autoPlayRef.current);
-    }, [nextSlide, isSuspended, autoplayMs]);
+    }, [nextSlide, isSuspended, autoplayMs, slides.length]);
 
     useEffect(() => {
         setCurrentIndex(1);
@@ -120,79 +120,89 @@ const PromoSlider = ({ externalSlides, autoplayInterval }) => {
                     }}
                     onAnimationComplete={handleTransitionEnd}
                 >
-                    {extendedSlides.map((slide, idx) => (
-                        <div
-                            key={`${idx}-${slide.id}`}
-                            className="relative flex-shrink-0 w-full h-full overflow-hidden bg-gray-50 group"
-                        >
-                            {/* Professional Gradient Overlay for Text Readability */}
-                            <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent pointer-events-none z-[5]" />
-
-                            {slide.mobileImage && (
+                    {extendedSlides.map((slide, idx) => {
+                        const hasText = Boolean(slide.tag || slide.title || slide.subtitle || slide.ctaLabel);
+                        return (
+                            <div
+                                key={`${idx}-${slide.id}`}
+                                className="relative flex-shrink-0 w-full h-full overflow-hidden bg-gray-50 group cursor-pointer"
+                                onClick={() => slide.link && navigate(slide.link)}
+                            >
+                                {slide.mobileImage && (
+                                    <img
+                                        src={slide.mobileImage}
+                                        alt={`${slide.title || 'Slide'} Mobile`}
+                                        loading={idx === 1 ? 'eager' : 'lazy'}
+                                        fetchPriority={idx === 1 ? 'high' : 'low'}
+                                        decoding={idx === 1 ? 'sync' : 'async'}
+                                        className="absolute inset-0 w-full h-full object-cover pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms] ease-out block md:hidden"
+                                    />
+                                )}
                                 <img
-                                    src={slide.mobileImage}
-                                    alt={`${slide.title} Mobile`}
+                                    src={slide.image}
+                                    alt={slide.title || 'Slide'}
                                     loading={idx === 1 ? 'eager' : 'lazy'}
                                     fetchPriority={idx === 1 ? 'high' : 'low'}
                                     decoding={idx === 1 ? 'sync' : 'async'}
-                                    className="absolute inset-0 w-full h-full object-cover pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms] ease-out block md:hidden"
+                                    className={`absolute inset-0 w-full h-full object-cover pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms] ease-out ${slide.mobileImage ? 'hidden md:block' : 'block'}`}
                                 />
-                            )}
-                            <img
-                                src={slide.image}
-                                alt={slide.title}
-                                loading={idx === 1 ? 'eager' : 'lazy'}
-                                fetchPriority={idx === 1 ? 'high' : 'low'}
-                                decoding={idx === 1 ? 'sync' : 'async'}
-                                className={`absolute inset-0 w-full h-full object-cover pointer-events-none group-hover:scale-110 transition-transform duration-[4000ms] ease-out ${slide.mobileImage ? 'hidden md:block' : 'block'}`}
-                            />
 
-                            {/* Subtle Brand Watermark */}
-                            <div className="absolute top-1 left-2 md:top-8 md:left-12 z-20">
-                                <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[4px] sm:text-[6px] md:text-[10px] font-bold uppercase tracking-[0.3em] px-1 py-0.5 md:px-3 md:py-1.5 rounded-sm">
-                                    A SANDS PRODUCT
-                                </span>
+                                {hasText && (
+                                    <>
+                                        {/* Professional Gradient Overlay for Text Readability */}
+                                        <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/35 to-transparent pointer-events-none z-[5]" />
+
+                                        {/* Refined Content Overlay - Left-aligned for high-end professional look */}
+                                        <div className="absolute inset-y-0 left-0 w-full md:w-[65%] flex flex-col justify-center px-6 md:px-20 z-10 text-white text-left pointer-events-none">
+                                            <motion.div
+                                                initial={{ opacity: 0, x: -30 }}
+                                                animate={currentIndex === idx ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
+                                                transition={{ duration: 0.8, delay: 0.2 }}
+                                                className="text-white flex flex-col items-start text-left"
+                                            >
+                                                {slide.tag && (
+                                                    <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-4">
+                                                        <div className="w-4 md:w-8 h-[1px] md:h-[2px] bg-[#9C5B61]"></div>
+                                                        <span className="text-[8px] sm:text-[10px] md:text-sm text-[#9C5B61] font-bold uppercase tracking-[0.3em]">
+                                                            {slide.tag}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {slide.title && (
+                                                    <h2 className="font-serif text-sm sm:text-2xl md:text-5xl font-bold leading-normal md:leading-tight mb-1 md:mb-3 drop-shadow-lg max-w-[95%] md:max-w-xl text-left">
+                                                        {slide.title}
+                                                    </h2>
+                                                )}
+
+                                                {slide.subtitle && (
+                                                    <p className="text-white/80 text-[8px] sm:text-xs md:text-base font-light leading-relaxed mb-2 md:mb-6 max-w-[90%] md:max-w-md tracking-wide line-clamp-2 md:line-clamp-none text-left">
+                                                        {slide.subtitle}
+                                                    </p>
+                                                )}
+
+                                                {slide.ctaLabel && (
+                                                    <div className="pointer-events-auto">
+                                                        <Link
+                                                            to={slide.link}
+                                                            onClick={(e) => e.stopPropagation()}
+                                                            className="relative group inline-flex items-center justify-center bg-[#9C5B61] text-white hover:bg-white hover:text-[#9C5B61] font-bold text-[8px] sm:text-xs md:text-sm uppercase tracking-[0.2em] px-4 py-1.5 md:px-12 md:py-4 transition-all duration-300 overflow-hidden shadow-xl"
+                                                        >
+                                                            <span className="relative z-10">{slide.ctaLabel}</span>
+                                                        </Link>
+                                                    </div>
+                                                )}
+                                            </motion.div>
+                                        </div>
+                                    </>
+                                )}
                             </div>
-
-                            {/* Refined Content Overlay - Left-aligned for high-end professional look */}
-                            <div className="absolute inset-y-0 left-0 w-full md:w-[65%] flex flex-col justify-center px-6 md:px-20 z-10 text-white text-left">
-                                <motion.div
-                                    initial={{ opacity: 0, x: -30 }}
-                                    animate={currentIndex === idx ? { opacity: 1, x: 0 } : { opacity: 0, x: -30 }}
-                                    transition={{ duration: 0.8, delay: 0.2 }}
-                                    className="text-white flex flex-col items-start text-left"
-                                >
-                                    <div className="flex items-center gap-2 md:gap-3 mb-1 md:mb-4">
-                                        <div className="w-4 md:w-8 h-[1px] md:h-[2px] bg-[#9C5B61]"></div>
-                                        <span className="text-[8px] sm:text-[10px] md:text-sm text-[#9C5B61] font-bold uppercase tracking-[0.3em]">
-                                            {slide.tag}
-                                        </span>
-                                    </div>
-
-                                    <h2 className="font-serif text-sm sm:text-2xl md:text-5xl font-bold leading-normal md:leading-tight mb-1 md:mb-3 drop-shadow-lg max-w-[95%] md:max-w-xl text-left">
-                                        {slide.title}
-                                    </h2>
-
-                                    <p className="text-white/80 text-[8px] sm:text-xs md:text-base font-light leading-relaxed mb-2 md:mb-6 max-w-[90%] md:max-w-md tracking-wide line-clamp-2 md:line-clamp-none text-left">
-                                        {slide.subtitle}
-                                    </p>
-
-                                    <Link
-                                        to={slide.link}
-                                        className="relative group inline-flex items-center justify-center bg-[#9C5B61] text-white hover:bg-white hover:text-[#9C5B61] font-bold text-[8px] sm:text-xs md:text-sm uppercase tracking-[0.2em] px-4 py-1.5 md:px-12 md:py-4 transition-all duration-300 overflow-hidden shadow-xl"
-                                    >
-                                        <span className="relative z-10">{slide.ctaLabel || 'Shop Collection'}</span>
-                                    </Link>
-                                </motion.div>
-                            </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </motion.div>
 
-                {/* Arrow Controls Removed */}
-
                 {/* Sliding Line Indicators - Inside Carousel Bottom Center */}
-                {slides.length > 0 && (
+                {slides.length > 1 && (
                     <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center justify-center gap-2 md:gap-3 z-30">
                         {slides.map((_, i) => {
                             const isActive = (currentIndex - 1 + slides.length) % slides.length === i;
@@ -217,4 +227,3 @@ const PromoSlider = ({ externalSlides, autoplayInterval }) => {
 };
 
 export default PromoSlider;
-
