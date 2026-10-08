@@ -960,7 +960,8 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
           name:
             isWomenCategoryLinkedSection ||
             isFamilyCategoryLinkedSection ||
-            isGoldCategoryLinkedSection
+            isGoldCategoryLinkedSection ||
+            sectionId === "silver-curated"
               ? item.name || resolved.name
               : resolved.name,
           path: isWomenCategoryLinkedSection
@@ -1320,6 +1321,14 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
       ...(sectionId === "proposal-rings" ? { categoryId: "" } : {}),
       ...(sectionId === "new-launch" ? { categoryId: "" } : {}),
       ...(isWomenCuratedCollections ? { categoryId: "" } : {}),
+      ...(sectionId === "silver-curated"
+        ? {
+            name: "New Curated Highlight",
+            label: "New Curated Highlight",
+            categoryId: "",
+            path: "/shop?metal=silver",
+          }
+        : {}),
       ...(isGoldCuratedShowcaseSection
         ? {
             name: "New Collection",
@@ -3069,7 +3078,8 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                                   name:
                                     isWomenCategoryLinkedSection ||
                                     isFamilyCategoryLinkedSection ||
-                                    isGoldCategoryLinkedSection
+                                    isGoldCategoryLinkedSection ||
+                                    sectionId === "silver-curated"
                                       ? entry.name || selected.name
                                       : selected.name,
                                   path: isCategoryGrid
@@ -3382,7 +3392,8 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                         isFixedWomenPromoBanners ||
                         isFamilyCuratedCollections ||
                         isFamilyLuxuryWithinReach ||
-                        isGoldLuxuryWithinReach) &&
+                        isGoldLuxuryWithinReach ||
+                        sectionId === "silver-curated") &&
                       sectionId !== "price-range-showcase" &&
                       (!isLuxuryWithinReach ||
                         isFamilyLuxuryWithinReach ||
@@ -3394,11 +3405,12 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                               : sectionId === "style-it-your-way"
                                 ? "Title"
                                 : isWomenCuratedCollections ||
-                                    isFamilyCuratedCollections
+                                    isFamilyCuratedCollections ||
+                                    sectionId === "silver-curated"
                                   ? "Card Title"
                                   : "Name"
                           }
-                          value={item.name}
+                          value={item.name || ""}
                           onChange={(e) =>
                             handleItemChange(item.id, "name", e.target.value)
                           }
@@ -3406,8 +3418,9 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                             isMostGiftedHero
                               ? "Most Gifted Items"
                               : isWomenCuratedCollections ||
-                                  isFamilyCuratedCollections
-                                ? "Boho Anklets"
+                                  isFamilyCuratedCollections ||
+                                  sectionId === "silver-curated"
+                                ? "e.g., Pure Silver Essentials"
                                 : "Name"
                           }
                         />
@@ -3690,7 +3703,8 @@ const CategoryShowcaseEditor = ({ sectionData, onSave, defaultItems = [] }) => {
                       !isWomenCategoryLinkedSection &&
                       !isFamilyCategoryLinkedSection &&
                       !isGoldCategoryLinkedSection &&
-                      !isGoldExploreCollectionsSection && (
+                      !isGoldExploreCollectionsSection &&
+                      sectionId !== "silver-curated" && (
                         <Input
                           label="Category Name"
                           value={item.name}
