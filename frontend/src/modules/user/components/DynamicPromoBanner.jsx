@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
+import { getOptimizedImageUrl } from '../../../utils/imageUtils';
 
 const DynamicPromoBanner = () => {
     const { data: homepageSections = {} } = useHomepageCms();
@@ -16,17 +17,21 @@ const DynamicPromoBanner = () => {
                 const label = String(item.label || item.title || '').toLowerCase();
                 return !label.includes('unique story in golds') && !label.includes('unique story in gold');
             })
-            .map((item, index) => ({
-                id: item.itemId || item.id || `dynamic-promo-${index + 1}`,
-                image: resolveLegacyCmsAsset(item.image, item.image),
-                mobileImage: item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, item.mobileImage) : null,
-                link: item.path || '/shop',
-                title: item.label || item.title || '',
-                name: item.name || '',
-                tag: item.tag || '',
-                subtitle: item.subtitle || '',
-                ctaLabel: item.ctaLabel || ''
-            }));
+            .map((item, index) => {
+                const resolvedImage = resolveLegacyCmsAsset(item.image, item.image);
+                const resolvedMobileImage = item.mobileImage ? resolveLegacyCmsAsset(item.mobileImage, item.mobileImage) : null;
+                return {
+                    id: item.itemId || item.id || `dynamic-promo-${index + 1}`,
+                    image: getOptimizedImageUrl(resolvedImage, { width: 1400, quality: 'auto', format: 'auto' }),
+                    mobileImage: resolvedMobileImage ? getOptimizedImageUrl(resolvedMobileImage, { width: 800, quality: 'auto', format: 'auto' }) : null,
+                    link: item.path || '/shop',
+                    title: item.label || item.title || '',
+                    name: item.name || '',
+                    tag: item.tag || '',
+                    subtitle: item.subtitle || '',
+                    ctaLabel: item.ctaLabel || ''
+                };
+            });
     }, [sectionData?.items]);
 
     const [currentIndex, setCurrentIndex] = useState(0);
