@@ -113,10 +113,6 @@ export const ShopProvider = ({ children }) => {
     // ── Catalogue ────────────────────────────────────────────────────────────
     const { products, categories, coupons: apiCoupons, siteSettings, isLoading: isCatalogueLoading } = useCatalogue();
 
-    useEffect(() => {
-        localStorage.setItem('sands_products', JSON.stringify(products));
-    }, [products]);
-
     // ── Sub-context delegates ────────────────────────────────────────────────
     const cartCtx = useCart();
     const wishlistCtx = useWishlist();
@@ -127,11 +123,6 @@ export const ShopProvider = ({ children }) => {
     useEffect(() => {
         if (apiCoupons.length > 0) cartCtx.setCoupons(apiCoupons);
     }, [apiCoupons]);
-
-    // Persist coupons list
-    useEffect(() => {
-        localStorage.setItem('sands_coupons', JSON.stringify(cartCtx.coupons));
-    }, [cartCtx.coupons]);
 
     // ── Auth Lifecycle (login / logout triggers) ─────────────────────────────
     useEffect(() => {
