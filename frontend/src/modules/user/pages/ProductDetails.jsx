@@ -60,20 +60,7 @@ import Loader from "../../shared/components/Loader";
 import { getProductPrice, getProductMRP, formatCurrency } from "../utils/price";
 import RecentlyViewed from "../components/RecentlyViewed";
 
-// Import model shots (angle 2) for maximum hover impact
-import latestRing from "@assets/latest_drop_ring.png";
-import latestBracelet from "@assets/latest_drop_bracelet.png";
-import latestNecklace from "@assets/latest_drop_necklace.png";
-import latestEarrings from "@assets/latest_drop_earrings.png";
-import newAnklets from "@assets/new_launch_anklets.png";
 
-const fallbackModelMap = {
-  ring: latestRing,
-  pendant: latestNecklace,
-  earring: latestEarrings,
-  bracelet: latestBracelet,
-  anklet: newAnklets,
-};
 
 const isImageMedia = (src = "") =>
   /\.(png|jpe?g|webp|gif|avif|svg)(\?.*)?$/i.test(String(src));
@@ -676,22 +663,11 @@ const ProductDetails = () => {
   }, [selectedImage, galleryImages]);
 
   const hoverPaneImage = useMemo(() => {
+    // Only resolve a second image if there is an actual different image in the product's gallery.
+    // If the seller only uploaded 1 image, keep it on the same image without switching to an unrelated stock photo.
     const candidate = galleryImages.find((img) => img && img !== primaryImage);
-    if (candidate) return candidate;
-
-    const categoryData = product?.category;
-    const categoryName =
-      typeof categoryData === "object" ? categoryData?.name : categoryData;
-    const searchStr = String(categoryName || product?.name || "").toLowerCase();
-
-    if (searchStr.includes("ring")) return fallbackModelMap.ring;
-    if (searchStr.includes("pendant") || searchStr.includes("necklace"))
-      return fallbackModelMap.pendant;
-    if (searchStr.includes("earring")) return fallbackModelMap.earring;
-    if (searchStr.includes("bracelet")) return fallbackModelMap.bracelet;
-    if (searchStr.includes("anklet")) return fallbackModelMap.anklet;
-    return null;
-  }, [galleryImages, primaryImage, product]);
+    return candidate || null;
+  }, [galleryImages, primaryImage]);
 
   const reviewCount = product?.reviewCount ?? reviews.length ?? 0;
   const averageRating = Number(product?.rating || 0);

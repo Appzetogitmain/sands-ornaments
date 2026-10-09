@@ -77,10 +77,10 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
             const categoryData = product.category;
             const categoryName = (typeof categoryData === 'object' ? categoryData?.name : categoryData) || '';
             const searchStr = String(categoryName + ' ' + (product.name || '')).toLowerCase();
+            if (searchStr.includes('earring')) return fallbackModelMap.earring;
             if (searchStr.includes('ring')) return fallbackModelMap.ring;
             if (searchStr.includes('necklace') || searchStr.includes('choker') || searchStr.includes('set')) return fallbackModelMap.pendant;
             if (searchStr.includes('pendant') || searchStr.includes('chain')) return fallbackModelMap.pendant;
-            if (searchStr.includes('earring')) return fallbackModelMap.earring;
             if (searchStr.includes('bracelet')) return fallbackModelMap.bracelet;
             if (searchStr.includes('anklet')) return fallbackModelMap.anklet;
         }

@@ -1,7 +1,5 @@
-import React, { lazy, useEffect } from 'react';
-import { useShop } from '../../../context/ShopContext';
+import React, { useEffect } from 'react';
 import { useHomepageCms } from '../hooks/useHomepageCms';
-import Loader from '../../shared/components/Loader';
 import { useResetScroll } from '../../../hooks/useResetScroll';
 import LazySection from '../../../components/LazySection';
 
@@ -39,7 +37,6 @@ import FAQSection from '../components/FAQSection';
 
 
 const Home = () => {
-    const { isLoading: isShopLoading } = useShop();
     const {
         isError: isHomepageCmsError,
         error: homepageCmsError,
@@ -52,14 +49,11 @@ const Home = () => {
         document.title = "SandsJewels | Crafted for Moments That Last";
     }, []);
 
-    // ONLY block on shop data (products/categories) — CMS is enhancement-only.
-    // Previously we also blocked on isHomepageCmsLoading which meant the entire
-    // page showed a blank loader until TWO separate APIs finished. On mobile
-    // with a slow connection, CMS fetch could take 1-2s extra. Now the page
-    // renders immediately once products are ready, and CMS slots fill in async.
-    if (isShopLoading) {
-        return <Loader />;
-    }
+    // Progressive rendering:
+    // Above-the-fold content (Hero Promo Banner, Category Grid, Trust Markers) and CMS sections
+    // render immediately without waiting for the global 48-product catalogue fetch.
+    // Product-dependent sections (BestStylesSection, AllJewellery, PerfectGift) consume
+    // products directly from ShopContext and populate seamlessly once catalogue data resolves.
 
     return (
         <div className="bg-white font-body text-black relative selection:bg-[#D39A9F] selection:text-white">
