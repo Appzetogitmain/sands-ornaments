@@ -225,25 +225,23 @@ exports.getProducts = async (req, res) => {
       query.$and = andFilters;
     }
 
-    // 6. Execute Query with Pagination
-    let products = [];
-    if (sortOption) {
-      products = await Product.find(query)
-        .select("name slug productCode brand images videoUrl variants tags rating reviewCount categories category categorySlug categoryId navShopByCategory weight weightUnit goldCategory silverCategory material audience sold createdAt updatedAt")
-        .populate("categories", "name slug")
-        .sort(sortOption)
-        .limit(resolvedLimit)
-        .skip((resolvedPage - 1) * resolvedLimit)
-        .lean();
-    } else {
-      // random: sample results (pagination is not deterministic; we return a random page-1 slice).
-      products = await Product.aggregate([
-        { $match: query },
-        { $sample: { size: resolvedLimit } },
-      ]);
-    }
+    // 6. Execute Query with Pagination concurrently
+    const productsPromise = sortOption
+      ? Product.find(query)
+          .select("name slug productCode brand images videoUrl variants tags rating reviewCount categories category categorySlug categoryId navShopByCategory weight weightUnit goldCategory silverCategory material audience sold createdAt updatedAt")
+          .populate("categories", "name slug")
+          .sort(sortOption)
+          .limit(resolvedLimit)
+          .skip((resolvedPage - 1) * resolvedLimit)
+          .lean()
+      : Product.aggregate([
+          { $match: query },
+          { $sample: { size: resolvedLimit } },
+        ]);
 
-    const total = await Product.countDocuments(query);
+    const countPromise = Product.countDocuments(query);
+
+    const [products, total] = await Promise.all([productsPromise, countPromise]);
 
     return success(res, {
       products: products.map((product) => normalizeProductForResponse(product)),
