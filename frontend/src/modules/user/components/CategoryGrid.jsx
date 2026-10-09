@@ -4,6 +4,7 @@ import { ChevronRight } from 'lucide-react';
 import { useHomepageCms } from '../hooks/useHomepageCms';
 import { useShop } from '../../../context/ShopContext';
 import { resolveLegacyCmsAsset } from '../utils/legacyCmsAssets';
+import { getOptimizedImageUrl } from '../../../utils/imageUtils';
 
 const resolveItemImage = (item, liveCategories = []) => {
     const rawImage = String(item?.image || '').trim();
@@ -45,7 +46,7 @@ const normalizeItems = (items = [], liveCategories = []) => items
     .map((item, index) => ({
         id: item.itemId || item.id || `category-grid-item-${index + 1}`,
         name: item.name,
-        image: resolveItemImage(item, liveCategories),
+        image: getOptimizedImageUrl(resolveItemImage(item, liveCategories), { width: 320, quality: 'auto', format: 'auto' }),
         path: item.path,
         badge: item.badge || ''
     }));
@@ -67,7 +68,7 @@ const CategoryGrid = () => {
             return liveCategories.map((cat, idx) => ({
                 id: cat._id || cat.id || `live-cat-${idx}`,
                 name: cat.name,
-                image: cat.image || '',
+                image: getOptimizedImageUrl(cat.image || '', { width: 320, quality: 'auto', format: 'auto' }),
                 path: `/category/${cat.slug || cat.path || ''}`,
                 badge: ''
             })).filter(c => Boolean(c.name && c.image));
