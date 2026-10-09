@@ -1177,10 +1177,11 @@ const Shop = () => {
               return (
                 <div>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-8 gap-y-8 md:gap-y-12">
-                    {productsToRender.map((product) => (
+                    {productsToRender.map((product, index) => (
                       <ProductCard
                         key={product.id || product._id}
                         product={product}
+                        imageLoading={index < 4 ? "eager" : "lazy"}
                       />
                     ))}
                   </div>

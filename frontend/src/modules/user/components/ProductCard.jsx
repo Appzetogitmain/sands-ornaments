@@ -35,7 +35,7 @@ const fallbackModelMap = {
 import { getProductPrice, getProductMRP, formatCurrency } from '../utils/price';
 import { getProductCardUrl } from '../../../utils/imageUtils';
 
-const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, loginSource = 'men' }) => {
+const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, loginSource = 'men', imageLoading = 'lazy' }) => {
     const { addToCart, addToWishlist, removeFromWishlist, wishlist } = useShop();
     const { user } = useAuth();
     const navigate = useNavigate();
@@ -146,7 +146,7 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
                             <img
                                 src={getProductCardUrl(primaryImage)}
                                 alt={product.name}
-                                loading="lazy"
+                                loading={imageLoading}
                                 decoding="async"
                                 className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover/card:scale-105"
                             />
