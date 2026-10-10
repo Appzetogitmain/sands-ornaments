@@ -139,9 +139,9 @@ const PriceRangeShowcase = () => {
                                     {/* Content Container (Mimicking ProductCard) */}
                                     <div className="flex flex-col px-0 mt-2">
                                         <div className="flex items-baseline gap-2 mb-1">
-                                            <span className="text-[15px] font-bold text-gray-900">₹{priceMax?.toLocaleString('en-IN') || '0'}</span>
+                                            <span className="text-[15px] font-bold text-gray-900">₹{Math.round(priceMax || 0).toLocaleString('en-IN')}</span>
                                             {originalPrice && (
-                                                <span className="text-[12px] text-gray-400 line-through font-medium">₹{originalPrice.toLocaleString('en-IN')}</span>
+                                                <span className="text-[12px] text-gray-400 line-through font-medium">₹{Math.round(originalPrice || 0).toLocaleString('en-IN')}</span>
                                             )}
                                         </div>
                                         

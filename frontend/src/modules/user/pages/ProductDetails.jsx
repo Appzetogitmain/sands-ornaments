@@ -9,7 +9,6 @@ import toast from "react-hot-toast";
 import ProductCard from "../components/ProductCard";
 import {
   getProductDetailUrl,
-  getProductCardUrl,
   getProductThumbUrl,
 } from "../../../utils/imageUtils";
 import { useResetScroll } from "../../../hooks/useResetScroll";
@@ -662,12 +661,6 @@ const ProductDetails = () => {
     return selectedImage || galleryImages[0] || null;
   }, [selectedImage, galleryImages]);
 
-  const hoverPaneImage = useMemo(() => {
-    // Only resolve a second image if there is an actual different image in the product's gallery.
-    // If the seller only uploaded 1 image, keep it on the same image without switching to an unrelated stock photo.
-    const candidate = galleryImages.find((img) => img && img !== primaryImage);
-    return candidate || null;
-  }, [galleryImages, primaryImage]);
 
   const reviewCount = product?.reviewCount ?? reviews.length ?? 0;
   const averageRating = Number(product?.rating || 0);
@@ -680,12 +673,24 @@ const ProductDetails = () => {
         Number(selectedVariant?.additionalCharge || 0),
   );
   const resolvedPgCharge = Number(selectedVariant?.pgChargeAmount || 0);
+
+  const rawMetalPrice = Number(selectedVariant?.metalPrice || 0);
+  const rawMakingCharge =
+    Number(selectedVariant?.makingCharge || 0) +
+    resolvedHiddenCharge +
+    resolvedPgCharge;
+
+  // For 925 Sterling Silver, making charges are absorbed into the metal charges on user side
+  const displayMetalPrice = is925SterlingSilver
+    ? rawMetalPrice + rawMakingCharge
+    : rawMetalPrice;
+  const displayMakingCharge = is925SterlingSilver ? 0 : rawMakingCharge;
+
   const pricingBreakdown = {
-    metalPrice: Number(selectedVariant?.metalPrice || 0),
-    makingCharge:
-      Number(selectedVariant?.makingCharge || 0) +
-      resolvedHiddenCharge +
-      resolvedPgCharge,
+    metalPrice: displayMetalPrice,
+    makingCharge: displayMakingCharge,
+    rawMetalPrice,
+    rawMakingCharge,
     diamondPrice: Number(selectedVariant?.diamondPrice || 0),
     gst: Number(selectedVariant?.gst ?? selectedVariant?.gstAmount ?? 0),
     finalPrice: Number(selectedVariant?.finalPrice ?? variantPrice ?? 0),
@@ -695,8 +700,8 @@ const ProductDetails = () => {
     selectedVariant?.weightUnit || product?.weightUnit || "";
   const pricingSubtotal =
     Number(selectedVariant?.subtotalBeforeTax || 0) ||
-    Number(pricingBreakdown.metalPrice || 0) +
-      Number(pricingBreakdown.makingCharge || 0) +
+    Number(rawMetalPrice) +
+      Number(rawMakingCharge) +
       Number(pricingBreakdown.diamondPrice || 0) -
       resolvedPgCharge;
   const gstPercent =
@@ -1033,16 +1038,6 @@ const ProductDetails = () => {
                       className={`absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-500 ease-out ${isImageZoomed ? 'scale-150' : 'scale-100'}`}
                     />
 
-                    {/* Hover Image (2nd gallery image when available; otherwise model fallback) */}
-                    {hoverPaneImage ? (
-                      <img
-                        src={getProductCardUrl(hoverPaneImage)}
-                        alt={`${product.name} look`}
-                        loading="lazy"
-                        decoding="async"
-                        className={`absolute inset-0 w-full h-full object-cover z-10 opacity-0 group-hover:opacity-100 transition-all duration-[1200ms] ease-in-out ${isImageZoomed ? 'scale-150' : 'scale-100'}`}
-                      />
-                    ) : null}
                     {/* Zoom Indicator Icon */}
                     <div className={`absolute inset-0 flex items-center justify-center transition-opacity bg-black/5 z-20 pointer-events-none ${isImageZoomed ? 'opacity-0' : 'opacity-0 group-hover:opacity-100'}`}>
                       <div className="p-3 rounded-full bg-white/80 backdrop-blur shadow-sm transform scale-90 group-hover:scale-100 transition-transform duration-500">
@@ -2093,7 +2088,7 @@ const ProductDetails = () => {
                               : `(${currentVariant?.weight || product.weight || "0"} {currentVariant?.weightUnit || product.weightUnit || 'g'})`}
                           </span>
                           <span className="font-bold text-gray-900">
-                            {formatCurrency(currentVariant?.metalPrice || 0)}
+                            {formatCurrency(pricingBreakdown.metalPrice)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center text-xs font-medium text-gray-600">

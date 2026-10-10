@@ -6,11 +6,8 @@ import toast from 'react-hot-toast';
 import { ProductThumb } from './ProductThumb';
 import ReturnActionModal from './ReturnActionModal';
 
-const formatCurrency = (value, minimumFractionDigits = 0) => (
-    `₹${Number(value || 0).toLocaleString('en-IN', {
-        minimumFractionDigits,
-        maximumFractionDigits: minimumFractionDigits
-    })}`
+const formatCurrency = (value) => (
+    `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`
 );
 
 const OrderCard = ({ order, isExpanded, onToggle }) => {
@@ -278,7 +275,7 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
                                         </span>
                                     </div>
                                     <h4 className="text-[10px] md:text-xs text-[#3E2723] font-medium leading-relaxed line-clamp-2 px-1 h-7 font-serif">{item.name}</h4>
-                                    <p className="text-xs md:text-sm font-bold text-[#5D4037] mt-1">{formatCurrency(item.price, 2)}</p>
+                                    <p className="text-xs md:text-sm font-bold text-[#5D4037] mt-1">{formatCurrency(item.price)}</p>
                                 </div>
                             ))}
                         </div>
@@ -288,28 +285,28 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
                             <div className="py-4 space-y-3 text-sm">
                                 <div className="flex justify-between text-[#8D6E63]">
                                     <span>Sub total</span>
-                                    <span>{formatCurrency(subtotal, 2)}</span>
+                                    <span>{formatCurrency(subtotal)}</span>
                                 </div>
                                 {discount > 0 && (
                                     <div className="flex justify-between text-red-500">
                                         <span>Discount</span>
-                                        <span>- {formatCurrency(discount, 2)}</span>
+                                        <span>- {formatCurrency(discount)}</span>
                                     </div>
                                 )}
                                 {giftWrapCharge > 0 && (
                                     <div className="flex justify-between text-[#8E2B45]">
                                         <span>Gift Wrap</span>
-                                        <span>+ {formatCurrency(giftWrapCharge, 2)}</span>
+                                        <span>+ {formatCurrency(giftWrapCharge)}</span>
                                     </div>
                                 )}
                                 <div className="flex justify-between text-[#8D6E63]">
                                     <span>Shipping cost</span>
-                                    <span>{shipping === 0 ? 'FREE' : formatCurrency(shipping, 2)}</span>
+                                    <span>{shipping === 0 ? 'FREE' : formatCurrency(shipping)}</span>
                                 </div>
                                 {giftCardDiscount > 0 && (
                                     <div className="flex justify-between text-emerald-600">
                                         <span>Gift Card</span>
-                                        <span>- {formatCurrency(giftCardDiscount, 2)}</span>
+                                        <span>- {formatCurrency(giftCardDiscount)}</span>
                                     </div>
                                 )}
                             </div>
@@ -320,7 +317,7 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
                 {/* Grand Total Bar */}
                 <div className="bg-[#F3F4F6] border-t border-gray-200 text-black p-3.5 md:p-4 md:px-6 flex justify-between items-center text-base md:text-lg font-bold">
                     <span>Grand total</span>
-                    <span>{formatCurrency(order.total, 2)}</span>
+                    <span>{formatCurrency(order.total)}</span>
                 </div>
             </div>
         </div>

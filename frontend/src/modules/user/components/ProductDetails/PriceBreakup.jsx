@@ -8,6 +8,8 @@ const PriceBreakup = ({
     gstPercent, 
     variantPrice 
 }) => {
+    const is925SterlingSilver = String(product?.silverCategory || '').toLowerCase().trim() === '925 sterling silver';
+
     return (
         <div className="max-w-2xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-700">
             <div className="bg-gray-50/50 rounded-2xl border border-gray-100 overflow-hidden shadow-sm">
@@ -21,7 +23,7 @@ const PriceBreakup = ({
                     </thead>
                     <tbody className="divide-y divide-gray-50">
                         {[
-                            { label: 'Metal (925 Silver)', rate: `${selectedVariantWeight || product.weight || '---'} g`, value: pricingBreakdown.metalPrice },
+                            { label: 'Metal (925 Silver)', rate: is925SterlingSilver ? '-' : `${selectedVariantWeight || product.weight || '---'} g`, value: pricingBreakdown.metalPrice },
                             { label: 'Making Charges', rate: '-', value: pricingBreakdown.makingCharge },
                             { label: 'Diamond / Stones', rate: '-', value: pricingBreakdown.diamondPrice },
                             { label: `GST (${gstPercent}%)`, rate: '-', value: pricingBreakdown.gst }

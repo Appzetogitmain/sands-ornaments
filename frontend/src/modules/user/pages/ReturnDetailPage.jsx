@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, CheckCircle, Clock, RefreshCw, Truck, XCircle, AlertCircle, Package } from 'lucide-react';
 import { useShop } from '../../../context/ShopContext';
 
-const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+const formatCurrency = (value) => `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 
 const resolveImageSrc = (...values) => values.find((value) => typeof value === 'string' && value.trim()) || null;
 

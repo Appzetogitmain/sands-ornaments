@@ -61,7 +61,7 @@ const getProductOriginalPrice = (product = {}) => {
 };
 
 const formatMoney = (value) => {
-    const numeric = Number(value || 0);
+    const numeric = Math.round(Number(value || 0));
     return `\u20B9${numeric.toLocaleString('en-IN')}`;
 };
 
