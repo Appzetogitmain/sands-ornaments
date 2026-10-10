@@ -5,7 +5,7 @@ import toast from 'react-hot-toast';
 import { useShop } from '../../../context/ShopContext';
 import api from '../../../services/api';
 
-const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+const formatCurrency = (value) => `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 
 const resolveImageSrc = (...values) => values.find((value) => typeof value === 'string' && value.trim()) || null;
 

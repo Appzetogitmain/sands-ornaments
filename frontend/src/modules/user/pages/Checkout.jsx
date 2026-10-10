@@ -17,7 +17,7 @@ const Checkout = () => {
     const { user, sendOtp, verifyOtp } = useAuth();
     const navigate = useNavigate();
     const { track } = useAnalytics();
-    const currencyText = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    const currencyText = (value) => `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
     const cartItemKey = (item) => `${item.id}-${item.variantId || item.packId || 'default'}`;
     const couponSummary = (coupon) => coupon?.description || coupon?.desc || 'Offer available on eligible items';
 
@@ -134,7 +134,7 @@ const Checkout = () => {
                 const amountUsed = Math.min(balance, currentRemaining);
                 setAppliedGiftCards(prev => [...prev, { code, balance }]);
                 setGiftCardInput('');
-                toast.success(`Gift card applied! ₹${amountUsed.toLocaleString('en-IN')} will be deducted`);
+                toast.success(`Gift card applied! ${currencyText(amountUsed)} will be deducted`);
             } else {
                 toast.error(res.data.message || 'Invalid gift card code');
             }

@@ -4,7 +4,7 @@ import { useShop } from '../../../context/ShopContext';
 import { Package, ArrowLeft, RefreshCw, Check, Clock } from 'lucide-react';
 import FAQSection from '../components/FAQSection';
 
-const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+const formatCurrency = (value) => `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 
 const formatDateTime = (dateTimestamp) => {
     if (!dateTimestamp) return 'Pending';

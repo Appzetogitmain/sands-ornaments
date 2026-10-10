@@ -5,12 +5,6 @@ import { useAuth } from '../../../context/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
-import latestRing from '@assets/latest_drop_ring.png';
-import latestBracelet from '@assets/latest_drop_bracelet.png';
-import latestNecklace from '@assets/latest_drop_necklace.png';
-import latestEarrings from '@assets/latest_drop_earrings.png';
-import newAnklets from '@assets/new_launch_anklets.png';
-
 // Import high-end generated product shots for missing DB images
 import premiumRingProduct from '@assets/premium_ring_product.png';
 import premiumBraceletProduct from '@assets/premium_bracelet_product.png';
@@ -22,14 +16,6 @@ const fallbackProductMap = {
     pendant: premiumPendantProduct,
     necklace: premiumNecklaceProduct,
     bracelet: premiumBraceletProduct
-};
-
-const fallbackModelMap = {
-    ring: latestRing,
-    pendant: latestNecklace,
-    earring: latestEarrings,
-    bracelet: latestBracelet,
-    anklet: newAnklets
 };
 
 import { getProductPrice, getProductMRP, formatCurrency } from '../utils/price';
@@ -67,26 +53,7 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
 
     const primaryImage = resolvePrimaryImage();
 
-    const resolveSecondaryImage = () => {
-        if (productImages.length >= 2) return productImages[1];
-        if (productImages.length === 0) {
-            const variantHover = variantImages.find((img) => img && img !== primaryImage);
-            if (variantHover) return variantHover;
-        }
-        if (!dbImages[0]) {
-            const categoryData = product.category;
-            const categoryName = (typeof categoryData === 'object' ? categoryData?.name : categoryData) || '';
-            const searchStr = String(categoryName + ' ' + (product.name || '')).toLowerCase();
-            if (searchStr.includes('earring')) return fallbackModelMap.earring;
-            if (searchStr.includes('ring')) return fallbackModelMap.ring;
-            if (searchStr.includes('necklace') || searchStr.includes('choker') || searchStr.includes('set')) return fallbackModelMap.pendant;
-            if (searchStr.includes('pendant') || searchStr.includes('chain')) return fallbackModelMap.pendant;
-            if (searchStr.includes('bracelet')) return fallbackModelMap.bracelet;
-            if (searchStr.includes('anklet')) return fallbackModelMap.anklet;
-        }
-        return null;
-    };
-    const secondaryImage = resolveSecondaryImage();
+
 
     // Use Centralized Price Logic
     const effectivePrice = getProductPrice(product);
@@ -142,24 +109,13 @@ const ProductCard = ({ product, isWishlistPage = false, requireLogin = false, lo
             <div className="group/card relative w-full flex flex-col bg-white overflow-hidden cursor-pointer" onClick={handleProductOpen}>
                 <div className="relative aspect-square overflow-hidden bg-gray-50 rounded-none mb-3">
                     {primaryImage ? (
-                        <>
-                            <img
-                                src={getProductCardUrl(primaryImage)}
-                                alt={product.name}
-                                loading={imageLoading}
-                                decoding="async"
-                                className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover/card:scale-105"
-                            />
-                            {secondaryImage && (
-                                <img
-                                    src={getProductCardUrl(secondaryImage)}
-                                    alt={`${product.name} detail`}
-                                    loading="lazy"
-                                    decoding="async"
-                                    className="absolute inset-0 w-full h-full object-cover opacity-0 group-hover/card:opacity-100 transition-opacity duration-[1.2s] ease-in-out"
-                                />
-                            )}
-                        </>
+                        <img
+                            src={getProductCardUrl(primaryImage)}
+                            alt={product.name}
+                            loading={imageLoading}
+                            decoding="async"
+                            className="w-full h-full object-cover transition-transform duration-[1.5s] group-hover/card:scale-105"
+                        />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center text-zinc-300 text-[10px] uppercase tracking-widest font-bold">
                             Sands Ornament

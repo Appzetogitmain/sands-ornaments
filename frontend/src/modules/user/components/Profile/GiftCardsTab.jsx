@@ -163,9 +163,9 @@ const GiftCardsTab = () => {
                                 <div className="space-y-1">
                                     <span className="text-[9px] uppercase tracking-widest opacity-70">Card Balance / Value</span>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-2xl font-black font-sans">₹{card.balance.toLocaleString('en-IN')}</span>
+                                        <span className="text-2xl font-black font-sans">₹{Math.round(card.balance || 0).toLocaleString('en-IN')}</span>
                                         {card.balance < card.value && (
-                                            <span className="text-xs line-through opacity-50">₹{card.value.toLocaleString('en-IN')}</span>
+                                            <span className="text-xs line-through opacity-50">₹{Math.round(card.value || 0).toLocaleString('en-IN')}</span>
                                         )}
                                     </div>
                                 </div>

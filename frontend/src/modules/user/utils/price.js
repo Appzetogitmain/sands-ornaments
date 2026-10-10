@@ -54,10 +54,10 @@ export const getProductMRP = (product) => {
 };
 
 /**
- * Formats a number as Indian Rupee currency.
+ * Formats a number as Indian Rupee currency (no decimals on user-facing UI).
  * @param {number|string} value - The price to format.
  * @returns {string} - Formatted currency string like ₹1,234.
  */
 export const formatCurrency = (value) => {
-  return `₹${Number(value || 0).toLocaleString("en-IN")}`;
+  return `₹${Math.round(Number(value || 0)).toLocaleString("en-IN")}`;
 };

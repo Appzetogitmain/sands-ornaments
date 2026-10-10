@@ -15,6 +15,7 @@ import { useShop } from "../../../context/ShopContext";
 import toast from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import api from "../../../services/api";
+import { formatCurrency } from "../utils/price";
 
 // Import the generated mockup image
 import giftCardMockup from "@assets/sands_gift_card_mockup_1777455722986.png";
@@ -245,7 +246,7 @@ const GiftCardsPage = () => {
                     <span
                       className={`text-2xl font-semibold tracking-tight ${!isCustomAmount && selectedAmount === amt ? "text-[#8E2B45]" : "text-gray-900"}`}
                     >
-                      ₹{amt.toLocaleString("en-IN")}
+                      {formatCurrency(amt)}
                     </span>
                     <span className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
                       Gift Card
@@ -380,7 +381,7 @@ const GiftCardsPage = () => {
                       Gift Card Value
                     </span>
                     <span className="text-xl font-semibold text-gray-900 tracking-tight">
-                      ₹{finalAmount.toLocaleString("en-IN")}
+                      {formatCurrency(finalAmount)}
                     </span>
                   </div>
                   <div className="flex justify-between items-center text-emerald-600">
@@ -404,7 +405,7 @@ const GiftCardsPage = () => {
                         Total to Pay
                       </span>
                       <span className="text-4xl font-semibold text-[#8E2B45] tracking-tighter">
-                        ₹{finalAmount.toLocaleString("en-IN")}
+                        {formatCurrency(finalAmount)}
                       </span>
                     </div>
                   </div>
@@ -516,7 +517,7 @@ const GiftCardsPage = () => {
                             Initial Value
                           </span>
                           <span className="text-xs font-bold text-gray-750">
-                            ₹{balanceResult.value.toLocaleString("en-IN")}
+                            {formatCurrency(balanceResult.value)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
@@ -524,7 +525,7 @@ const GiftCardsPage = () => {
                             Remaining Balance
                           </span>
                           <span className="text-base font-bold text-emerald-850">
-                            ₹{balanceResult.balance.toLocaleString("en-IN")}
+                            {formatCurrency(balanceResult.balance)}
                           </span>
                         </div>
                         <div className="flex justify-between items-center">
