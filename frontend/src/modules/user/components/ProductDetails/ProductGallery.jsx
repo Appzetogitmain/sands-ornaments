@@ -65,17 +65,7 @@ const ProductGallery = ({ product, selectedVariant, galleryImages, primaryImage,
                     <div className="w-full h-full flex items-center justify-center text-gray-400">No media available</div>
                 )}
 
-                {/* Secondary Image on Hover */}
-                {hoverPaneImage && (
-                    <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none bg-[#FAFAFA] flex items-center justify-center p-4">
-                        <img
-                            src={getProductDetailUrl(hoverPaneImage)}
-                            alt="Secondary View"
-                            className="w-full h-full object-contain mix-blend-multiply"
-                            loading="lazy"
-                        />
-                    </div>
-                )}
+
             </div>
 
             {/* Thumbnails (Left side on desktop, bottom on mobile) */}

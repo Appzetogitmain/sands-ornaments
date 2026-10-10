@@ -86,7 +86,7 @@ const CouponsModal = ({ isOpen, onClose, coupons, onApply, cartTotal = 0 }) => {
                                                     <span>Min order: Rs {minOrder}</span>
                                                     {!isEligible && amountShort > 0 && (
                                                         <span className="text-amber-700 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200 text-[11px]">
-                                                            Add Rs {amountShort.toLocaleString('en-IN')} more to unlock
+                                                            Add Rs {Math.round(amountShort).toLocaleString('en-IN')} more to unlock
                                                         </span>
                                                     )}
                                                     {coupon.maxDiscount && <span>Max discount: Rs {coupon.maxDiscount}</span>}

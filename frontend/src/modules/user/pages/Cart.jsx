@@ -17,7 +17,7 @@ const Cart = () => {
     const warrantyLabel = siteSettings?.warrantyText || "6-Month Warranty";
     const platingLabel = siteSettings?.platingText || "Lifetime Plating";
     const returnLabel = siteSettings?.returnPolicy || "15-Day Returns";
-    const currencyText = (value) => `₹${Number(value || 0).toLocaleString('en-IN')}`;
+    const currencyText = (value) => `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
     const couponSaveText = (coupon) => {
         const type = coupon.type || coupon.discountType;
         const val = coupon.value || coupon.discountValue || 0;
