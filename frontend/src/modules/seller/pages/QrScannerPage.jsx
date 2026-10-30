@@ -42,6 +42,7 @@ const QrScannerPage = () => {
   const [cameras, setCameras] = useState([]);
   const [selectedCameraId, setSelectedCameraId] = useState("");
   const [activeCameraId, setActiveCameraId] = useState("");
+  const [decoderStatus, setDecoderStatus] = useState(null);
 
   const resetScan = () => {
     setScannedProduct(null);
@@ -99,6 +100,7 @@ const QrScannerPage = () => {
             video,
             onDecode: decode,
             shouldDecode: () => active && !document.hidden && !scanLockedRef.current,
+            onStatus: (status) => { if (active) setDecoderStatus(status); },
           });
         }
       },
@@ -234,6 +236,7 @@ const QrScannerPage = () => {
                     setIsFlashOn(false);
                     setFlashSupported(false);
                     setCameraError(null);
+                    setDecoderStatus(null);
                     setSelectedCameraId(event.target.value);
                     setCameraAttempt((attempt) => attempt + 1);
                   }}
@@ -244,6 +247,13 @@ const QrScannerPage = () => {
                   ))}
                 </select>
               </label>
+            )}
+            {decoderStatus && (
+              <details className="mx-auto mt-3 max-w-sm rounded-lg bg-black/85 p-2 text-left text-xs text-white">
+                <summary className="cursor-pointer">Scanner details</summary>
+                <p className="mt-2">{decoderStatus.state}; frames read: {decoderStatus.frames}; image: {decoderStatus.width} × {decoderStatus.height}</p>
+                {decoderStatus.error && <p className="mt-1 break-words">{decoderStatus.error}</p>}
+              </details>
             )}
           </div>
         )}

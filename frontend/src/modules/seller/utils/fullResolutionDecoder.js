@@ -23,11 +23,39 @@ export function decodeLuminance(source) {
   return new ZXing.MultiFormatReader(false, hints).decode(bitmap).text;
 }
 
-export function startFullResolutionDecoder({ video, onDecode, shouldDecode, interval = 700 }) {
+const isDecodeMiss = (error) => error instanceof ZXing.NotFoundException
+  || error instanceof ZXing.ChecksumException || error instanceof ZXing.FormatException;
+
+export function decodeFramePixels({ data, width, height }) {
+  const pixels = new Uint8ClampedArray(width * height);
+  for (let i = 0; i < pixels.length; i++) {
+    const offset = i * 4;
+    pixels[i] = data[offset + 3] === 0 ? 255
+      : (306 * data[offset] + 601 * data[offset + 1] + 117 * data[offset + 2] + 512) >> 10;
+  }
+  try {
+    return decodeLuminance(new ZXing.RGBLuminanceSource(pixels, width, height));
+  } catch (error) {
+    if (!isDecodeMiss(error)) throw error;
+  }
+  // The bundled HTMLCanvasElementLuminanceSource keeps its original dimensions
+  // after rotation. Rotate the pixels explicitly, including width/height, so
+  // portrait and sideways barcodes use the same tested luminance path.
+  const rotated = new Uint8ClampedArray(pixels.length);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      rotated[(width - 1 - x) * height + y] = pixels[y * width + x];
+    }
+  }
+  return decodeLuminance(new ZXing.RGBLuminanceSource(rotated, height, width));
+}
+
+export function startFullResolutionDecoder({ video, onDecode, shouldDecode, onStatus = () => {}, interval = 700 }) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { willReadFrequently: true });
   let stopped = false;
   let timeout;
+  let frames = 0;
 
   const scan = () => {
     if (stopped) return;
@@ -38,11 +66,23 @@ export function startFullResolutionDecoder({ video, onDecode, shouldDecode, inte
       canvas.height = video.videoHeight;
       try {
         context.drawImage(video, 0, 0);
-        const text = decodeLuminance(new ZXing.HTMLCanvasElementLuminanceSource(canvas));
+        const image = context.getImageData(0, 0, canvas.width, canvas.height);
+        frames++;
+        const text = decodeFramePixels(image);
+        onStatus({ state: "decoded", frames, width: canvas.width, height: canvas.height });
         if (!stopped) onDecode(text);
-      } catch {
-        // A frame without a readable barcode is normal; try the next frame.
+      } catch (error) {
+        // Report unexpected extraction/decoder failures instead of silently
+        // treating every exception as an ordinary frame without a barcode.
+        onStatus({
+          state: isDecodeMiss(error) ? "No barcode found" : "Decoder error",
+          frames, width: canvas.width, height: canvas.height,
+          error: isDecodeMiss(error) ? "" : `${error?.name || "Error"}: ${error?.message || error}`,
+        });
       }
+    } else if (!context || !video.videoWidth || video.readyState < 2) {
+      onStatus({ state: context ? "Waiting for camera frames" : "Canvas unavailable", frames,
+        width: video.videoWidth, height: video.videoHeight, readyState: video.readyState });
     }
     if (!stopped) timeout = setTimeout(scan, interval);
   };

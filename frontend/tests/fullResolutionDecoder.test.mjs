@@ -1,11 +1,78 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { decodeLuminance, isIOSDevice, startFullResolutionDecoder } from "../src/modules/seller/utils/fullResolutionDecoder.js";
+import { decodeFramePixels, decodeLuminance, isIOSDevice, startFullResolutionDecoder } from "../src/modules/seller/utils/fullResolutionDecoder.js";
 
 const require = createRequire(import.meta.url);
 const JsBarcode = require("jsbarcode");
 const ZXing = require("html5-qrcode/third_party/zxing-js.umd.js");
+
+function barcodeFrame(sideways = false) {
+  const barcode = {};
+  JsBarcode(barcode, "SANDS-TEST-123456", { format: "CODE128", displayValue: false });
+  const modules = barcode.encodings.map((encoding) => encoding.data).join("");
+  const originalWidth = modules.length * 2 + 60;
+  const originalHeight = 180;
+  const width = sideways ? originalHeight : originalWidth;
+  const height = sideways ? originalWidth : originalHeight;
+  const data = new Uint8ClampedArray(width * height * 4).fill(255);
+  for (let y = 30; y < 150; y++) {
+    for (let x = 0; x < modules.length * 2; x++) {
+      if (modules[Math.floor(x / 2)] !== "1") continue;
+      const originalX = x + 30;
+      const offset = sideways
+        ? (originalX * width + (originalHeight - 1 - y)) * 4
+        : (y * width + originalX) * 4;
+      data[offset] = data[offset + 1] = data[offset + 2] = 0;
+    }
+  }
+  return { data, width, height };
+}
+
+test("RGBA camera frames decode in both portrait and sideways orientations", () => {
+  assert.equal(decodeFramePixels(barcodeFrame()), "SANDS-TEST-123456");
+  assert.equal(decodeFramePixels(barcodeFrame(true)), "SANDS-TEST-123456");
+});
+
+test("video frame extraction and decoding report success through the complete adapter", (t) => {
+  const originalDocument = globalThis.document;
+  t.after(() => { if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument; });
+  const image = barcodeFrame(true);
+  const canvas = { getContext: () => ({ drawImage() {}, getImageData: () => image }) };
+  globalThis.document = { createElement: () => canvas };
+  let scheduled;
+  t.mock.method(globalThis, "setTimeout", (callback) => { scheduled = callback; return 1; });
+  t.mock.method(globalThis, "clearTimeout", () => {});
+  const decoded = [];
+  const statuses = [];
+  const stop = startFullResolutionDecoder({
+    video: { readyState: 4, videoWidth: image.width, videoHeight: image.height },
+    shouldDecode: () => true, onDecode: (text) => decoded.push(text), onStatus: (status) => statuses.push(status),
+  });
+  scheduled();
+  assert.deepEqual(decoded, ["SANDS-TEST-123456"]);
+  assert.equal(statuses[0].state, "decoded");
+  assert.equal(statuses[0].frames, 1);
+  stop();
+});
+
+test("frame extraction errors are reported rather than treated as unreadable barcodes", (t) => {
+  const originalDocument = globalThis.document;
+  t.after(() => { if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument; });
+  globalThis.document = { createElement: () => ({ getContext: () => ({ drawImage() { throw new TypeError("Frame unavailable"); } }) }) };
+  let scheduled;
+  t.mock.method(globalThis, "setTimeout", (callback) => { scheduled = callback; return 1; });
+  t.mock.method(globalThis, "clearTimeout", () => {});
+  const statuses = [];
+  const stop = startFullResolutionDecoder({
+    video: { readyState: 4, videoWidth: 1920, videoHeight: 1080 },
+    shouldDecode: () => true, onDecode: () => assert.fail("must not decode"), onStatus: (status) => statuses.push(status),
+  });
+  scheduled();
+  assert.equal(statuses[0].state, "Decoder error");
+  assert.match(statuses[0].error, /Frame unavailable/);
+  stop();
+});
 
 test("shrinking a dense CODE_128 frame to 320 pixels loses decodable bar detail", () => {
   const serial = "SANDS-ABCDEFGHIJKLMNOPQRSTUVWXYZ-0123456789";

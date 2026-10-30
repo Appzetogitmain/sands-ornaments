@@ -34,6 +34,12 @@ Repeat these checks in iPhone Safari and Android Chrome:
   displayed scan box. If the default lens is blurry, use the Camera dropdown
   to select another rear lens. Verify switching releases the previous camera
   and scanning still works. Scan a second item after Cancel / Scan Again.
+- Rotate a CODE_128 label 90 degrees and verify the iPhone decoder can still
+  read it. If detection fails, expand Scanner details and record the status,
+  frame count, image dimensions, and any error text. Increasing frame counts
+  with "No barcode found" mean image extraction is working; zero frames or a
+  decoder error identify a camera-to-decoder failure. No barcode values or
+  images are sent anywhere by this diagnostic panel.
 - On a device reporting torch support, toggle flash both ways. On other devices,
   verify flash is disabled and scanning still works.
 
