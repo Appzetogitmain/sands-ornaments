@@ -41,6 +41,7 @@ test("starts the rear camera without a forced aspect ratio and stops on disposal
   await tick();
   assert.deepEqual(f.calls[0][1], { facingMode: "environment" });
   assert.equal(f.calls[0][2].aspectRatio, undefined);
+  assert.equal(f.calls[0][2].fps, 20);
   f.scanner.decode("SERIAL-123");
   await dispose();
   f.scanner.decode("ignored after unmount");
@@ -169,6 +170,7 @@ test("iOS requests preferred capture resolution and preserves an explicitly sele
   const dispose = createScannerSessionManager()({ ...f.options, highResolution: true, cameraId: "rear-wide" });
   await tick();
   assert.equal(f.calls[0][1], "rear-wide");
+  assert.equal(f.calls[0][2].fps, 5);
   assert.deepEqual(f.calls[0][2].videoConstraints, {
     deviceId: { exact: "rear-wide" }, width: { ideal: 1920 }, height: { ideal: 1080 },
   });

@@ -26,7 +26,43 @@ export function decodeLuminance(source) {
 const isDecodeMiss = (error) => error instanceof ZXing.NotFoundException
   || error instanceof ZXing.ChecksumException || error instanceof ZXing.FormatException;
 
+export function decodeCenterStrip({ data, width, height }, vertical) {
+  // Linear barcodes need scan lines across their bars, not a QR search over
+  // the whole image. Keep native pixel detail in both orientations.
+  const stripWidth = vertical ? Math.min(width, 96) : width;
+  const stripHeight = vertical ? height : Math.min(height, 96);
+  const left = Math.floor((width - stripWidth) / 2);
+  const top = Math.floor((height - stripHeight) / 2);
+  const pixels = new Uint8ClampedArray(stripWidth * stripHeight);
+  for (let y = 0; y < stripHeight; y++) {
+    for (let x = 0; x < stripWidth; x++) {
+      const offset = ((y + top) * width + x + left) * 4;
+      const target = vertical ? (stripWidth - 1 - x) * stripHeight + y : y * stripWidth + x;
+      pixels[target] = data[offset + 3] === 0 ? 255
+        : (306 * data[offset] + 601 * data[offset + 1] + 117 * data[offset + 2] + 512) >> 10;
+    }
+  }
+  const source = new ZXing.RGBLuminanceSource(pixels,
+    vertical ? stripHeight : stripWidth, vertical ? stripWidth : stripHeight);
+  const hints = new Map([
+    // Product labels use CODE_128. A short pass in each direction avoids an
+    // exhaustive search in the wrong direction before trying a sideways label.
+    [ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128]],
+    [ZXing.DecodeHintType.TRY_HARDER, false],
+  ]);
+  return new ZXing.MultiFormatReader(false, hints)
+    .decode(new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(source))).text;
+}
+
 export function decodeFramePixels({ data, width, height }) {
+  for (const vertical of [false, true]) {
+    try {
+      return decodeCenterStrip({ data, width, height }, vertical);
+    } catch (error) {
+      if (!isDecodeMiss(error)) throw error;
+    }
+  }
+  // Preserve the full-frame path for QR codes and barcodes outside the center.
   const pixels = new Uint8ClampedArray(width * height);
   for (let i = 0; i < pixels.length; i++) {
     const offset = i * 4;
@@ -50,7 +86,7 @@ export function decodeFramePixels({ data, width, height }) {
   return decodeLuminance(new ZXing.RGBLuminanceSource(rotated, height, width));
 }
 
-export function startFullResolutionDecoder({ video, onDecode, shouldDecode, onStatus = () => {}, interval = 700 }) {
+export function startFullResolutionDecoder({ video, onDecode, shouldDecode, onStatus = () => {}, interval = 250 }) {
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d", { willReadFrequently: true });
   let stopped = false;
@@ -62,8 +98,8 @@ export function startFullResolutionDecoder({ video, onDecode, shouldDecode, onSt
     if (context && shouldDecode() && video.readyState >= 2 && video.videoWidth && video.videoHeight) {
       // Preserve sensor pixels instead of shrinking the barcode to a CSS-sized
       // scan box. Include the whole image so longer serial barcodes fit.
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
+      if (canvas.width !== video.videoWidth) canvas.width = video.videoWidth;
+      if (canvas.height !== video.videoHeight) canvas.height = video.videoHeight;
       try {
         context.drawImage(video, 0, 0);
         const image = context.getImageData(0, 0, canvas.width, canvas.height);
@@ -86,7 +122,7 @@ export function startFullResolutionDecoder({ video, onDecode, shouldDecode, onSt
     }
     if (!stopped) timeout = setTimeout(scan, interval);
   };
-  timeout = setTimeout(scan, interval);
+  timeout = setTimeout(scan, 0);
   return () => {
     stopped = true;
     clearTimeout(timeout);

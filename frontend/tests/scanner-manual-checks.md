@@ -3,6 +3,10 @@
 Run `npm run test:scanner`, `npm run build`, and
 `npx eslint src/modules/seller/pages/QrScannerPage.jsx src/modules/seller/utils/scannerSession.js src/modules/seller/utils/fullResolutionDecoder.js`.
 
+Run `node tests/benchmark-scanner.mjs` to measure decoding of generated 1080p
+CODE_128 frames in both orientations. This measures local processing time,
+not iPhone autofocus, network latency, or complete time to scan a product.
+
 Camera hardware checks require the deployed HTTPS site. An HTTP LAN address
 from the Vite development server cannot provide camera access on an iPhone.
 The automated tests decode generated CODE_128 image pixels and mock the camera
@@ -13,6 +17,10 @@ Repeat these checks in iPhone Safari and Android Chrome:
 - Open the seller scanner, allow camera permission, and verify rear-camera video
   and a scan frame appear. Scan a real product CODE_128 barcode and a supported
   QR code containing a product serial. Verify the correct product and price.
+- On iPhone, compare time to first detection with a sharp CODE_128 barcode
+  crossing the image center, in both orientations. Also scan an off-center label
+  and a QR code to check the full-frame fallback. The faster center pass must
+  not reduce supported formats or produce duplicate preview requests.
 - Keep the barcode in view. Verify only one preview request and one success
   notification occur. Show another barcode while the result is open: the
   displayed product must stay unchanged.
