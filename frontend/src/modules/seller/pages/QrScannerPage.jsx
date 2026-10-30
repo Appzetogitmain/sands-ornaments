@@ -25,34 +25,73 @@ const QrScannerPage = () => {
   const scannerRef = useRef(null);
 
   useEffect(() => {
-    const html5QrCode = new Html5Qrcode("reader");
+    let isMounted = true;
+
+    // Pass formats to constructor where html5-qrcode expects them
+    const html5QrCode = new Html5Qrcode("reader", {
+      formatsToSupport: [
+        Html5Qrcode.QR_CODE,
+        Html5Qrcode.CODE_128,
+        Html5Qrcode.EAN_13,
+        Html5Qrcode.EAN_8,
+        Html5Qrcode.UPC_A,
+        Html5Qrcode.UPC_E,
+        Html5Qrcode.CODE_39,
+      ],
+      verbose: false,
+    });
     scannerRef.current = html5QrCode;
 
     const startScanner = async () => {
+      const scanConfig = {
+        fps: 20,
+        qrbox: { width: 280, height: 180 },
+      };
+
       try {
-        // Enable multiple formats including common barcodes
+        // Primary: Start with environment (rear) camera
+        // Note: aspectRatio constraint is omitted so WebKit/Safari does not reject
         await html5QrCode.start(
           { facingMode: "environment" },
-          {
-            fps: 20, // Higher FPS for faster scanning
-            qrbox: { width: 280, height: 180 }, // Rectangle box better for barcodes
-            aspectRatio: 1.0,
-            formatsToSupport: [
-              Html5Qrcode.QR_CODE,
-              Html5Qrcode.CODE_128,
-              Html5Qrcode.EAN_13,
-              Html5Qrcode.EAN_8,
-              Html5Qrcode.UPC_A,
-              Html5Qrcode.UPC_E,
-              Html5Qrcode.CODE_39,
-            ],
-          },
+          scanConfig,
           onScanSuccess,
-          () => {}, // silent error
+          () => {} // silent per-frame handler
         );
-        setScannerReady(true);
-      } catch (err) {
-        console.error("Scanner start error:", err);
+
+        if (isMounted) {
+          setScannerReady(true);
+        } else if (html5QrCode.isScanning) {
+          html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
+        }
+      } catch (primaryErr) {
+        if (!isMounted) return;
+
+        // Fallback: Query available cameras directly (helps multi-lens iPhones & iPads)
+        try {
+          const cameras = await Html5Qrcode.getCameras().catch(() => []);
+          if (cameras && cameras.length > 0) {
+            const backCamera =
+              cameras.find((cam) =>
+                /back|rear|environment/i.test(cam.label || "")
+              ) || cameras[cameras.length - 1];
+
+            await html5QrCode.start(
+              backCamera.id,
+              scanConfig,
+              onScanSuccess,
+              () => {}
+            );
+
+            if (isMounted) {
+              setScannerReady(true);
+              return;
+            }
+          }
+        } catch (_fallbackErr) {
+          // Keep primary error log
+        }
+
+        console.error("Scanner start error:", primaryErr);
         toast.error("Camera access denied or not found");
       }
     };
@@ -60,6 +99,7 @@ const QrScannerPage = () => {
     startScanner();
 
     return () => {
+      isMounted = false;
       if (html5QrCode.isScanning) {
         html5QrCode
           .stop()
@@ -297,6 +337,16 @@ const QrScannerPage = () => {
       )}
 
       <style>{`
+                #reader {
+                    width: 100% !important;
+                    height: 100% !important;
+                    border: none !important;
+                }
+                #reader video {
+                    width: 100% !important;
+                    height: 100% !important;
+                    object-fit: cover !important;
+                }
                 .scanner-laser {
                     animation: laser 2s infinite ease-in-out;
                 }
