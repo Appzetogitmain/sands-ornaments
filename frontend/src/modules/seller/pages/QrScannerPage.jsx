@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Html5Qrcode } from "html5-qrcode";
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import {
   X,
   QrCode,
@@ -30,13 +30,13 @@ const QrScannerPage = () => {
     // Pass formats to constructor where html5-qrcode expects them
     const html5QrCode = new Html5Qrcode("reader", {
       formatsToSupport: [
-        Html5Qrcode.QR_CODE,
-        Html5Qrcode.CODE_128,
-        Html5Qrcode.EAN_13,
-        Html5Qrcode.EAN_8,
-        Html5Qrcode.UPC_A,
-        Html5Qrcode.UPC_E,
-        Html5Qrcode.CODE_39,
+        Html5QrcodeSupportedFormats.QR_CODE,
+        Html5QrcodeSupportedFormats.CODE_128,
+        Html5QrcodeSupportedFormats.EAN_13,
+        Html5QrcodeSupportedFormats.EAN_8,
+        Html5QrcodeSupportedFormats.UPC_A,
+        Html5QrcodeSupportedFormats.UPC_E,
+        Html5QrcodeSupportedFormats.CODE_39,
       ],
       verbose: false,
     });
