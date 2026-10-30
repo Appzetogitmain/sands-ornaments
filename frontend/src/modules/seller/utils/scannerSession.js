@@ -22,7 +22,7 @@ export const getCameraErrorMessage = (error) => {
 export function createScannerSessionManager() {
   let previousSession = Promise.resolve();
 
-  return function openScannerSession({ createScanner, getCameras, onDecode, onReady, onError }) {
+  return function openScannerSession({ createScanner, getCameras, onDecode, onReady, onError, cameraId, highResolution = false }) {
     let disposed = false;
     let release;
     const released = new Promise((resolve) => { release = resolve; });
@@ -30,14 +30,25 @@ export function createScannerSessionManager() {
     const finished = previousSession.then(async () => {
       if (disposed) return;
       let scanner;
+      let stopAdditionalDecoder;
       try {
         scanner = createScanner();
         const config = { fps: 20, qrbox: getScanBox };
+        const start = (camera) => scanner.start(camera, highResolution ? {
+          ...config,
+          videoConstraints: {
+            ...(typeof camera === "string"
+              ? { deviceId: { exact: camera } }
+              : { facingMode: "environment" }),
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        } : config, decode, () => {});
         const decode = (text) => { if (!disposed) onDecode(text); };
         try {
           // Keep the camera's native aspect ratio. The library supplies muted
           // inline video playback, as required by Safari on iOS.
-          await scanner.start({ facingMode: "environment" }, config, decode, () => {});
+          await start(cameraId || { facingMode: "environment" });
         } catch (error) {
           if (disposed) return;
           if (/NotAllowed|Permission|denied/i.test(`${error?.name} ${error?.message || error}`)) {
@@ -48,15 +59,16 @@ export function createScannerSessionManager() {
           const camera = cameras.find(({ label }) => /back|rear|environment/i.test(label || ""))
             || cameras[cameras.length - 1];
           if (!camera) throw error;
-          await scanner.start(camera.id, config, decode, () => {});
+          await start(camera.id);
         }
         if (!disposed) {
-          onReady(scanner);
+          stopAdditionalDecoder = onReady(scanner, decode);
           await released;
         }
       } catch (error) {
         if (!disposed) onError(error);
       } finally {
+        if (typeof stopAdditionalDecoder === "function") stopAdditionalDecoder();
         if (scanner) {
           try {
             if (scanner.isScanning) await scanner.stop();

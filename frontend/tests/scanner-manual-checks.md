@@ -1,12 +1,12 @@
 # Seller scanner device checks
 
 Run `npm run test:scanner`, `npm run build`, and
-`npx eslint src/modules/seller/pages/QrScannerPage.jsx src/modules/seller/utils/scannerSession.js`.
+`npx eslint src/modules/seller/pages/QrScannerPage.jsx src/modules/seller/utils/scannerSession.js src/modules/seller/utils/fullResolutionDecoder.js`.
 
 Camera hardware checks require the deployed HTTPS site. An HTTP LAN address
 from the Vite development server cannot provide camera access on an iPhone.
-The automated tests mock the camera; they do not validate autofocus or Safari
-video capture on a physical device.
+The automated tests decode generated CODE_128 image pixels and mock the camera
+lifecycle; they do not validate autofocus or Safari video capture on a physical device.
 
 Repeat these checks in iPhone Safari and Android Chrome:
 
@@ -29,6 +29,11 @@ Repeat these checks in iPhone Safari and Android Chrome:
   the browser's camera-use indicator turns off.
 - Test narrow portrait and landscape views. Verify the barcode under the
   library's scan frame is decoded and the preview is not stretched or cropped.
+- On iPhone, test a long serial barcode with the entire code visible and sharply
+  focused. The additional decoder reads sensor pixels rather than the small
+  displayed scan box. If the default lens is blurry, use the Camera dropdown
+  to select another rear lens. Verify switching releases the previous camera
+  and scanning still works. Scan a second item after Cancel / Scan Again.
 - On a device reporting torch support, toggle flash both ways. On other devices,
   verify flash is disabled and scanning still works.
 

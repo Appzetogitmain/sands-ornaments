@@ -11,6 +11,7 @@ import {
 import { sellerDirectSaleService } from "../services/sellerDirectSaleService";
 import toast from "react-hot-toast";
 import { getCameraErrorMessage, openScannerSession } from "../utils/scannerSession";
+import { isIOSDevice, startFullResolutionDecoder } from "../utils/fullResolutionDecoder";
 
 const playSuccessEffects = () => {
   try {
@@ -38,6 +39,9 @@ const QrScannerPage = () => {
   const [scanError, setScanError] = useState(null);
   const [cameraAttempt, setCameraAttempt] = useState(0);
   const [flashSupported, setFlashSupported] = useState(false);
+  const [cameras, setCameras] = useState([]);
+  const [selectedCameraId, setSelectedCameraId] = useState("");
+  const [activeCameraId, setActiveCameraId] = useState("");
 
   const resetScan = () => {
     setScannedProduct(null);
@@ -56,6 +60,8 @@ const QrScannerPage = () => {
     }
 
     const dispose = openScannerSession({
+      cameraId: selectedCameraId,
+      highResolution: isIOSDevice(navigator),
       createScanner: () => new Html5Qrcode("reader", {
         formatsToSupport: [
           Html5QrcodeSupportedFormats.QR_CODE,
@@ -69,13 +75,31 @@ const QrScannerPage = () => {
         verbose: false,
       }),
       getCameras: () => Html5Qrcode.getCameras(),
-      onReady: (scanner) => {
+      onReady: (scanner, decode) => {
         scannerRef.current = scanner;
         setScannerReady(true);
         try {
-          setFlashSupported(scanner.getRunningTrackCapabilities().torch === true);
+          const capabilities = scanner.getRunningTrackCapabilities();
+          setFlashSupported(capabilities.torch === true);
+          setActiveCameraId(scanner.getRunningTrackSettings().deviceId || "");
+          if (capabilities.focusMode?.includes("continuous")) {
+            scanner.applyVideoConstraints({ advanced: [{ focusMode: "continuous" }] }).catch(() => {});
+          }
         } catch {
           setFlashSupported(false);
+        }
+        // Enumerate the permitted devices without opening a second stream:
+        // opening another camera can interrupt Safari's existing camera feed.
+        navigator.mediaDevices.enumerateDevices?.().then((devices) => {
+          if (active) setCameras(devices.filter((device) => device.kind === "videoinput" && device.deviceId));
+        }).catch(() => {});
+        const video = document.querySelector("#reader video");
+        if (isIOSDevice(navigator) && video) {
+          return startFullResolutionDecoder({
+            video,
+            onDecode: decode,
+            shouldDecode: () => active && !document.hidden && !scanLockedRef.current,
+          });
         }
       },
       onError: (error) => {
@@ -121,7 +145,7 @@ const QrScannerPage = () => {
       scannerRef.current = null;
       void dispose();
     };
-  }, [cameraAttempt]);
+  }, [cameraAttempt, selectedCameraId]);
 
   const confirmDirectSale = async () => {
     if (!scannedProduct?.serialCode || scannedProduct.available === false || confirmingRef.current) return;
@@ -189,11 +213,38 @@ const QrScannerPage = () => {
       <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-auto">
         <div id="reader" className="w-full" />
         {!scannedProduct && !cameraError && !scanError && (
-          <div className="absolute bottom-8 inset-x-4 pointer-events-none text-center">
+          <div className="absolute bottom-8 inset-x-4 text-center">
             {!scannerReady && <Loader2 className="mx-auto mb-4 w-8 h-8 text-amber-500 animate-spin" />}
             <p className="text-white text-xs font-bold">
               {scannerReady ? "Position the barcode or QR code within the camera frame" : "Starting camera..."}
             </p>
+            {scannerReady && (
+              <p className="mt-2 text-xs text-white/80">Keep the whole barcode visible. If blurry, move farther away or change camera.</p>
+            )}
+            {cameras.length > 1 && (
+              <label className="mt-4 inline-flex items-center gap-3 text-sm text-white">
+                Camera
+                <select
+                  aria-label="Scanner camera"
+                  className="max-w-56 rounded-lg bg-black px-3 py-2 text-white border border-white/30"
+                  value={activeCameraId}
+                  disabled={!scannerReady || loading}
+                  onChange={(event) => {
+                    setScannerReady(false);
+                    setIsFlashOn(false);
+                    setFlashSupported(false);
+                    setCameraError(null);
+                    setSelectedCameraId(event.target.value);
+                    setCameraAttempt((attempt) => attempt + 1);
+                  }}
+                >
+                  {!activeCameraId && <option value="">Automatic rear camera</option>}
+                  {cameras.map((camera, index) => (
+                    <option key={camera.deviceId} value={camera.deviceId}>{camera.label || `Camera ${index + 1}`}</option>
+                  ))}
+                </select>
+              </label>
+            )}
           </div>
         )}
         {(cameraError || scanError) && (

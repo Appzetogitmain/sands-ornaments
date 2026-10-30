@@ -163,3 +163,26 @@ test("camera errors give actionable permission, missing-camera and busy messages
   assert.match(getCameraErrorMessage({ name: "NotFoundError" }), /No camera/);
   assert.match(getCameraErrorMessage(new Error("NotReadableError")), /camera is busy/);
 });
+
+test("iOS requests preferred capture resolution and preserves an explicitly selected lens", async () => {
+  const f = fixture();
+  const dispose = createScannerSessionManager()({ ...f.options, highResolution: true, cameraId: "rear-wide" });
+  await tick();
+  assert.equal(f.calls[0][1], "rear-wide");
+  assert.deepEqual(f.calls[0][2].videoConstraints, {
+    deviceId: { exact: "rear-wide" }, width: { ideal: 1920 }, height: { ideal: 1080 },
+  });
+  await dispose();
+});
+
+test("additional decoder is stopped before releasing the camera", async () => {
+  const f = fixture();
+  f.options.onReady = (scanner, decode) => {
+    decode("SERIAL-123");
+    return () => f.calls.push(["stop-decoder"]);
+  };
+  const dispose = createScannerSessionManager()(f.options);
+  await tick();
+  await dispose();
+  assert.deepEqual(f.calls.map(([name]) => name), ["start", "decode", "stop-decoder", "stop", "clear"]);
+});
