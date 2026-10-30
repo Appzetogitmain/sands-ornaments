@@ -1,15 +1,15 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { decodeFramePixels, decodeLuminance, isIOSDevice, startFullResolutionDecoder } from "../src/modules/seller/utils/fullResolutionDecoder.js";
+import { decodeCenterStrip, decodeFramePixels, decodeLuminance, isIOSDevice, startFullResolutionDecoder } from "../src/modules/seller/utils/fullResolutionDecoder.js";
 
 const require = createRequire(import.meta.url);
 const JsBarcode = require("jsbarcode");
 const ZXing = require("html5-qrcode/third_party/zxing-js.umd.js");
 
-function barcodeFrame(sideways = false) {
+function barcodeFrame(sideways = false, { code = "SANDS-TEST-123456", format = "CODE128" } = {}) {
   const barcode = {};
-  JsBarcode(barcode, "SANDS-TEST-123456", { format: "CODE128", displayValue: false });
+  JsBarcode(barcode, code, { format, displayValue: false });
   const modules = barcode.encodings.map((encoding) => encoding.data).join("");
   const originalWidth = modules.length * 2 + 60;
   const originalHeight = 180;
@@ -34,6 +34,39 @@ test("RGBA camera frames decode in both portrait and sideways orientations", () 
   assert.equal(decodeFramePixels(barcodeFrame(true)), "SANDS-TEST-123456");
 });
 
+test("centered product barcodes decode through the fast pass in both directions", () => {
+  assert.equal(decodeCenterStrip(barcodeFrame(), false), "SANDS-TEST-123456");
+  assert.equal(decodeCenterStrip(barcodeFrame(true), true), "SANDS-TEST-123456");
+});
+
+test("the full-frame fallback still reads barcodes outside the center strips", () => {
+  const image = barcodeFrame();
+  const height = 700;
+  const data = new Uint8ClampedArray(image.width * height * 4).fill(255);
+  data.set(image.data, image.width * 20 * 4);
+  const frame = { data, width: image.width, height };
+  assert.throws(() => decodeCenterStrip(frame, false));
+  assert.throws(() => decodeCenterStrip(frame, true));
+  assert.equal(decodeFramePixels(frame), "SANDS-TEST-123456");
+});
+
+test("the full-frame fallback preserves EAN_13 and QR support", () => {
+  assert.equal(decodeFramePixels(barcodeFrame(false, { code: "5901234123457", format: "EAN13" })), "5901234123457");
+  const matrix = new ZXing.QRCodeWriter().encode("SANDS-QR-123", ZXing.BarcodeFormat.QR_CODE, 240, 240, new Map());
+  const width = matrix.getWidth();
+  const height = matrix.getHeight();
+  const data = new Uint8ClampedArray(width * height * 4).fill(255);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (matrix.get(x, y)) {
+        const offset = (y * width + x) * 4;
+        data[offset] = data[offset + 1] = data[offset + 2] = 0;
+      }
+    }
+  }
+  assert.equal(decodeFramePixels({ data, width, height }), "SANDS-QR-123");
+});
+
 test("video frame extraction and decoding report success through the complete adapter", (t) => {
   const originalDocument = globalThis.document;
   t.after(() => { if (originalDocument === undefined) delete globalThis.document; else globalThis.document = originalDocument; });
@@ -41,7 +74,8 @@ test("video frame extraction and decoding report success through the complete ad
   const canvas = { getContext: () => ({ drawImage() {}, getImageData: () => image }) };
   globalThis.document = { createElement: () => canvas };
   let scheduled;
-  t.mock.method(globalThis, "setTimeout", (callback) => { scheduled = callback; return 1; });
+  const delays = [];
+  t.mock.method(globalThis, "setTimeout", (callback, delay) => { scheduled = callback; delays.push(delay); return 1; });
   t.mock.method(globalThis, "clearTimeout", () => {});
   const decoded = [];
   const statuses = [];
@@ -53,6 +87,7 @@ test("video frame extraction and decoding report success through the complete ad
   assert.deepEqual(decoded, ["SANDS-TEST-123456"]);
   assert.equal(statuses[0].state, "decoded");
   assert.equal(statuses[0].frames, 1);
+  assert.deepEqual(delays, [0, 250]);
   stop();
 });
 

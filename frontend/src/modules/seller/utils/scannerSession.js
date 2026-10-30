@@ -33,7 +33,9 @@ export function createScannerSessionManager() {
       let stopAdditionalDecoder;
       try {
         scanner = createScanner();
-        const config = { fps: 20, qrbox: getScanBox };
+        // On iOS the full-resolution decoder handles small and sideways
+        // barcodes. Avoid competing with it using 20 CSS-sized scans/second.
+        const config = { fps: highResolution ? 5 : 20, qrbox: getScanBox };
         const start = (camera) => scanner.start(camera, highResolution ? {
           ...config,
           videoConstraints: {
