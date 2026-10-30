@@ -2,17 +2,25 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Html5Qrcode, Html5QrcodeSupportedFormats } from "html5-qrcode";
 import {
-  X,
-  QrCode,
   ArrowLeft,
   CheckCircle2 as SuccessIcon,
-  Package,
   Zap,
   ZapOff,
   Loader2,
 } from "lucide-react";
 import { sellerDirectSaleService } from "../services/sellerDirectSaleService";
 import toast from "react-hot-toast";
+import { getCameraErrorMessage, openScannerSession } from "../utils/scannerSession";
+
+const playSuccessEffects = () => {
+  try {
+    const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3");
+    audio.play().catch(() => {});
+    window.navigator?.vibrate?.(200);
+  } catch {
+    // Sound and vibration are optional on iOS and other browsers.
+  }
+};
 
 const QrScannerPage = () => {
   const navigate = useNavigate();
@@ -24,152 +32,100 @@ const QrScannerPage = () => {
   const [scannerReady, setScannerReady] = useState(false);
   const scannerRef = useRef(null);
 
+  const scanLockedRef = useRef(false);
+  const confirmingRef = useRef(false);
+  const [cameraError, setCameraError] = useState(null);
+  const [scanError, setScanError] = useState(null);
+  const [cameraAttempt, setCameraAttempt] = useState(0);
+  const [flashSupported, setFlashSupported] = useState(false);
+
+  const resetScan = () => {
+    setScannedProduct(null);
+    setScanResult(null);
+    setScanError(null);
+    scanLockedRef.current = false;
+  };
+
   useEffect(() => {
-    let isMounted = true;
+    let active = true;
+    if (!window.isSecureContext || !navigator.mediaDevices?.getUserMedia) {
+      setCameraError(window.isSecureContext
+        ? "Camera access is unavailable in this browser. Open this page in Safari or Chrome."
+        : "Camera access requires HTTPS. Open the secure website to scan.");
+      return;
+    }
 
-    // Pass formats to constructor where html5-qrcode expects them
-    const html5QrCode = new Html5Qrcode("reader", {
-      formatsToSupport: [
-        Html5QrcodeSupportedFormats.QR_CODE,
-        Html5QrcodeSupportedFormats.CODE_128,
-        Html5QrcodeSupportedFormats.EAN_13,
-        Html5QrcodeSupportedFormats.EAN_8,
-        Html5QrcodeSupportedFormats.UPC_A,
-        Html5QrcodeSupportedFormats.UPC_E,
-        Html5QrcodeSupportedFormats.CODE_39,
-      ],
-      verbose: false,
-    });
-    scannerRef.current = html5QrCode;
-
-    const startScanner = async () => {
-      const scanConfig = {
-        fps: 20,
-        qrbox: { width: 280, height: 180 },
-      };
-
-      try {
-        // Primary: Start with environment (rear) camera
-        // Note: aspectRatio constraint is omitted so WebKit/Safari does not reject
-        await html5QrCode.start(
-          { facingMode: "environment" },
-          scanConfig,
-          onScanSuccess,
-          () => {} // silent per-frame handler
-        );
-
-        if (isMounted) {
-          setScannerReady(true);
-        } else if (html5QrCode.isScanning) {
-          html5QrCode.stop().then(() => html5QrCode.clear()).catch(() => {});
-        }
-      } catch (primaryErr) {
-        if (!isMounted) return;
-
-        // Fallback: Query available cameras directly (helps multi-lens iPhones & iPads)
+    const dispose = openScannerSession({
+      createScanner: () => new Html5Qrcode("reader", {
+        formatsToSupport: [
+          Html5QrcodeSupportedFormats.QR_CODE,
+          Html5QrcodeSupportedFormats.CODE_128,
+          Html5QrcodeSupportedFormats.EAN_13,
+          Html5QrcodeSupportedFormats.EAN_8,
+          Html5QrcodeSupportedFormats.UPC_A,
+          Html5QrcodeSupportedFormats.UPC_E,
+          Html5QrcodeSupportedFormats.CODE_39,
+        ],
+        verbose: false,
+      }),
+      getCameras: () => Html5Qrcode.getCameras(),
+      onReady: (scanner) => {
+        scannerRef.current = scanner;
+        setScannerReady(true);
         try {
-          const cameras = await Html5Qrcode.getCameras().catch(() => []);
-          if (cameras && cameras.length > 0) {
-            const backCamera =
-              cameras.find((cam) =>
-                /back|rear|environment/i.test(cam.label || "")
-              ) || cameras[cameras.length - 1];
-
-            await html5QrCode.start(
-              backCamera.id,
-              scanConfig,
-              onScanSuccess,
-              () => {}
-            );
-
-            if (isMounted) {
-              setScannerReady(true);
-              return;
-            }
-          }
-        } catch (_fallbackErr) {
-          // Keep primary error log
+          setFlashSupported(scanner.getRunningTrackCapabilities().torch === true);
+        } catch {
+          setFlashSupported(false);
         }
-
-        console.error("Scanner start error:", primaryErr);
-        toast.error("Camera access denied or not found");
-      }
-    };
-
-    startScanner();
+      },
+      onError: (error) => {
+        console.error("Scanner start error:", error);
+        setCameraError(getCameraErrorMessage(error));
+      },
+      onDecode: async (decodedText) => {
+        const code = String(decodedText || "").trim();
+        // Acquire synchronously: React state updates cannot guard callbacks
+        // from subsequent frames or a second barcode while preview is open.
+        if (!code || scanLockedRef.current) return;
+        scanLockedRef.current = true;
+        setScanResult(code);
+        setLoading(true);
+        playSuccessEffects();
+        try {
+          const response = await sellerDirectSaleService.preview({ serialCode: code });
+          if (!active) return;
+          if (!response?.success) throw new Error(response?.message || "Failed to preview");
+          const data = response.data || response;
+          setScannedProduct({
+            name: data.product?.name,
+            stock: data.variant?.stock,
+            price: data.variant?.price,
+            serialCode: data.serialCode,
+            available: data.available,
+            status: data.status,
+          });
+          toast.success(data.available ? "Identity Verified: Unit Available" : "Unit Not Available");
+        } catch (error) {
+          if (!active) return;
+          const message = error.response?.data?.message || error.message || "Failed to preview";
+          setScanError(message);
+          toast.error(message);
+        } finally {
+          if (active) setLoading(false);
+        }
+      },
+    });
 
     return () => {
-      isMounted = false;
-      if (html5QrCode.isScanning) {
-        html5QrCode
-          .stop()
-          .then(() => {
-            html5QrCode.clear();
-          })
-          .catch((err) => console.error("Scanner stop error", err));
-      }
+      active = false;
+      scannerRef.current = null;
+      void dispose();
     };
-  }, []);
-
-  const onScanSuccess = async (decodedText) => {
-    if (loading || scanResult === decodedText) return;
-
-    playSuccessEffects();
-    setScanResult(decodedText);
-    handleProductScan(decodedText);
-  };
-
-  const playSuccessEffects = () => {
-    try {
-      // Beep
-      const audio = new Audio(
-        "https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3",
-      );
-      audio.play().catch(() => {});
-
-      // Vibrate
-      if (window.navigator?.vibrate) {
-        window.navigator.vibrate(200);
-      }
-    } catch (_e) {
-      // Ignore sound/vibration failures (common on some browsers/devices).
-    }
-  };
-
-  const handleProductScan = async (code) => {
-    setLoading(true);
-    try {
-      const response = await sellerDirectSaleService.preview({
-        serialCode: code,
-      });
-      if (!response?.success)
-        throw new Error(response?.message || "Failed to preview");
-      const data = response?.data || response;
-      setScannedProduct({
-        name: data.product?.name,
-        stock: data.variant?.stock,
-        price: data.variant?.price,
-        serialCode: data.serialCode,
-        available: data.available,
-        status: data.status,
-      });
-      toast.success(
-        data.available
-          ? "Identity Verified: Unit Available"
-          : "Unit Not Available",
-      );
-    } catch (err) {
-      toast.error(
-        err.response?.data?.message || "Critical: Decrypted data mismatch",
-      );
-      setScanResult(null); // Reset to allow retry
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, [cameraAttempt]);
 
   const confirmDirectSale = async () => {
-    if (!scannedProduct?.serialCode) return;
+    if (!scannedProduct?.serialCode || scannedProduct.available === false || confirmingRef.current) return;
+    confirmingRef.current = true;
     setConfirming(true);
     try {
       const res = await sellerDirectSaleService.confirm({
@@ -179,11 +135,11 @@ const QrScannerPage = () => {
       if (!res?.success)
         throw new Error(res?.message || "Failed to record sale");
       toast.success("Direct sale recorded");
-      setScannedProduct(null);
-      setScanResult(null);
+      resetScan();
     } catch (err) {
       toast.error(err?.message || "Failed to record sale");
     } finally {
+      confirmingRef.current = false;
       setConfirming(false);
     }
   };
@@ -196,7 +152,7 @@ const QrScannerPage = () => {
         advanced: [{ torch: newState }],
       });
       setIsFlashOn(newState);
-    } catch (err) {
+    } catch {
       toast.error("Flash not supported on this device");
     }
   };
@@ -221,40 +177,43 @@ const QrScannerPage = () => {
         </div>
         <button
           onClick={toggleFlash}
-          className={`p-3 backdrop-blur-xl border rounded-2xl transition-all ${isFlashOn ? "bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/40" : "bg-white/10 border-white/20 text-white"}`}
+          disabled={!scannerReady || !flashSupported}
+          aria-label={isFlashOn ? "Turn flash off" : "Turn flash on"}
+          className={`p-3 backdrop-blur-xl border rounded-2xl transition-all disabled:opacity-40 ${isFlashOn ? "bg-amber-500 border-amber-400 text-white shadow-lg shadow-amber-500/40" : "bg-white/10 border-white/20 text-white"}`}
         >
           {isFlashOn ? <Zap size={20} /> : <ZapOff size={20} />}
         </button>
       </div>
 
-      {/* Viewfinder Container */}
-      <div className="flex-grow relative flex items-center justify-center">
-        <div id="reader" className="w-full h-full object-cover"></div>
-
-        {/* Custom Overlay */}
-        {!scannedProduct && (
-          <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
-            <div className="relative w-72 h-72">
-              {/* Scanning Corners */}
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-amber-500 rounded-tl-2xl"></div>
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-amber-500 rounded-tr-2xl"></div>
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-amber-500 rounded-bl-2xl"></div>
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-amber-500 rounded-br-2xl"></div>
-
-              {/* Scanning Laser Line */}
-              <div
-                className={`absolute top-0 left-0 right-0 h-0.5 bg-amber-500 shadow-[0_0_15px_#f59e0b] shadow-amber-500 transition-all duration-1000 ease-in-out scanner-laser`}
-              ></div>
-
-              {!scannerReady && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm rounded-3xl">
-                  <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
-                </div>
-              )}
-            </div>
-            <p className="mt-12 text-white/60 text-[10px] font-black uppercase tracking-[0.2em] animate-pulse">
-              Position identity code within frame
+      {/* Let the library align its viewfinder with the native video dimensions. */}
+      <div className="flex-1 min-h-0 relative flex items-center justify-center overflow-auto">
+        <div id="reader" className="w-full" />
+        {!scannedProduct && !cameraError && !scanError && (
+          <div className="absolute bottom-8 inset-x-4 pointer-events-none text-center">
+            {!scannerReady && <Loader2 className="mx-auto mb-4 w-8 h-8 text-amber-500 animate-spin" />}
+            <p className="text-white text-xs font-bold">
+              {scannerReady ? "Position the barcode or QR code within the camera frame" : "Starting camera..."}
             </p>
+          </div>
+        )}
+        {(cameraError || scanError) && (
+          <div role="alert" className="absolute inset-0 flex flex-col items-center justify-center gap-5 bg-black/80 px-8 text-center text-white">
+            <p>{cameraError || scanError}</p>
+            <button
+              className="rounded-xl bg-amber-500 px-6 py-3 font-bold text-black"
+              onClick={() => {
+                resetScan();
+                if (cameraError) {
+                  setCameraError(null);
+                  setScannerReady(false);
+                  setFlashSupported(false);
+                  setIsFlashOn(false);
+                  setCameraAttempt((attempt) => attempt + 1);
+                }
+              }}
+            >
+              {cameraError ? "Retry Camera" : "Scan Again"}
+            </button>
           </div>
         )}
       </div>
@@ -315,10 +274,8 @@ const QrScannerPage = () => {
             </button>
 
             <button
-              onClick={() => {
-                setScannedProduct(null);
-                setScanResult(null);
-              }}
+              onClick={resetScan}
+              disabled={confirming}
               className="w-full py-4 bg-gray-50 text-gray-700 rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] border border-gray-200 active:scale-95 transition-all"
             >
               Cancel / Scan Again
@@ -337,25 +294,9 @@ const QrScannerPage = () => {
       )}
 
       <style>{`
-                #reader {
-                    width: 100% !important;
-                    height: 100% !important;
-                    border: none !important;
-                }
-                #reader video {
-                    width: 100% !important;
-                    height: 100% !important;
-                    object-fit: cover !important;
-                }
-                .scanner-laser {
-                    animation: laser 2s infinite ease-in-out;
-                }
-                @keyframes laser {
-                    0% { top: 0; opacity: 1; }
-                    50% { top: 100%; opacity: 0.5; }
-                    100% { top: 0; opacity: 1; }
-                }
-            `}</style>
+        #reader { width: 100%; border: none; }
+        #reader video { width: 100% !important; height: auto !important; }
+      `}</style>
     </div>
   );
 };
