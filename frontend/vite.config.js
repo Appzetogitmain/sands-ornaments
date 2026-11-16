@@ -3,10 +3,6 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { fileURLToPath } from "node:url";
-import { createRequire } from "module";
-
-
-const require = createRequire(import.meta.url);
 
 // https://vite.dev/config/
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -80,4 +76,4 @@ export default defineConfig({
   server: {
     port: 3000,
   },
-});																																																																																																																																																																																																																																							
+});
