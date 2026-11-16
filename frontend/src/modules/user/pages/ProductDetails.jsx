@@ -275,10 +275,11 @@ const useDragScroll = () => {
 };
 
 const AccordionItem = ({ title, children, isOpen, onClick }) => (
-  <div className="border-b border-[#EBCDD0]/50">
+  <div className="min-w-0 border-b border-[#EBCDD0]/50">
     <button
-      className="w-full py-5 flex items-center justify-center md:justify-between text-center md:text-left focus:outline-none group relative"
+      className="w-full py-5 px-6 md:px-0 flex items-center justify-center md:justify-between gap-3 text-center md:text-left focus:outline-none group relative"
       onClick={onClick}
+      aria-expanded={isOpen}
     >
       <span
         className={`font-sans text-lg font-semibold transition-colors ${isOpen ? "text-black" : "text-gray-800 group-hover:text-black"}`}
@@ -294,10 +295,13 @@ const AccordionItem = ({ title, children, isOpen, onClick }) => (
       </span>
     </button>
     <div
-      className={`overflow-hidden transition-all duration-300 ease-in-out ${isOpen ? "max-h-[1000px] opacity-100 pb-4" : "max-h-0 opacity-0"}`}
+      className={`grid transition-all duration-300 ease-in-out ${isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"}`}
+      aria-hidden={!isOpen}
     >
-      <div className="text-sm text-black leading-relaxed font-sans text-center md:text-left">
-        {children}
+      <div className="min-h-0 min-w-0 overflow-hidden">
+        <div className="pb-4 text-sm text-black leading-relaxed font-sans text-left [overflow-wrap:anywhere]">
+          {children}
+        </div>
       </div>
     </div>
   </div>
@@ -1866,7 +1870,7 @@ const ProductDetails = () => {
             </div>
 
             {/* Right: Detailed Product Info Accordion - Professional & Minimal */}
-            <div className="lg:col-span-8">
+            <div className="min-w-0 lg:col-span-8">
               <div className="divide-y divide-gray-100">
                 <AccordionItem
                   title="Product Story"
@@ -1876,7 +1880,7 @@ const ProductDetails = () => {
                   <div className="py-2">
                     {product.description ? (
                       <div
-                        className="prose prose-sm max-w-none text-gray-600 font-medium leading-relaxed"
+                        className="product-detail-content prose prose-sm max-w-none text-gray-600 font-medium leading-relaxed"
                         dangerouslySetInnerHTML={{
                           __html: product.description,
                         }}
@@ -2063,7 +2067,7 @@ const ProductDetails = () => {
 
                     {product.specifications && (
                       <div
-                        className="mt-6 p-6 bg-gray-50/30 rounded-2xl border border-gray-100 prose prose-sm max-w-none text-gray-600 font-medium"
+                        className="product-detail-content mt-6 p-6 bg-gray-50/30 rounded-2xl border border-gray-100 prose prose-sm max-w-none text-gray-600 font-medium"
                         dangerouslySetInnerHTML={{
                           __html: product.specifications,
                         }}
@@ -2144,7 +2148,7 @@ const ProductDetails = () => {
                   <div className="py-4">
                     {product.stylingTips ? (
                       <div
-                        className="prose prose-sm max-w-none text-gray-600 font-medium"
+                        className="product-detail-content prose prose-sm max-w-none text-gray-600 font-medium"
                         dangerouslySetInnerHTML={{
                           __html: product.stylingTips,
                         }}
@@ -2168,7 +2172,7 @@ const ProductDetails = () => {
                   <div className="py-4">
                     {product.careTips ? (
                       <div
-                        className="prose prose-sm max-w-none text-gray-600 font-medium"
+                        className="product-detail-content prose prose-sm max-w-none text-gray-600 font-medium"
                         dangerouslySetInnerHTML={{
                           __html: product.careTips,
                         }}

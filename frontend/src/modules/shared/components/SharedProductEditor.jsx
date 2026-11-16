@@ -14,6 +14,7 @@ import api from '../../../services/api';
 import toast from 'react-hot-toast';
 import { downloadImage, downloadSvgNode, downloadTextFile } from '../../../utils/downloadUtils';
 import familyVideoFrame from '@/assets/products/family/videoframe_23898.png';
+import { getProductDraftStorage, readProductDraft, saveProductDraft, clearProductDraft } from '../utils/productFormDraft';
 
 // Tab Components
 import ProductGeneralTab from './product-editor/ProductGeneralTab';
@@ -32,12 +33,13 @@ import {
     syncVariantSerialQuantity
 } from '../utils/productEditorUtils';
 
-const SharedProductEditor = ({
+const ProductEditorSession = ({
     productApi,
     metalPricingApi,
     backPath = '/seller/products',
     categoryApi,
-    editorMode = 'seller'
+    editorMode = 'seller',
+    onStartFresh
 }) => {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -78,101 +80,26 @@ const SharedProductEditor = ({
     const [showEnhanceModal, setShowEnhanceModal] = useState(false);
     const [enhancedIndices, setEnhancedIndices] = useState(new Set());
 
-    const [formData, setFormData] = useState(() => {
-        const initial = {
-            name: '',
-            productCode: '',
-            huid: '',
-            material: 'Silver',
-            description: '',
-            specifications: '',
-            supplierInfo: '',
-            stylingTips: '',
-            careTips: '',
-            diamondType: 'none',
-            categories: [],
-            variants: [{ 
-                id: Date.now(), 
-                name: 'Standard', 
-                size: '', 
-                weight: '', 
-                weightUnit: 'Grams',
-                makingCharge: '0', 
-                hallmarkingCharge: '0',
-                diamondCertificateCharge: '0',
-                additionalCharge: '0',
-                diamondPrice: '0', 
-                diamondType: 'none',
-                mrp: '0', 
-                price: '', 
-                stock: 0,
-                serialCodes: [],
-                hiddenCharge: 0,
-                subtotalBeforeTax: 0,
-                gstAmount: 0,
-                priceAfterTax: 0,
-                pgChargePercent: 0,
-                pgChargeAmount: 0,
-                variantCode: '',
-                variantImages: [],
-                variantFaqs: [],
-                diamondSpecs: {
-                    carat: '',
-                    clarity: '',
-                    color: '',
-                    cut: '',
-                    shape: '',
-                    diamondCount: 0
-                }
-            }],
-            faqs: [],
-            seo: { title: '', description: '', keywords: '' },
-            logistics: { estimatedShippingDays: 3, certificateUrl: '' },
-            deletedImages: [],
-            tags: { 
-                isNewArrival: false, 
-                isMostGifted: false, 
-                isNewLaunch: false, 
-                isTrending: false, 
-                isPremium: false 
-            },
-            relatedProducts: [],
-            weight: '',
-            weightUnit: 'Grams',
-            paymentGatewayChargeBearer: 'seller',
-            videoUrl: '',
-            status: 'Active',
-            active: true,
-            showInNavbar: true,
-            showInCollection: true,
-            cardLabel: '',
-            cardBadge: '',
-            audience: ['unisex'],
-            silverCategory: '',
-            goldCategory: ''
-        };
-
-        if (typeof window !== 'undefined' && !Boolean(id)) {
-            const saved = localStorage.getItem(storageKey);
-            if (saved) {
-                try {
-                    const parsed = JSON.parse(saved);
-                    if (parsed && typeof parsed === 'object') {
-                        return { ...initial, ...parsed };
-                    }
-                } catch (e) {
-                    console.error("Failed to parse saved product form", e);
-                }
-            }
-        }
-        return initial;
-    });
-
+    const [initialDraft] = useState(() => readProductDraft(
+        !id && !isViewMode ? getProductDraftStorage() : null,
+        storageKey
+    ));
+    const [formData, setFormData] = useState(initialDraft.formData);
+    const [draftRestored, setDraftRestored] = useState(initialDraft.restored);
     useEffect(() => {
-        if (!isEditMode && !isViewMode) {
-            localStorage.setItem(storageKey, JSON.stringify(formData));
+        if (!isEditMode && !isViewMode && !showSuccessModal) {
+            saveProductDraft(getProductDraftStorage(), storageKey, formData);
         }
-    }, [formData, isEditMode, isViewMode, storageKey]);
+    }, [formData, isEditMode, isViewMode, storageKey, showSuccessModal]);
+
+    const startFresh = () => {
+        if (isSaving) return;
+        if (!clearProductDraft(getProductDraftStorage(), storageKey)) {
+            toast.error('Could not clear the saved draft. Please try again.');
+            return;
+        }
+        onStartFresh();
+    };
 
     useEffect(() => {
         const newErrors = {};
@@ -998,7 +925,8 @@ const SharedProductEditor = ({
             if (response) {
                 toast.success(isEditMode ? "Product updated successfully" : "Product created successfully");
                 if (!isEditMode) {
-                    localStorage.removeItem(storageKey);
+                    clearProductDraft(getProductDraftStorage(), storageKey);
+                    setDraftRestored(false);
                 }
                 setCreatedProductData(response.data?.data || response.data || response);
                 setShowSuccessModal(true);
@@ -1089,6 +1017,20 @@ const SharedProductEditor = ({
 
             {/* Main Content Area */}
             <div className="max-w-[1400px] mx-auto px-4 md:px-8 mt-8">
+                {!isEditMode && !isViewMode && draftRestored && (
+                    <div role="status" className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 sm:p-5">
+                        <div className="flex items-start gap-3 min-w-0">
+                            <Info size={20} className="mt-0.5 shrink-0 text-amber-700" aria-hidden="true" />
+                            <div>
+                                <p className="text-sm font-semibold text-gray-900">Your previous draft was restored</p>
+                                <p className="mt-1 text-sm text-gray-600">Continue with these details, or start fresh to clear this draft. Reattach any files from your previous session.</p>
+                            </div>
+                        </div>
+                        <button type="button" onClick={startFresh} disabled={isSaving} className="shrink-0 rounded-lg border border-amber-300 bg-white px-4 py-2 text-sm font-semibold text-amber-900 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-700 disabled:opacity-50">
+                            Start fresh
+                        </button>
+                    </div>
+                )}
                 {editorMode === 'seller' && sellerProfile && !sellerProfile.bisNumberGold && !sellerProfile.bisNumberSilver && !isEditMode && !isViewMode ? (
                     <div className="bg-white rounded-[2rem] border border-red-100 p-8 sm:p-12 text-center max-w-xl mx-auto shadow-sm space-y-6">
                         <div className="w-16 h-16 rounded-2xl bg-rose-50 border border-rose-100 flex items-center justify-center mx-auto text-rose-500">
@@ -1239,9 +1181,11 @@ const SharedProductEditor = ({
                             <div className="space-y-4 mt-12">
                                 <button 
                                     onClick={() => {
-                                        setShowSuccessModal(false);
-                                        if (isAdminMode) navigate('/admin/products/new');
-                                        else window.location.reload();
+                                        if (isEditMode || isViewMode) {
+                                            navigate(isAdminMode ? '/admin/products/new' : '/seller/products/new');
+                                        } else {
+                                            startFresh();
+                                        }
                                     }}
                                     className="w-full py-5 bg-[#3E2723] text-white rounded-2xl font-black uppercase tracking-[0.2em] text-[10px] shadow-xl shadow-[#3E2723]/20 hover:bg-black transition-all flex items-center justify-center gap-3"
                                 >
@@ -1259,6 +1203,19 @@ const SharedProductEditor = ({
                 </div>
             )}
         </div>
+    );
+};
+
+// A new route or reset starts a separate form session, including upload and validation state.
+const SharedProductEditor = (props) => {
+    const location = useLocation();
+    const [session, setSession] = useState(0);
+    return (
+        <ProductEditorSession
+            key={`${location.pathname}:${session}`}
+            {...props}
+            onStartFresh={() => setSession(current => current + 1)}
+        />
     );
 };
 

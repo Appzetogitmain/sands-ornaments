@@ -341,6 +341,36 @@ input:-webkit-autofill:active {
     transition: background-color 5000s ease-in-out 0s;
 }
 
+/* Keep product editor HTML inside the accordion at every viewport width. */
+.product-detail-content,
+.product-detail-content * {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    white-space: normal !important;
+    overflow-wrap: anywhere !important;
+    word-break: normal !important;
+}
+
+.product-detail-content :is(p, div, pre, blockquote) {
+    width: auto !important;
+}
+
+.product-detail-content :is(img, video) {
+    height: auto;
+}
+
+.product-detail-content table {
+    display: block;
+    overflow-x: auto;
+}
+
+@media (max-width: 767px) {
+    .product-detail-content,
+    .product-detail-content * {
+        text-align: left !important;
+    }
+}
+
 /* Rich Text / CMS Content Typography & Layout System */
 .rich-text-content {
     color: #374151;
