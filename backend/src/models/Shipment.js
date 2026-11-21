@@ -9,7 +9,8 @@ const timelineEntrySchema = new mongoose.Schema({
 
 const shipmentSchema = new mongoose.Schema({
   orderId: { type: mongoose.Schema.Types.ObjectId, ref: "Order", required: true, index: true },
-  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller", required: true, index: true },
+  sellerId: { type: mongoose.Schema.Types.ObjectId, ref: "Seller", default: null, index: true },
+  isAdminShipment: { type: Boolean, default: false, index: true },
 
   courier: {
     type: String,

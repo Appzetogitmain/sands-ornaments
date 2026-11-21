@@ -371,3 +371,200 @@ exports.regenerateLabel = async (req, res) => {
     return error(res, err.message);
   }
 };
+
+/**
+ * GET /api/admin/shipping/pickup-locations
+ * List pickup locations registered with Shiprocket.
+ */
+exports.getPickupLocations = async (req, res) => {
+  try {
+    const provider = getCourierProvider("shiprocket");
+    if (!provider || typeof provider.listPickupLocations !== "function") {
+      return success(res, { locations: [{ warehouseName: "Primary" }] });
+    }
+    const result = await provider.listPickupLocations();
+    const locations = (result?.locations && result.locations.length > 0)
+      ? result.locations
+      : [{ warehouseName: "Primary" }];
+    return success(res, { locations });
+  } catch (err) {
+    return success(res, { locations: [{ warehouseName: "Primary" }] });
+  }
+};
+
+/**
+ * GET /api/admin/shipping/orders/:orderId
+ * Get all shipments associated with an order.
+ */
+exports.getOrderShipments = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return error(res, "Invalid order ID", 400);
+    }
+    const shipments = await Shipment.find({ orderId }).sort({ createdAt: -1 });
+    return success(res, { shipments });
+  } catch (err) {
+    return error(res, err.message);
+  }
+};
+
+/**
+ * POST /api/admin/shipping/orders/:orderId/create
+ * Create a shipment for an order directly via Shiprocket (for admin products or direct platform orders).
+ */
+exports.createShipment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    const { courier = "shiprocket", packageInfo, pickupLocationName, preferredCourierId } = req.body;
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return error(res, "Invalid order ID", 400);
+    }
+
+    const order = await Order.findById(orderId).populate("items.productId", "name images sku");
+    if (!order) return error(res, "Order not found", 404);
+
+    // Check for existing active shipment
+    const existingShipment = await Shipment.findOne({
+      orderId,
+      status: { $ne: "CANCELLED" }
+    });
+    if (existingShipment) {
+      return error(res, `A shipment already exists for this order (AWB: ${existingShipment.awbNumber || existingShipment._id})`, 409);
+    }
+
+    const shippingAddr = order.shippingAddress || {};
+    if (!shippingAddr.pincode) return error(res, "Customer delivery pincode is missing", 400);
+    if (!shippingAddr.phone) return error(res, "Customer phone is missing", 400);
+    const customerName = [shippingAddr.firstName, shippingAddr.lastName].filter(Boolean).join(" ");
+    if (!customerName) return error(res, "Customer name is missing", 400);
+    const customerAddress = [shippingAddr.flatNo, shippingAddr.area].filter(Boolean).join(", ");
+    if (!customerAddress) return error(res, "Customer address is missing", 400);
+
+    const deliveryAddress = {
+      name: customerName,
+      phone: String(shippingAddr.phone || "").trim(),
+      address: customerAddress,
+      city: shippingAddr.city || "",
+      state: shippingAddr.state || "",
+      pincode: String(shippingAddr.pincode || "").trim(),
+      country: shippingAddr.country || "India",
+    };
+
+    const pkg = {
+      weight: Number(packageInfo?.weight) > 0 ? Number(packageInfo.weight) : 200,
+      length: Number(packageInfo?.length) > 0 ? Number(packageInfo.length) : 10,
+      breadth: Number(packageInfo?.breadth) > 0 ? Number(packageInfo.breadth) : 10,
+      height: Number(packageInfo?.height) > 0 ? Number(packageInfo.height) : 5,
+    };
+
+    const isCod = order.paymentMethod === "cod";
+    const mode = isCod ? "cod" : "prepaid";
+    const codAmount = isCod ? (Number(req.body.codAmount) || Number(order.total) || 0) : 0;
+
+    const shipmentItems = (order.items || []).map((item) => ({
+      productId: item.productId?._id || item.productId,
+      variantId: item.variantId,
+      name: item.name || item.productId?.name || "Jewellery",
+      sku: item.sku || item.productId?.sku || `SKU_${item.productId || Date.now()}`,
+      quantity: Number(item.quantity) || 1,
+      price: Number(item.price) || 0,
+    }));
+
+    if (shipmentItems.length === 0) {
+      return error(res, "Order has no items to ship", 400);
+    }
+
+    const chosenPickupName = String(pickupLocationName || "").trim() || "Primary";
+
+    const pickupAddress = {
+      name: "Sands Jewels",
+      phone: process.env.ADMIN_PHONE || "9303235166",
+      address: "Sands Jewels Warehouse",
+      city: "Ranchi",
+      state: "Jharkhand",
+      pincode: "834001",
+      country: "India",
+    };
+
+    const provider = getCourierProvider(courier);
+    if (!provider) {
+      return error(res, `Courier provider '${courier}' is not available`, 400);
+    }
+
+    const courierResult = await provider.createShipment({
+      orderId: order.orderId || order._id.toString(),
+      pickupAddress,
+      deliveryAddress,
+      package: pkg,
+      paymentMode: mode,
+      codAmount,
+      items: shipmentItems,
+      sellerName: "Sands Jewels",
+      shiprocketPickupName: chosenPickupName,
+      preferredCourierId: preferredCourierId || null,
+    });
+
+    let labelUrl = courierResult.labelUrl || "";
+    if (!labelUrl && courierResult.awbNumber && courier !== "shiprocket") {
+      try {
+        const labelResult = await provider.generateLabel({ awbNumber: courierResult.awbNumber });
+        labelUrl = labelResult.labelUrl || "";
+      } catch (labelErr) {
+        console.warn("[Admin Shipping] Label generation failed:", labelErr.message);
+      }
+    }
+
+    const trackingUrl = courierResult.trackingUrl ||
+      (courierResult.awbNumber ? `https://shiprocket.co/tracking/${courierResult.awbNumber}` : "");
+
+    const shipment = await Shipment.create({
+      orderId: order._id,
+      sellerId: null,
+      isAdminShipment: true,
+      courier,
+      awbNumber: courierResult.awbNumber || "",
+      waybill: courierResult.waybill || courierResult.awbNumber || "",
+      labelUrl,
+      invoiceUrl: courierResult.invoiceUrl || "",
+      manifestUrl: "",
+      trackingUrl,
+      shiprocketOrderId: courierResult.shiprocketOrderId || null,
+      shiprocketShipmentId: courierResult.shiprocketShipmentId || null,
+      shiprocketPickupName: chosenPickupName,
+      status: "CREATED",
+      pickupAddress,
+      deliveryAddress,
+      package: pkg,
+      paymentMode: mode,
+      codAmount,
+      items: shipmentItems,
+      courierResponse: courierResult.courierResponse,
+      timeline: [{
+        status: "CREATED",
+        message: `Shipment created with ${courier}. AWB: ${courierResult.awbNumber || "Pending"}`,
+        date: new Date(),
+      }],
+    });
+
+    // Update order status to Shipped and store shipping details
+    order.status = "Shipped";
+    order.shippingInfo = {
+      carrier: courierResult.courierName || "Shiprocket",
+      trackingId: courierResult.awbNumber || "",
+      trackingUrl,
+    };
+    order.timeline.push({
+      status: "Shipped",
+      note: `Shipment created via Shiprocket${courierResult.awbNumber ? ` (AWB: ${courierResult.awbNumber})` : ""}`,
+      date: new Date(),
+    });
+    await order.save();
+
+    return success(res, { shipment, order }, "Shipment created successfully with Shiprocket", 201);
+  } catch (err) {
+    console.error("[Admin Shipping] Create shipment error:", err);
+    return error(res, err.response?.data?.message || err.message || "Failed to create shipment", 400);
+  }
+};

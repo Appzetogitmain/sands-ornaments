@@ -6,6 +6,15 @@ const shippingController = require("../controllers/shipping.controller");
 // Reports must be before /:shipmentId to avoid route conflict
 router.get("/reports", shippingController.getReports);
 
+// Pickup locations from Shiprocket
+router.get("/pickup-locations", shippingController.getPickupLocations);
+
+// Create shipment for an order (Shiprocket)
+router.post("/orders/:orderId/create", shippingController.createShipment);
+
+// Get shipments for an order
+router.get("/orders/:orderId", shippingController.getOrderShipments);
+
 // List all shipments
 router.get("/", shippingController.getAllShipments);
 

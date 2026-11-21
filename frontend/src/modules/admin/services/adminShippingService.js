@@ -51,4 +51,44 @@ export const adminShippingService = {
     const res = await api.get('admin/shipping/reports', { params });
     return res.data?.data || {};
   },
+
+  /**
+   * Create a shipment via Shiprocket for an order.
+   */
+  createShipment: async (orderId, payload) => {
+    const res = await api.post(`admin/shipping/orders/${orderId}/create`, payload);
+    return res.data?.data || {};
+  },
+
+  /**
+   * Get all shipments for an order.
+   */
+  getOrderShipments: async (orderId) => {
+    const res = await api.get(`admin/shipping/orders/${orderId}`);
+    return res.data?.data?.shipments || [];
+  },
+
+  /**
+   * Get pickup locations from Shiprocket.
+   */
+  getPickupLocations: async () => {
+    const res = await api.get('admin/shipping/pickup-locations');
+    return res.data?.data?.locations || [];
+  },
+
+  /**
+   * Re-generate label for a shipment.
+   */
+  regenerateLabel: async (shipmentId) => {
+    const res = await api.post(`admin/shipping/${shipmentId}/generate-label`);
+    return res.data?.data || {};
+  },
+
+  /**
+   * Generate manifest for a shipment.
+   */
+  generateManifest: async (shipmentId) => {
+    const res = await api.post(`admin/shipping/${shipmentId}/manifest`);
+    return res.data?.data || {};
+  },
 };
