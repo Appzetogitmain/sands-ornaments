@@ -242,6 +242,7 @@ export const ShopProvider = ({ children }) => {
         createTicket: orderCtx.createTicket,
         addTicketReply: orderCtx.addTicketReply,
         deleteTicket: orderCtx.deleteTicket,
+        cancelOrder: orderCtx.cancelOrder,
         refreshOrders: orderCtx.refreshOrders,
         refreshReturns: orderCtx.refreshReturns,
         refreshReplacements: orderCtx.refreshReplacements,

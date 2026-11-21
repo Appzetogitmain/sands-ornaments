@@ -316,6 +316,28 @@ export const OrderProvider = ({ children, showNotification = () => {} }) => {
     const refreshReplacements = useCallback(() => fetchReplacements(), [fetchReplacements]);
     const refreshSupportTickets = useCallback(() => fetchSupportTickets(), [fetchSupportTickets]);
 
+    // ── Cancel Order ──────────────────────────────────────────────────────────
+    const cancelOrder = useCallback(async (orderId, reason = '') => {
+        try {
+            const res = await api.patch(`user/orders/${orderId}/cancel`, { reason });
+            if (res.data.success) {
+                await fetchOrders();
+                const { toast } = await import('react-hot-toast');
+                toast.success('Order cancelled successfully');
+                return { success: true, order: res.data.data?.order || res.data.order };
+            }
+            const { toast } = await import('react-hot-toast');
+            toast.error(res.data.message || 'Failed to cancel order');
+            return { success: false, message: res.data.message };
+        } catch (err) {
+            console.error('Failed to cancel order:', err);
+            const { toast } = await import('react-hot-toast');
+            const message = err.response?.data?.message || err.message || 'Failed to cancel order';
+            toast.error(message);
+            return { success: false, message };
+        }
+    }, [fetchOrders]);
+
     // ── clearAllOnAccountDelete ──────────────────────────────────────────────
     const clearOrdersOnDelete = useCallback(() => {
         setOrders([]);
@@ -333,6 +355,7 @@ export const OrderProvider = ({ children, showNotification = () => {} }) => {
         addresses, defaultAddressId,
         fetchOrders, fetchReturns, fetchReplacements, fetchSupportTickets, fetchAddresses,
         refreshOrders, refreshReturns, refreshReplacements, refreshSupportTickets,
+        cancelOrder,
         addAddress, removeAddress, updateAddress, setDefaultAddress,
         createTicket, addTicketReply, deleteTicket,
         clearOrdersOnDelete,

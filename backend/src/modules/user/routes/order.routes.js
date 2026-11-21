@@ -12,5 +12,6 @@ router.get("/", orderController.getOrders);
 router.get("/:id", orderController.getOrderDetail);
 router.post("/place", validate(placeOrderSchema), orderController.placeOrder);
 router.patch("/:id/cancel", orderController.cancelOrder);
+router.post("/:id/cancel", orderController.cancelOrder);
 
 module.exports = router;

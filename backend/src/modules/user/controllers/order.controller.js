@@ -6,6 +6,7 @@ const StockLog = require("../../../models/StockLog");
 const Seller = require("../../../models/Seller");
 const GiftCard = require("../../../models/GiftCard");
 const User = require("../../../models/User");
+const Shipment = require("../../../models/Shipment");
 const { generateOrderId } = require("../../../utils/generateId");
 const { success, error } = require("../../../utils/apiResponse");
 const razorpay = require("../../../config/razorpay");
@@ -16,7 +17,10 @@ const {
 } = require("../../../services/sellerNotificationService");
 const { enqueueEmail } = require("../../../services/emailService");
 const emailTemplates = require("../../../services/emailTemplates");
-const { emitNewOrder } = require("../../../services/socketEmitter");
+const { emitNewOrder, emitOrderStatusUpdate } = require("../../../services/socketEmitter");
+const { getCourierProvider } = require("../../../services/shipping/courierFactory");
+const { processRefund: razorpayProcessRefund } = require("../../../services/razorpayService");
+const { createNotification } = require("../../../services/notificationService");
 const {
   accrueCommissionsForOrder,
   reverseCommissionsForOrder,
@@ -710,7 +714,7 @@ exports.getOrderDetail = async (req, res) => {
 };
 
 // ─────────────────────────────────────────────────────────────────
-// POST /api/user/orders/:id/cancel
+// POST / PATCH /api/user/orders/:id/cancel
 // ─────────────────────────────────────────────────────────────────
 exports.cancelOrder = async (req, res) => {
   try {
@@ -723,12 +727,107 @@ exports.cancelOrder = async (req, res) => {
     });
     if (!order) return error(res, "Order not found", 404);
 
-    if (["Shipped", "Delivered", "Cancelled"].includes(order.status)) {
-      return error(res, `Cannot cancel order in ${order.status} status`, 400);
+    const CANCELLABLE_STATUSES = ["Pending", "Processing", "Confirmed", "Packed"];
+    if (!CANCELLABLE_STATUSES.includes(order.status)) {
+      return error(
+        res,
+        `Cannot cancel order with status '${order.status}'. Only pending or processing orders can be cancelled.`,
+        400
+      );
     }
 
+    // Guard: Check if any active shipment has already been dispatched / picked up
+    const activeShipments = await Shipment.find({
+      orderId: order._id,
+      status: { $ne: "CANCELLED" },
+    });
+
+    const dispatchedShipment = activeShipments.find((s) =>
+      ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
+    );
+    if (dispatchedShipment) {
+      return error(
+        res,
+        "Cannot cancel order because the package has already been handed over to the courier / dispatched. You can request a return after delivery.",
+        400
+      );
+    }
+
+    // Cancel any pre-pickup courier shipments (e.g. CREATED, PICKUP_SCHEDULED)
+    for (const shipment of activeShipments) {
+      try {
+        const provider = getCourierProvider(shipment.courier);
+        if (provider && typeof provider.cancelShipment === "function") {
+          const cancelRes = await provider.cancelShipment({
+            awbNumber: shipment.awbNumber,
+            waybill: shipment.waybill,
+            shiprocketOrderId: shipment.shiprocketOrderId,
+          });
+          if (cancelRes && cancelRes.cancelled === false) {
+            console.warn(`[Order Cancel] Courier ${shipment.courier} cancellation notice: ${cancelRes.message}`);
+          }
+        }
+      } catch (courierErr) {
+        console.warn(`[Order Cancel] Failed to cancel courier shipment ${shipment._id}:`, courierErr.message);
+      }
+      shipment.status = "CANCELLED";
+      shipment.timeline.push({
+        status: "CANCELLED",
+        message: "Shipment cancelled due to order cancellation by customer",
+        date: new Date(),
+      });
+      await shipment.save();
+    }
+
+    const reason = (req.body?.reason && typeof req.body.reason === "string" ? req.body.reason.trim() : "") || "Cancelled by user";
+    const previousPaymentStatus = order.paymentStatus;
+
     order.status = "Cancelled";
-    order.timeline.push({ status: "Cancelled", note: "Cancelled by user" });
+    order.timeline.push({
+      status: "Cancelled",
+      note: `Cancelled by user: ${reason}`,
+      date: new Date(),
+    });
+
+    // Process online refund for paid Razorpay orders
+    if (
+      order.paymentMethod === "razorpay" &&
+      order.paymentStatus === "paid" &&
+      order.razorpayPaymentId &&
+      order.refundStatus !== "processed"
+    ) {
+      try {
+        order.refundStatus = "pending";
+        const refundResult = await razorpayProcessRefund(
+          order.razorpayPaymentId,
+          order.total,
+          {
+            orderId: String(order.orderId || order._id),
+            reason: reason || "Cancelled by user",
+            cancelledBy: "customer",
+          }
+        );
+        order.refundId = refundResult.id;
+        order.refundStatus = "processed";
+        order.refundAmount = order.total;
+        order.refundedAt = new Date();
+        order.paymentStatus = "refunded";
+        order.timeline.push({
+          status: "Cancelled",
+          note: `Online refund of ₹${order.total} initiated successfully (Razorpay Refund ID: ${refundResult.id}).`,
+          date: new Date(),
+        });
+      } catch (refundErr) {
+        console.error("[Order Cancel] Razorpay auto-refund error:", refundErr.message);
+        order.refundStatus = "failed";
+        order.timeline.push({
+          status: "Cancelled",
+          note: `Automatic online refund failed (${refundErr.message}). Sands Ornaments support team will process your refund manually.`,
+          date: new Date(),
+        });
+      }
+    }
+
     await order.save();
 
     // Refund any applied gift cards (restoring balance and updating status)
@@ -766,7 +865,7 @@ exports.cancelOrder = async (req, res) => {
     try {
       await reverseCommissionsForOrder(order._id, {
         triggeredBy: "order_cancelled",
-        reasonNote: "Cancelled by user",
+        reasonNote: reason || "Cancelled by user",
         safe: true,
       });
     } catch (e) {
@@ -774,7 +873,7 @@ exports.cancelOrder = async (req, res) => {
     }
 
     // Restock only if stock was already deducted (COD or paid Razorpay orders)
-    if (order.paymentStatus === "cod" || order.paymentStatus === "paid") {
+    if (previousPaymentStatus === "cod" || previousPaymentStatus === "paid" || order.paymentStatus === "refunded") {
       for (const item of order.items) {
         const product = await Product.findById(item.productId);
         const variant = product?.variants.id(item.variantId);
@@ -809,10 +908,55 @@ exports.cancelOrder = async (req, res) => {
           previousStock,
           newStock: variant.stock,
           change: variant.stock - previousStock,
-          reason: `Order ${order.orderId} cancelled by user`,
+          reason: `Order ${order.orderId} cancelled by user: ${reason}`,
           userId: req.user.userId,
         });
       }
+    }
+
+    // Real-time socket updates to user
+    try {
+      emitOrderStatusUpdate(order);
+    } catch (sockErr) {
+      console.error("[Order Cancel] Socket emit error:", sockErr.message);
+    }
+
+    // In-app & push notification
+    try {
+      await createNotification({
+        userId: order.userId,
+        title: "Order Cancelled",
+        message: `Your order #${order.orderId || order._id} has been cancelled successfully.`,
+        type: "ORDER",
+        link: `/order-tracking/${order._id}`,
+      });
+    } catch (notifErr) {
+      console.error("[Order Cancel] Notification error:", notifErr.message);
+    }
+
+    // Send confirmation email
+    try {
+      let recipientEmail = order.customerEmail || order.shippingAddress?.email;
+      let recipientName = order.customerName || order.shippingAddress?.firstName;
+      if (!recipientEmail && req.user?.userId) {
+        const userDoc = await User.findById(req.user.userId).select("email name");
+        recipientEmail = userDoc?.email;
+        recipientName = recipientName || userDoc?.name;
+      }
+
+      if (recipientEmail) {
+        enqueueEmail({
+          to: recipientEmail,
+          subject: `Order Cancelled — ${order.orderId || order._id}`,
+          html: emailTemplates.orderCancelled({
+            order,
+            userName: recipientName || "Customer",
+            reason,
+          }),
+        });
+      }
+    } catch (emailErr) {
+      console.error("[Order Cancel] Email notification error:", emailErr.message);
     }
 
     return success(res, { order }, "Order cancelled successfully");

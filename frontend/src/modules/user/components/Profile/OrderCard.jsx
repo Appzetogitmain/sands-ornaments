@@ -5,6 +5,7 @@ import { useShop } from '../../../../context/ShopContext';
 import toast from 'react-hot-toast';
 import { ProductThumb } from './ProductThumb';
 import ReturnActionModal from './ReturnActionModal';
+import CancelOrderModal from './CancelOrderModal';
 
 const formatCurrency = (value) => (
     `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`
@@ -13,6 +14,7 @@ const formatCurrency = (value) => (
 const OrderCard = ({ order, isExpanded, onToggle }) => {
     const [localShow, setLocalShow] = useState(false);
     const [isActionModalOpen, setActionModalOpen] = useState(false);
+    const [isCancelModalOpen, setCancelModalOpen] = useState(false);
     const [actionType, setActionType] = useState('return'); // 'return' or 'exchange'
 
     const { returns, replacements, refreshReturns, refreshReplacements } = useShop();
@@ -30,7 +32,10 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
     const discount = order.discount !== undefined ? order.discount : 0;
     const giftWrapCharge = order.giftWrapCharge !== undefined ? order.giftWrapCharge : 0;
     const giftCardDiscount = order.giftCardDiscount !== undefined ? order.giftCardDiscount : 0;
-    const canRaiseRequest = String(order.status || order.orderStatus || '').trim() === 'Delivered';
+    const orderStatus = String(order.status || order.orderStatus || '').trim();
+    const isCancelled = orderStatus === 'Cancelled';
+    const canRaiseRequest = orderStatus === 'Delivered';
+    const canCancel = ['Placed', 'Confirmed', 'Processing', 'Packed', 'Pending'].includes(orderStatus) && !activeRequest;
     const orderDisplayId = order.displayId || order.orderId || order.id || order._id;
     const orderDisplayShort = String(orderDisplayId || '').replace('ORD-', '');
 
@@ -67,11 +72,17 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
     return (
         <div className="md:bg-white md:shadow-sm md:rounded-2xl md:border md:border-gray-100 overflow-hidden font-sans mb-6 md:mb-5">
             <ReturnActionModal isOpen={isActionModalOpen} onClose={() => setActionModalOpen(false)} type={actionType} order={order} onSuccess={handleActionSuccess} />
+            <CancelOrderModal isOpen={isCancelModalOpen} onClose={() => setCancelModalOpen(false)} order={order} onSuccess={handleActionSuccess} />
             {/* Mobile View */}
             <div className="md:hidden bg-white rounded-2xl border border-gray-100 shadow-sm p-4 space-y-4">
                 <div className="flex justify-between items-start border-b border-gray-50 pb-3">
                     <div>
-                        <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Order ID</p>
+                        <div className="flex items-center gap-2">
+                            <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Order ID</p>
+                            {isCancelled && (
+                                <span className="text-[9px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full uppercase tracking-wider">Cancelled</span>
+                            )}
+                        </div>
                         <h4 className="text-sm font-bold text-black">#{orderDisplayShort}</h4>
                     </div>
                     <div className="text-right">
@@ -132,20 +143,31 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
                             <button className="flex-1 bg-[#FAFAFA] text-[#3E2723] py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-gray-100 active:scale-95 transition-transform" onClick={() => setShowDetails(!showDetails)}>
                                 {showDetails ? 'Close' : 'Details'}
                             </button>
-                            <button
-                                onClick={() => openAction('return')}
-                                disabled={!canRaiseRequest}
-                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border active:scale-95 transition-transform ${canRaiseRequest ? 'bg-[#FAFAFA] text-[#3E2723] border-gray-100' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
-                            >
-                                Return
-                            </button>
-                            <button
-                                onClick={() => openAction('exchange')}
-                                disabled={!canRaiseRequest}
-                                className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border active:scale-95 transition-transform ${canRaiseRequest ? 'bg-[#FAFAFA] text-[#3E2723] border-gray-100' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
-                            >
-                                Exchange
-                            </button>
+                            {canCancel ? (
+                                <button
+                                    onClick={() => setCancelModalOpen(true)}
+                                    className="flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 active:scale-95 transition-transform"
+                                >
+                                    Cancel
+                                </button>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={() => openAction('return')}
+                                        disabled={!canRaiseRequest}
+                                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border active:scale-95 transition-transform ${canRaiseRequest ? 'bg-[#FAFAFA] text-[#3E2723] border-gray-100' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                                    >
+                                        Return
+                                    </button>
+                                    <button
+                                        onClick={() => openAction('exchange')}
+                                        disabled={!canRaiseRequest}
+                                        className={`flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest border active:scale-95 transition-transform ${canRaiseRequest ? 'bg-[#FAFAFA] text-[#3E2723] border-gray-100' : 'bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed'}`}
+                                    >
+                                        Exchange
+                                    </button>
+                                </>
+                            )}
                             <Link to={`/order-tracking/${order.id}`} className="flex-1 bg-black text-white py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-widest text-center shadow-md shadow-black/5 active:scale-95 transition-transform hover:bg-[#D39A9F]">
                                 Track
                             </Link>
@@ -194,9 +216,14 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
                         <div>
                             <span className="font-bold block text-gray-900">{new Date(order.createdAt || order.date || Date.now()).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                         </div>
-                        <div>
-                            <span className="text-gray-500 mr-1">Order no.:</span>
-                            <span className="font-bold text-gray-900">#{orderDisplayShort}</span>
+                        <div className="flex items-center gap-2">
+                            <div>
+                                <span className="text-gray-500 mr-1">Order no.:</span>
+                                <span className="font-bold text-gray-900">#{orderDisplayShort}</span>
+                            </div>
+                            {isCancelled && (
+                                <span className="text-[11px] font-bold text-red-600 bg-red-50 border border-red-200 px-2.5 py-0.5 rounded-full uppercase tracking-wider">Cancelled</span>
+                            )}
                         </div>
                         <div>
                             <span className="text-gray-500 mr-1">Items:</span>
@@ -233,6 +260,14 @@ const OrderCard = ({ order, isExpanded, onToggle }) => {
                     </div>
                 ) : (
                     <div className="flex flex-wrap justify-end gap-3 p-3 md:p-4 bg-white">
+                        {canCancel && (
+                            <button
+                                onClick={() => setCancelModalOpen(true)}
+                                className="px-4 md:px-6 py-2 text-[10px] md:text-sm font-bold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg uppercase tracking-wider transition-colors active:scale-95"
+                            >
+                                Cancel Order
+                            </button>
+                        )}
                         <button
                             onClick={() => openAction('return')}
                             disabled={!canRaiseRequest}

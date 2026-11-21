@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useShop } from '../../../context/ShopContext';
 import { Package, ArrowLeft, RefreshCw, Check, Clock } from 'lucide-react';
 import FAQSection from '../components/FAQSection';
+import CancelOrderModal from '../components/profile/CancelOrderModal';
 
 const formatCurrency = (value) => `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 
@@ -30,6 +31,7 @@ const ProductThumb = ({ src, alt = '', className, fallbackIconClassName = 'w-4 h
 const OrderTracking = () => {
     const { orderId, view } = useParams();
     const { orders, returns, replacements } = useShop();
+    const [isCancelModalOpen, setCancelModalOpen] = useState(false);
     const navigate = useNavigate();
     const safeOrders = Array.isArray(orders) ? orders : [];
     const safeReturns = Array.isArray(returns) ? returns : [];
@@ -42,9 +44,13 @@ const OrderTracking = () => {
         return id === orderId || displayId === orderId || displayId.replace('ORD-', '') === orderId;
     });
 
+    const orderStatus = String(order?.status || order?.orderStatus || '').trim();
+    const isCancelled = orderStatus === 'Cancelled';
+
     const returnRecord = safeReturns.find(r => String(r.orderId?._id || r.orderId) === String(order?.id || order?._id));
     const replacementRecord = safeReplacements.find(r => String(r.orderId?._id || r.orderId) === String(order?.id || order?._id));
     const activeRequest = returnRecord || replacementRecord;
+    const canCancel = ['Placed', 'Confirmed', 'Processing', 'Packed', 'Pending'].includes(orderStatus) && !activeRequest;
     const requestType = returnRecord ? 'return' : replacementRecord ? 'exchange' : null;
     const returnRequest = activeRequest ? {
         ...activeRequest,
@@ -257,8 +263,21 @@ const OrderTracking = () => {
                         <div className="p-3 md:p-5 border-b border-gray-50 bg-gray-50 flex justify-between items-center">
                             <div>
                                 <span className="text-[9px] md:text-[10px] font-bold text-gray-400 uppercase tracking-widest block">Original Delivery</span>
-                                <h3 className="text-xs md:text-sm font-bold text-black mt-0.5">{currentDeliveryStatus.status}</h3>
+                                <div className="flex items-center gap-2 mt-0.5">
+                                    <h3 className="text-xs md:text-sm font-bold text-black">{currentDeliveryStatus.status}</h3>
+                                    {isCancelled && (
+                                        <span className="text-[10px] font-bold text-red-600 bg-red-50 border border-red-200 px-2 py-0.5 rounded-full uppercase tracking-wider">Cancelled</span>
+                                    )}
+                                </div>
                             </div>
+                            {canCancel && (
+                                <button
+                                    onClick={() => setCancelModalOpen(true)}
+                                    className="px-3 md:px-4 py-1.5 text-[10px] md:text-xs font-bold border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg uppercase tracking-wider transition-colors active:scale-95 shadow-xs"
+                                >
+                                    Cancel Order
+                                </button>
+                            )}
                         </div>
                         <div className="p-3 md:p-5 space-y-6">
                             <div className="flex gap-4 overflow-x-auto pb-1 scrollbar-hide">
@@ -293,6 +312,12 @@ const OrderTracking = () => {
                     <FAQSection />
                 </div>
             </div>
+
+            <CancelOrderModal
+                isOpen={isCancelModalOpen}
+                onClose={() => setCancelModalOpen(false)}
+                order={order}
+            />
         </div>
     );
 };
