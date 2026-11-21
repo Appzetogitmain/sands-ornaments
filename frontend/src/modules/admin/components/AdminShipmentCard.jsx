@@ -26,7 +26,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
 
   // Form state
   const [pickupLocations, setPickupLocations] = useState([]);
-  const [selectedPickup, setSelectedPickup] = useState('Primary');
+  const [selectedPickup, setSelectedPickup] = useState('');
   const [packageInfo, setPackageInfo] = useState({
     weight: '200',
     length: '10',
@@ -42,12 +42,12 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
     try {
       const [shipmentList, locList] = await Promise.all([
         adminShippingService.getOrderShipments(orderId).catch(() => []),
-        adminShippingService.getPickupLocations().catch(() => [{ warehouseName: 'Primary' }]),
+        adminShippingService.getPickupLocations().catch(() => []),
       ]);
       setShipments(shipmentList || []);
-      const validLocs = (locList && locList.length > 0) ? locList : [{ warehouseName: 'Primary' }];
+      const validLocs = Array.isArray(locList) ? locList : [];
       setPickupLocations(validLocs);
-      if (validLocs[0]?.warehouseName) {
+      if (validLocs.length > 0 && validLocs[0]?.warehouseName) {
         setSelectedPickup(validLocs[0].warehouseName);
       }
     } finally {
@@ -93,7 +93,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
       toast.success(res?.message || 'Shipment created successfully in Shiprocket!');
       await loadData();
       if (onOrderUpdated) {
-        onOrderUpdated(res?.order);
+        await onOrderUpdated();
       }
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to create Shiprocket shipment';
@@ -249,6 +249,31 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
 
   // Case 2: No shipment yet - Show One-Click Creation Form
   const isCod = order?.paymentMethod === 'cod';
+  const items = order?.items || [];
+  const adminItems = items.filter((item) => !item.sellerId);
+  const isPureSellerOrder = items.length > 0 && adminItems.length === 0;
+
+  if (isPureSellerOrder) {
+    return (
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center text-blue-700">
+            <Truck size={16} />
+          </div>
+          <div>
+            <h3 className="text-xs font-black text-gray-900 uppercase tracking-widest">Seller-Fulfilled Order</h3>
+            <p className="text-[10px] text-gray-400 font-bold">Independent marketplace vendor items</p>
+          </div>
+        </div>
+        <div className="text-xs bg-blue-50/70 border border-blue-200/60 rounded-xl p-3.5 text-blue-900 flex items-start gap-2.5">
+          <AlertCircle size={15} className="text-blue-700 shrink-0 mt-0.5" />
+          <span className="leading-snug">
+            All items in this order belong to third-party sellers. Courier dispatch and label generation are managed by the seller in their Seller Portal.
+          </span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">
@@ -273,18 +298,27 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           <label className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
             <MapPin size={11} /> Pickup Warehouse (Shiprocket)
           </label>
-          <select
-            value={selectedPickup}
-            onChange={(e) => setSelectedPickup(e.target.value)}
-            disabled={creating}
-            className="w-full bg-white border border-gray-200 rounded-xl py-2.5 px-3 text-xs font-bold text-gray-800 focus:outline-none focus:border-[#3E2723] focus:ring-2 focus:ring-[#3E2723]/10"
-          >
-            {pickupLocations.map((loc, idx) => (
-              <option key={idx} value={loc.warehouseName || loc.pickupName || 'Primary'}>
-                {loc.warehouseName || loc.pickupName || 'Primary'} {loc.city ? `(${loc.city})` : ''}
-              </option>
-            ))}
-          </select>
+          {pickupLocations.length > 0 ? (
+            <select
+              value={selectedPickup}
+              onChange={(e) => setSelectedPickup(e.target.value)}
+              disabled={creating}
+              className="w-full bg-white border border-gray-200 rounded-xl py-2.5 px-3 text-xs font-bold text-gray-800 focus:outline-none focus:border-[#3E2723] focus:ring-2 focus:ring-[#3E2723]/10"
+            >
+              {pickupLocations.map((loc, idx) => (
+                <option key={idx} value={loc.warehouseName || loc.pickupName || 'Primary'}>
+                  {loc.warehouseName || loc.pickupName || 'Primary'} {loc.city ? `(${loc.city})` : ''}
+                </option>
+              ))}
+            </select>
+          ) : (
+            <div className="text-[11px] bg-red-50 border border-red-200 rounded-xl p-3 text-red-800 flex items-start gap-2">
+              <AlertCircle size={14} className="text-red-600 shrink-0 mt-0.5" />
+              <span>
+                No pickup locations found in your Shiprocket account. Please configure a pickup warehouse in Shiprocket Settings.
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Package Dimensions */}
@@ -347,7 +381,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
         <button
           type="button"
           onClick={handleCreateShipment}
-          disabled={creating || ['Delivered', 'Cancelled', 'Returned'].includes(order?.orderStatus)}
+          disabled={creating || pickupLocations.length === 0 || ['Delivered', 'Cancelled', 'Returned'].includes(order?.orderStatus)}
           className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[#3E2723] to-[#5D4037] text-white text-[11px] font-black uppercase tracking-widest hover:from-[#2d1e1b] hover:to-[#4a342c] transition-all shadow-md hover:shadow-lg disabled:opacity-50"
         >
           {creating ? (

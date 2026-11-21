@@ -486,7 +486,7 @@ const OrderDetailPage = () => {
 
                     <AdminShipmentCard
                         order={order}
-                        onOrderUpdated={(updated) => updated ? setOrder(updated) : refreshOrder()}
+                        onOrderUpdated={refreshOrder}
                     />
 
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-5">

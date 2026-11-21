@@ -201,10 +201,38 @@ class ShiprocketProvider extends ShippingProvider {
         ...(preferredCourierId ? { courier_id: preferredCourierId } : {}),
       };
 
-      const awbResponse = await client.post("/courier/assign/awb", awbPayload);
+      let awbResponse;
+      try {
+        awbResponse = await client.post("/courier/assign/awb", awbPayload);
+      } catch (awbErr) {
+        // Automatically cancel the created adhoc order in Shiprocket so no orphaned order lingers
+        try {
+          await client.post("/orders/cancel", { ids: [Number(shiprocketOrderId)] });
+          console.log(`[Shiprocket] Cleaned up orphaned order ${shiprocketOrderId} after AWB failure.`);
+        } catch (cleanupErr) {
+          console.warn("[Shiprocket] Failed to cancel orphaned order:", cleanupErr.message);
+        }
+        const errMsg = awbErr.response?.data?.message || awbErr.message || "Failed to assign AWB";
+        throw new Error(`Shiprocket AWB assignment failed: ${errMsg}`);
+      }
+
       const awbData = awbResponse.data;
       const awbNumber = awbData?.response?.data?.awb_code || awbData?.awb_code || "";
       const courierName = awbData?.response?.data?.courier_name || "";
+
+      if (!awbNumber) {
+        const assignErr = awbData?.response?.data?.awb_assign_error ||
+          awbData?.response?.data?.message ||
+          awbData?.message ||
+          "Failed to assign AWB from courier. Check Shiprocket recharge balance or courier availability.";
+        try {
+          await client.post("/orders/cancel", { ids: [Number(shiprocketOrderId)] });
+          console.log(`[Shiprocket] Cleaned up orphaned order ${shiprocketOrderId} after missing AWB.`);
+        } catch (cleanupErr) {
+          console.warn("[Shiprocket] Failed to cancel orphaned order:", cleanupErr.message);
+        }
+        throw new Error(`Shiprocket AWB assignment failed: ${assignErr}`);
+      }
 
       // ── Step 3: Generate Label ───────────────────────────────────────────────
       let labelUrl = "";

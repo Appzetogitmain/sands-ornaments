@@ -380,15 +380,16 @@ exports.getPickupLocations = async (req, res) => {
   try {
     const provider = getCourierProvider("shiprocket");
     if (!provider || typeof provider.listPickupLocations !== "function") {
-      return success(res, { locations: [{ warehouseName: "Primary" }] });
+      return success(res, { locations: [] });
     }
     const result = await provider.listPickupLocations();
-    const locations = (result?.locations && result.locations.length > 0)
+    const locations = (result?.locations && Array.isArray(result.locations))
       ? result.locations
-      : [{ warehouseName: "Primary" }];
+      : [];
     return success(res, { locations });
   } catch (err) {
-    return success(res, { locations: [{ warehouseName: "Primary" }] });
+    console.error("[Admin Shipping] getPickupLocations error:", err.message);
+    return error(res, `Failed to load pickup locations: ${err.message}`, 500);
   }
 };
 
@@ -432,6 +433,18 @@ exports.createShipment = async (req, res) => {
     });
     if (existingShipment) {
       return error(res, `A shipment already exists for this order (AWB: ${existingShipment.awbNumber || existingShipment._id})`, 409);
+    }
+
+    // Filter admin-fulfilled items (items where sellerId is null or empty)
+    const adminItems = (order.items || []).filter((item) => !item.sellerId);
+    const sellerItems = (order.items || []).filter((item) => Boolean(item.sellerId));
+
+    if (adminItems.length === 0) {
+      return error(
+        res,
+        "This order contains only seller-fulfilled products. Shipments for seller items must be created by their respective seller via the Seller Portal.",
+        400
+      );
     }
 
     const shippingAddr = order.shippingAddress || {};
@@ -478,7 +491,7 @@ exports.createShipment = async (req, res) => {
     const mode = isCod ? "cod" : "prepaid";
     const codAmount = isCod ? (Number(req.body.codAmount) || Number(order.total) || 0) : 0;
 
-    const shipmentItems = (order.items || []).map((item) => ({
+    const shipmentItems = adminItems.map((item) => ({
       productId: item.productId?._id || item.productId,
       variantId: item.variantId,
       name: item.name || item.productId?.name || "Jewellery",
@@ -488,12 +501,17 @@ exports.createShipment = async (req, res) => {
     }));
 
     if (shipmentItems.length === 0) {
-      return error(res, "Order has no items to ship", 400);
+      return error(res, "No admin items available to ship for this order", 400);
     }
 
-    const chosenPickupName = String(pickupLocationName || "").trim() || "Primary";
+    const provider = getCourierProvider(courier);
+    if (!provider) {
+      return error(res, `Courier provider '${courier}' is not available`, 400);
+    }
 
-    const pickupAddress = {
+    // Resolve pickup location dynamically from Shiprocket
+    let chosenPickupName = String(pickupLocationName || "").trim();
+    let pickupAddress = {
       name: "Sands Jewels",
       phone: process.env.ADMIN_PHONE || "9303235166",
       address: "Sands Jewels Warehouse",
@@ -503,9 +521,37 @@ exports.createShipment = async (req, res) => {
       country: "India",
     };
 
-    const provider = getCourierProvider(courier);
-    if (!provider) {
-      return error(res, `Courier provider '${courier}' is not available`, 400);
+    if (courier === "shiprocket" && typeof provider.listPickupLocations === "function") {
+      const locResult = await provider.listPickupLocations();
+      const registeredLocations = locResult?.locations || [];
+
+      if (registeredLocations.length > 0) {
+        let matched = null;
+        if (chosenPickupName) {
+          matched = registeredLocations.find(
+            (loc) => loc.warehouseName?.toLowerCase() === chosenPickupName.toLowerCase()
+          );
+        }
+        if (!matched) {
+          matched = registeredLocations[0];
+        }
+        chosenPickupName = matched.warehouseName;
+        pickupAddress = {
+          name: matched.contactPerson || "Sands Jewels",
+          phone: matched.phone || process.env.ADMIN_PHONE || "9303235166",
+          address: matched.address || "Sands Jewels Warehouse",
+          city: matched.city || "Ranchi",
+          state: matched.state || "Jharkhand",
+          pincode: String(matched.pincode || "834001"),
+          country: "India",
+        };
+      } else if (!chosenPickupName) {
+        return error(
+          res,
+          "No pickup locations configured in your Shiprocket account. Please configure a pickup location in Shiprocket Settings.",
+          400
+        );
+      }
     }
 
     const courierResult = await provider.createShipment({
@@ -563,18 +609,27 @@ exports.createShipment = async (req, res) => {
       }],
     });
 
-    // Update order status to Shipped and store shipping details
-    order.status = "Shipped";
-    order.shippingInfo = {
-      carrier: courierResult.courierName || "Shiprocket",
-      trackingId: courierResult.awbNumber || "",
-      trackingUrl,
-    };
-    order.timeline.push({
-      status: "Shipped",
-      note: `Shipment created via Shiprocket${courierResult.awbNumber ? ` (AWB: ${courierResult.awbNumber})` : ""}`,
-      date: new Date(),
-    });
+    // Update order status: only mark order Shipped if all items in the order belong to admin
+    if (sellerItems.length === 0) {
+      order.status = "Shipped";
+      order.shippingInfo = {
+        carrier: courierResult.courierName || "Shiprocket",
+        trackingId: courierResult.awbNumber || "",
+        trackingUrl,
+      };
+      order.timeline.push({
+        status: "Shipped",
+        note: `Shipment created via Shiprocket${courierResult.awbNumber ? ` (AWB: ${courierResult.awbNumber})` : ""}`,
+        date: new Date(),
+      });
+    } else {
+      // For mixed orders, note admin fulfillment in timeline without overriding pending seller shipments
+      order.timeline.push({
+        status: order.status || "Processing",
+        note: `Admin items shipped via Shiprocket${courierResult.awbNumber ? ` (AWB: ${courierResult.awbNumber})` : ""}`,
+        date: new Date(),
+      });
+    }
     await order.save();
 
     return success(res, { shipment, order }, "Shipment created successfully with Shiprocket", 201);
