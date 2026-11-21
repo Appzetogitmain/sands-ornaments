@@ -59,7 +59,8 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
     loadData();
   }, [loadData]);
 
-  const activeShipment = shipments.find((s) => s.status !== 'CANCELLED') || shipments[0];
+  const adminShipments = shipments.filter((s) => s.isAdminShipment || !s.sellerId);
+  const activeShipment = adminShipments.find((s) => s.status !== 'CANCELLED') || adminShipments[0];
 
   const handleCopyAwb = (awb) => {
     if (!awb) return;
@@ -251,7 +252,9 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
   const isCod = order?.paymentMethod === 'cod';
   const items = order?.items || [];
   const adminItems = items.filter((item) => !item.sellerId);
+  const sellerItems = items.filter((item) => Boolean(item.sellerId));
   const isPureSellerOrder = items.length > 0 && adminItems.length === 0;
+  const isMixedOrder = adminItems.length > 0 && sellerItems.length > 0;
 
   if (isPureSellerOrder) {
     return (
@@ -293,6 +296,15 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
       </div>
 
       <div className="space-y-4">
+        {isMixedOrder && (
+          <div className="text-[11px] bg-sky-50 border border-sky-200 rounded-xl p-3 text-sky-900 flex items-start gap-2">
+            <AlertCircle size={14} className="text-sky-700 shrink-0 mt-0.5" />
+            <span className="leading-snug">
+              <strong>Mixed Order:</strong> Contains {adminItems.length} admin product(s) and {sellerItems.length} seller product(s). This shipment will fulfill only the admin-managed items.
+            </span>
+          </div>
+        )}
+
         {/* Pickup Location selection */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">

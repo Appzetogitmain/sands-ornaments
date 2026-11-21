@@ -33,32 +33,62 @@ const _updateOrderFromShipments = async (orderId) => {
 
   const previousStatus = order.status;
 
-  const sellerShipments = shipments.map((s) => ({
+  const hasAdminItems = (order.items || []).some((item) => !item.sellerId);
+  const sellerIdsInOrder = [...new Set(
+    (order.items || []).map((item) => String(item.sellerId || "")).filter(Boolean)
+  )];
+
+  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
+
+  // Admin items fulfillment check
+  const adminShipment = activeShipments.find((s) => s.isAdminShipment || !s.sellerId);
+  const adminDelivered = !hasAdminItems || (adminShipment && adminShipment.status === "DELIVERED");
+  const adminShipped = !hasAdminItems || (adminShipment && ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(adminShipment.status));
+
+  // Seller items fulfillment check
+  const deliveredSellers = new Set(
+    activeShipments
+      .filter((s) => s.status === "DELIVERED" && s.sellerId)
+      .map((s) => String(s.sellerId))
+  );
+  const shippedSellers = new Set(
+    activeShipments
+      .filter((s) => ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status) && s.sellerId)
+      .map((s) => String(s.sellerId))
+  );
+
+  const allSellersDelivered = sellerIdsInOrder.length === 0 ||
+    sellerIdsInOrder.every((sid) => deliveredSellers.has(sid));
+  const allSellersShipped = sellerIdsInOrder.length === 0 ||
+    sellerIdsInOrder.every((sid) => shippedSellers.has(sid));
+
+  const hasAnyItems = hasAdminItems || sellerIdsInOrder.length > 0;
+  const allDelivered = hasAnyItems && adminDelivered && allSellersDelivered;
+  const allShipped = hasAnyItems && adminShipped && allSellersShipped;
+  const anyShipped = activeShipments.some((s) =>
+    ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
+  );
+  const allCancelled = shipments.length > 0 && shipments.every((s) => s.status === "CANCELLED");
+
+  if (allDelivered) {
+    order.status = "Delivered";
+  } else if (allCancelled) {
+    order.status = "Cancelled";
+  } else if (allShipped) {
+    order.status = "Shipped";
+  } else if (anyShipped) {
+    if (!["Shipped", "Out for Delivery", "Delivered"].includes(order.status)) {
+      order.status = "Processing";
+    }
+  }
+
+  order.sellerShipments = shipments.map((s) => ({
     sellerId: s.sellerId,
     shipmentId: s._id,
     courier: s.courier,
     awbNumber: s.awbNumber,
     status: s.status,
   }));
-
-  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
-  const allDelivered = activeShipments.length > 0 &&
-    activeShipments.every((s) => s.status === "DELIVERED");
-  const allCancelled = shipments.length > 0 &&
-    shipments.every((s) => s.status === "CANCELLED");
-  const anyShipped = shipments.some((s) =>
-    ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
-  );
-
-  if (allDelivered) {
-    order.status = "Delivered";
-  } else if (allCancelled) {
-    order.status = "Cancelled";
-  } else if (anyShipped) {
-    order.status = "Shipped";
-  }
-
-  order.sellerShipments = sellerShipments;
   await order.save();
 
   // ── Platform commission lifecycle ───────────────────────────────────────────

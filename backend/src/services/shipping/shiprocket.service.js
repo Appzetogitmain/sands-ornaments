@@ -312,18 +312,30 @@ class ShiprocketProvider extends ShippingProvider {
     try {
       const client = await this._getClient();
 
-      if (!shiprocketOrderId) {
-        throw new Error("shiprocketOrderId is required to cancel a Shiprocket shipment");
+      if (!shiprocketOrderId && !awbNumber) {
+        throw new Error("shiprocketOrderId or awbNumber is required to cancel a Shiprocket shipment");
       }
 
-      const response = await client.post("/orders/cancel", {
-        ids: [Number(shiprocketOrderId)],
-      });
+      const payload = {};
+      if (shiprocketOrderId) {
+        payload.ids = [Number(shiprocketOrderId)];
+      } else if (awbNumber) {
+        payload.awbs = [String(awbNumber)];
+      }
+
+      const response = await client.post("/orders/cancel", payload);
+
+      // Check for success status from Shiprocket
+      const resData = response.data;
+      const isSuccess = resData?.status_code === 200 ||
+        resData?.message?.toLowerCase()?.includes("success") ||
+        resData?.response?.data?.message?.toLowerCase()?.includes("success") ||
+        (Array.isArray(resData?.data) && resData.data.length > 0);
 
       return {
-        cancelled: true,
-        message: "Shipment cancelled successfully",
-        courierResponse: response.data,
+        cancelled: isSuccess,
+        message: resData?.message || resData?.response?.data?.message || (isSuccess ? "Shipment cancelled successfully" : "Failed to cancel shipment with Shiprocket"),
+        courierResponse: resData,
       };
     } catch (err) {
       const msg = err.response?.data?.message || err.message;

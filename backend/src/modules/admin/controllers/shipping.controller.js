@@ -17,31 +17,42 @@ const updateOrderShippingStatus = async (orderId) => {
   const order = await Order.findById(orderId);
   if (!order) return;
 
+  const hasAdminItems = (order.items || []).some((item) => !item.sellerId);
   const sellerIdsInOrder = [...new Set(
     (order.items || []).map((item) => String(item.sellerId || "")).filter(Boolean)
   )];
 
-  const sellerShipments = shipments.map((s) => ({
-    sellerId: s.sellerId,
-    shipmentId: s._id,
-    courier: s.courier,
-    awbNumber: s.awbNumber,
-    status: s.status,
-  }));
+  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
 
+  // Admin items fulfillment check
+  const adminShipment = activeShipments.find((s) => s.isAdminShipment || !s.sellerId);
+  const adminDelivered = !hasAdminItems || (adminShipment && adminShipment.status === "DELIVERED");
+  const adminShipped = !hasAdminItems || (adminShipment && ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(adminShipment.status));
+
+  // Seller items fulfillment check
+  const deliveredSellers = new Set(
+    activeShipments
+      .filter((s) => s.status === "DELIVERED" && s.sellerId)
+      .map((s) => String(s.sellerId))
+  );
   const shippedSellers = new Set(
-    shipments
-      .filter((s) => !["CANCELLED"].includes(s.status))
+    activeShipments
+      .filter((s) => ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status) && s.sellerId)
       .map((s) => String(s.sellerId))
   );
 
-  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
-  const allDelivered = activeShipments.length > 0 &&
-    activeShipments.every((s) => s.status === "DELIVERED");
-  const allCancelled = shipments.length > 0 &&
-    shipments.every((s) => s.status === "CANCELLED");
-  const allShipped = sellerIdsInOrder.length > 0 &&
+  const allSellersDelivered = sellerIdsInOrder.length === 0 ||
+    sellerIdsInOrder.every((sid) => deliveredSellers.has(sid));
+  const allSellersShipped = sellerIdsInOrder.length === 0 ||
     sellerIdsInOrder.every((sid) => shippedSellers.has(sid));
+
+  const hasAnyItems = hasAdminItems || sellerIdsInOrder.length > 0;
+  const allDelivered = hasAnyItems && adminDelivered && allSellersDelivered;
+  const allShipped = hasAnyItems && adminShipped && allSellersShipped;
+  const anyShipped = activeShipments.some((s) =>
+    ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
+  );
+  const allCancelled = shipments.length > 0 && shipments.every((s) => s.status === "CANCELLED");
 
   if (allDelivered) {
     order.status = "Delivered";
@@ -49,9 +60,19 @@ const updateOrderShippingStatus = async (orderId) => {
     order.status = "Cancelled";
   } else if (allShipped) {
     order.status = "Shipped";
+  } else if (anyShipped) {
+    if (!["Shipped", "Out for Delivery", "Delivered"].includes(order.status)) {
+      order.status = "Processing";
+    }
   }
 
-  order.sellerShipments = sellerShipments;
+  order.sellerShipments = shipments.map((s) => ({
+    sellerId: s.sellerId,
+    shipmentId: s._id,
+    courier: s.courier,
+    awbNumber: s.awbNumber,
+    status: s.status,
+  }));
   await order.save();
 };
 
@@ -197,15 +218,24 @@ exports.cancelShipment = async (req, res) => {
     }
 
     const provider = getCourierProvider(shipment.courier);
+    if (!provider) {
+      return error(res, `Courier provider '${shipment.courier}' not found`, 400);
+    }
+
     const cancelResult = await provider.cancelShipment({
       awbNumber: shipment.awbNumber,
       waybill: shipment.waybill,
+      shiprocketOrderId: shipment.shiprocketOrderId,
     });
+
+    if (cancelResult && cancelResult.cancelled === false) {
+      return error(res, `Failed to cancel shipment with ${shipment.courier}: ${cancelResult.message || "Courier rejected cancellation"}`, 400);
+    }
 
     shipment.status = "CANCELLED";
     shipment.timeline.push({
       status: "CANCELLED",
-      message: `Shipment cancelled by admin. ${cancelResult.message || ""}`.trim(),
+      message: `Shipment cancelled by admin. ${cancelResult?.message || ""}`.trim(),
       date: new Date(),
     });
     await shipment.save();
@@ -415,6 +445,8 @@ exports.getOrderShipments = async (req, res) => {
  * Create a shipment for an order directly via Shiprocket (for admin products or direct platform orders).
  */
 exports.createShipment = async (req, res) => {
+  let courierResult = null;
+  let provider = null;
   try {
     const { orderId } = req.params;
     const { courier = "shiprocket", packageInfo, pickupLocationName, preferredCourierId } = req.body;
@@ -426,13 +458,14 @@ exports.createShipment = async (req, res) => {
     const order = await Order.findById(orderId).populate("items.productId", "name images sku");
     if (!order) return error(res, "Order not found", 404);
 
-    // Check for existing active shipment
-    const existingShipment = await Shipment.findOne({
+    // Check for existing active shipment for ADMIN products in this order
+    const existingAdminShipment = await Shipment.findOne({
       orderId,
+      $or: [{ isAdminShipment: true }, { sellerId: null }],
       status: { $ne: "CANCELLED" }
     });
-    if (existingShipment) {
-      return error(res, `A shipment already exists for this order (AWB: ${existingShipment.awbNumber || existingShipment._id})`, 409);
+    if (existingAdminShipment) {
+      return error(res, `An admin shipment already exists for this order (AWB: ${existingAdminShipment.awbNumber || existingAdminShipment._id})`, 409);
     }
 
     // Filter admin-fulfilled items (items where sellerId is null or empty)
@@ -504,7 +537,7 @@ exports.createShipment = async (req, res) => {
       return error(res, "No admin items available to ship for this order", 400);
     }
 
-    const provider = getCourierProvider(courier);
+    provider = getCourierProvider(courier);
     if (!provider) {
       return error(res, `Courier provider '${courier}' is not available`, 400);
     }
@@ -554,7 +587,7 @@ exports.createShipment = async (req, res) => {
       }
     }
 
-    const courierResult = await provider.createShipment({
+    courierResult = await provider.createShipment({
       orderId: order.orderId || order._id.toString(),
       pickupAddress,
       deliveryAddress,
@@ -635,6 +668,20 @@ exports.createShipment = async (req, res) => {
     return success(res, { shipment, order }, "Shipment created successfully with Shiprocket", 201);
   } catch (err) {
     console.error("[Admin Shipping] Create shipment error:", err);
+
+    // Rollback: if remote order was created in Shiprocket before local DB save failed, cancel it
+    if (courierResult?.shiprocketOrderId && provider && typeof provider.cancelShipment === "function") {
+      try {
+        await provider.cancelShipment({
+          shiprocketOrderId: courierResult.shiprocketOrderId,
+          awbNumber: courierResult.awbNumber,
+        });
+        console.log(`[Admin Shipping] Rolled back remote Shiprocket order ${courierResult.shiprocketOrderId} after local database failure.`);
+      } catch (rollbackErr) {
+        console.error("[Admin Shipping] Failed to rollback remote order after local failure:", rollbackErr.message);
+      }
+    }
+
     return error(res, err.response?.data?.message || err.message || "Failed to create shipment", 400);
   }
 };

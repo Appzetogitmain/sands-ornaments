@@ -43,36 +43,44 @@ const updateOrderShippingStatus = async (orderId) => {
   const order = await Order.findById(orderId);
   if (!order) return;
 
-  // Get unique sellerIds from order items
+  const hasAdminItems = (order.items || []).some((item) => !item.sellerId);
   const sellerIdsInOrder = [...new Set(
     (order.items || [])
       .map((item) => String(item.sellerId || ""))
       .filter(Boolean)
   )];
 
-  // Build sellerShipments array
-  const sellerShipments = shipments.map((s) => ({
-    sellerId: s.sellerId,
-    shipmentId: s._id,
-    courier: s.courier,
-    awbNumber: s.awbNumber,
-    status: s.status,
-  }));
+  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
 
-  // Determine main order status
+  // Admin items fulfillment check
+  const adminShipment = activeShipments.find((s) => s.isAdminShipment || !s.sellerId);
+  const adminDelivered = !hasAdminItems || (adminShipment && adminShipment.status === "DELIVERED");
+  const adminShipped = !hasAdminItems || (adminShipment && ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(adminShipment.status));
+
+  // Seller items fulfillment check
+  const deliveredSellers = new Set(
+    activeShipments
+      .filter((s) => s.status === "DELIVERED" && s.sellerId)
+      .map((s) => String(s.sellerId))
+  );
   const shippedSellers = new Set(
-    shipments
-      .filter((s) => !["CANCELLED"].includes(s.status))
+    activeShipments
+      .filter((s) => ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status) && s.sellerId)
       .map((s) => String(s.sellerId))
   );
 
-  const activeShipments = shipments.filter((s) => s.status !== "CANCELLED");
-  const allDelivered = activeShipments.length > 0 &&
-    activeShipments.every((s) => s.status === "DELIVERED");
-  const allCancelled = shipments.length > 0 &&
-    shipments.every((s) => s.status === "CANCELLED");
-  const allShipped = sellerIdsInOrder.length > 0 &&
+  const allSellersDelivered = sellerIdsInOrder.length === 0 ||
+    sellerIdsInOrder.every((sid) => deliveredSellers.has(sid));
+  const allSellersShipped = sellerIdsInOrder.length === 0 ||
     sellerIdsInOrder.every((sid) => shippedSellers.has(sid));
+
+  const hasAnyItems = hasAdminItems || sellerIdsInOrder.length > 0;
+  const allDelivered = hasAnyItems && adminDelivered && allSellersDelivered;
+  const allShipped = hasAnyItems && adminShipped && allSellersShipped;
+  const anyShipped = activeShipments.some((s) =>
+    ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
+  );
+  const allCancelled = shipments.length > 0 && shipments.every((s) => s.status === "CANCELLED");
 
   if (allDelivered) {
     order.status = "Delivered";
@@ -80,13 +88,20 @@ const updateOrderShippingStatus = async (orderId) => {
     order.status = "Cancelled";
   } else if (allShipped) {
     order.status = "Shipped";
-  } else if (shippedSellers.size > 0) {
-    // Partially shipped — keep as Processing or set to Shipped only if at least some are shipped
-    // Use the existing status if it's already beyond Processing
+  } else if (anyShipped) {
     if (!["Shipped", "Out for Delivery", "Delivered"].includes(order.status)) {
       order.status = "Processing";
     }
   }
+
+  order.sellerShipments = shipments.map((s) => ({
+    sellerId: s.sellerId,
+    shipmentId: s._id,
+    courier: s.courier,
+    awbNumber: s.awbNumber,
+    status: s.status,
+  }));
+  await order.save();
 
   // Store sellerShipments on order for reference
   order.sellerShipments = sellerShipments;
@@ -468,15 +483,24 @@ exports.cancelOrderShipment = async (req, res) => {
     }
 
     const provider = getCourierProvider(shipment.courier);
+    if (!provider) {
+      return error(res, `Courier provider '${shipment.courier}' not found`, 400);
+    }
+
     const cancelResult = await provider.cancelShipment({
       awbNumber: shipment.awbNumber,
       waybill: shipment.waybill,
+      shiprocketOrderId: shipment.shiprocketOrderId,
     });
+
+    if (cancelResult && cancelResult.cancelled === false) {
+      return error(res, `Failed to cancel shipment with ${shipment.courier}: ${cancelResult.message || "Courier rejected cancellation"}`, 400);
+    }
 
     shipment.status = "CANCELLED";
     shipment.timeline.push({
       status: "CANCELLED",
-      message: `Shipment cancelled by seller. ${cancelResult.message || ""}`.trim(),
+      message: `Shipment cancelled by seller. ${cancelResult?.message || ""}`.trim(),
       date: new Date(),
     });
     await shipment.save();
