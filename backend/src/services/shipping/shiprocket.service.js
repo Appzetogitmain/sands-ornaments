@@ -133,57 +133,89 @@ class ShiprocketProvider extends ShippingProvider {
   }
 
   /**
+   * Builds the payload for Shiprocket /orders/create/adhoc.
+   * Accurately factors in codAmount via total_discount or shipping_charges so that
+   * Shiprocket collects the exact intended COD amount.
+   */
+  _buildOrderPayload(payload) {
+    const {
+      orderId,
+      deliveryAddress = {},
+      package: pkg = {},
+      paymentMode = "prepaid",
+      codAmount = 0,
+      items = [],
+      shiprocketPickupName,
+    } = payload;
+
+    const isCod = paymentMode === "cod";
+    const itemsSubtotal = (items || []).reduce(
+      (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+      0
+    );
+    const targetCollectable = isCod
+      ? (Number(codAmount) > 0 ? Number(codAmount) : itemsSubtotal)
+      : itemsSubtotal;
+
+    let totalDiscount = 0;
+    let shippingCharges = 0;
+
+    if (isCod) {
+      if (targetCollectable < itemsSubtotal) {
+        totalDiscount = Math.round((itemsSubtotal - targetCollectable) * 100) / 100;
+      } else if (targetCollectable > itemsSubtotal) {
+        shippingCharges = Math.round((targetCollectable - itemsSubtotal) * 100) / 100;
+      }
+    }
+
+    return {
+      order_id: `SR_${orderId}_${Date.now()}`,
+      order_date: new Date().toISOString().split("T")[0],
+      pickup_location: shiprocketPickupName || "Primary",
+      billing_customer_name: deliveryAddress.name || "Customer",
+      billing_last_name: "",
+      billing_address: deliveryAddress.address || "",
+      billing_city: deliveryAddress.city || "",
+      billing_pincode: deliveryAddress.pincode || "",
+      billing_state: deliveryAddress.state || "",
+      billing_country: deliveryAddress.country || "India",
+      billing_email: deliveryAddress.email || "",
+      billing_phone: deliveryAddress.phone || "",
+      shipping_is_billing: true,
+      order_items: (items || []).map((item) => ({
+        name: item.name || "Product",
+        sku: item.sku || `SKU_${item.productId || Date.now()}`,
+        units: Number(item.quantity) || 1,
+        selling_price: Number(item.price) || 0,
+        discount: 0,
+        tax: 0,
+        hsn: "",
+      })),
+      payment_method: isCod ? "COD" : "Prepaid",
+      sub_total: itemsSubtotal,
+      total_discount: totalDiscount,
+      shipping_charges: shippingCharges,
+      length: pkg.length || 10,
+      breadth: pkg.breadth || 10,
+      height: pkg.height || 10,
+      weight: pkg.weight > 100 ? pkg.weight / 1000 : pkg.weight || 0.5, // grams to kg
+    };
+  }
+
+  /**
    * Create an order + shipment in Shiprocket.
    * Returns shiprocketOrderId, shiprocketShipmentId, awbNumber, labelUrl, etc.
    */
   async createShipment(payload) {
     try {
       const {
-        orderId,
-        pickupAddress,
-        deliveryAddress,
-        package: pkg,
-        paymentMode,
-        codAmount,
-        items,
-        sellerName,
-        shiprocketPickupName, // Shiprocket pickup location name (warehouse name)
         preferredCourierId,   // Optional: force a specific courier
       } = payload;
 
       const client = await this._getClient();
 
       // ── Step 1: Create Shiprocket Order ────────────────────────────────────
-      const orderPayload = {
-        order_id: `SR_${orderId}_${Date.now()}`,
-        order_date: new Date().toISOString().split("T")[0],
-        pickup_location: shiprocketPickupName || "Primary",
-        billing_customer_name: deliveryAddress.name,
-        billing_last_name: "",
-        billing_address: deliveryAddress.address,
-        billing_city: deliveryAddress.city,
-        billing_pincode: deliveryAddress.pincode,
-        billing_state: deliveryAddress.state,
-        billing_country: deliveryAddress.country || "India",
-        billing_email: deliveryAddress.email || "",
-        billing_phone: deliveryAddress.phone,
-        shipping_is_billing: true,
-        order_items: items.map((item) => ({
-          name: item.name || "Product",
-          sku: item.sku || `SKU_${item.productId || Date.now()}`,
-          units: item.quantity || 1,
-          selling_price: item.price || 0,
-          discount: 0,
-          tax: 0,
-          hsn: "",
-        })),
-        payment_method: paymentMode === "cod" ? "COD" : "Prepaid",
-        sub_total: items.reduce((sum, i) => sum + (i.price || 0) * (i.quantity || 1), 0),
-        length: pkg.length || 10,
-        breadth: pkg.breadth || 10,
-        height: pkg.height || 10,
-        weight: pkg.weight > 100 ? pkg.weight / 1000 : pkg.weight || 0.5, // grams to kg
-      };
+      const orderPayload = this._buildOrderPayload(payload);
 
       const orderResponse = await client.post("/orders/create/adhoc", orderPayload);
       const orderData = orderResponse.data;

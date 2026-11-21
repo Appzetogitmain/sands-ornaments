@@ -537,7 +537,27 @@ exports.createShipment = async (req, res) => {
 
     const isCod = order.paymentMethod === "cod";
     const mode = isCod ? "cod" : "prepaid";
-    const codAmount = isCod ? (Number(req.body.codAmount) || Number(order.total) || 0) : 0;
+
+    let codAmount = 0;
+    if (isCod) {
+      if (Number(req.body.codAmount) > 0) {
+        codAmount = Number(req.body.codAmount);
+      } else {
+        const adminSubtotal = adminItems.reduce(
+          (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+          0
+        );
+        const orderSubtotal = (order.items || []).reduce(
+          (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+          0
+        );
+        if (sellerItems.length === 0 || orderSubtotal <= 0) {
+          codAmount = Number(order.total) || 0;
+        } else {
+          codAmount = Math.round(((Number(order.total) || 0) * adminSubtotal / orderSubtotal) * 100) / 100;
+        }
+      }
+    }
 
     const shipmentItems = adminItems.map((item) => ({
       productId: item.productId?._id || item.productId,

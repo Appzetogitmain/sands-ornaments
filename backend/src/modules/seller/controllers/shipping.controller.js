@@ -252,7 +252,24 @@ exports.createShipment = async (req, res) => {
 
     // Validate payment mode
     const mode = paymentMode || (order.paymentMethod === "cod" ? "cod" : "prepaid");
-    if (mode === "cod" && (!codAmount || codAmount <= 0)) {
+    let finalCodAmount = Number(codAmount) || 0;
+    if (mode === "cod" && finalCodAmount <= 0) {
+      const sellerSubtotal = sellerItems.reduce(
+        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+        0
+      );
+      const orderSubtotal = (order.items || []).reduce(
+        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+        0
+      );
+      if (sellerItems.length === (order.items || []).length || orderSubtotal <= 0) {
+        finalCodAmount = Number(order.total) || 0;
+      } else {
+        finalCodAmount = Math.round(((Number(order.total) || 0) * sellerSubtotal / orderSubtotal) * 100) / 100;
+      }
+    }
+
+    if (mode === "cod" && finalCodAmount <= 0) {
       return error(res, "COD amount is required for COD orders", 400);
     }
 
@@ -334,7 +351,7 @@ exports.createShipment = async (req, res) => {
       deliveryAddress,
       package: pkg,
       paymentMode: mode,
-      codAmount: mode === "cod" ? codAmount : 0,
+      codAmount: mode === "cod" ? finalCodAmount : 0,
       items: shipmentItems,
       sellerName: seller.shopName || seller.fullName,
       // Shiprocket-specific:
@@ -372,7 +389,7 @@ exports.createShipment = async (req, res) => {
       deliveryAddress,
       package: pkg,
       paymentMode: mode,
-      codAmount: mode === "cod" ? codAmount : 0,
+      codAmount: mode === "cod" ? finalCodAmount : 0,
       items: shipmentItems,
       courierResponse: courierResult.courierResponse,
       timeline: [{

@@ -91,6 +91,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           height: Number(packageInfo.height) || 5,
         },
         pickupLocationName: selectedPickup,
+        codAmount: adminCodAmount,
       });
 
       toast.success(res?.message || 'Shipment created successfully in Shiprocket!');
@@ -296,6 +297,14 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
   const isPureSellerOrder = items.length > 0 && adminItems.length === 0;
   const isMixedOrder = adminItems.length > 0 && sellerItems.length > 0;
 
+  const adminSubtotal = adminItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+  const orderSubtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
+  const adminCodAmount = isCod
+    ? (isMixedOrder && orderSubtotal > 0
+        ? Math.round(((order?.total || 0) * adminSubtotal) / orderSubtotal)
+        : Number(order?.total || 0))
+    : 0;
+
   if (isPureSellerOrder) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 space-y-3">
@@ -331,7 +340,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           </div>
         </div>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isCod ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-          {isCod ? `COD: ₹${order?.total || 0}` : 'Prepaid'}
+          {isCod ? `COD: ₹${adminCodAmount}` : 'Prepaid'}
         </span>
       </div>
 
@@ -340,7 +349,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           <div className="text-[11px] bg-sky-50 border border-sky-200 rounded-xl p-3 text-sky-900 flex items-start gap-2">
             <AlertCircle size={14} className="text-sky-700 shrink-0 mt-0.5" />
             <span className="leading-snug">
-              <strong>Mixed Order:</strong> Contains {adminItems.length} admin product(s) and {sellerItems.length} seller product(s). This shipment will fulfill only the admin-managed items.
+              <strong>Mixed Order:</strong> Contains {adminItems.length} admin product(s) and {sellerItems.length} seller product(s). This shipment will fulfill only the admin-managed items{isCod ? ` (COD collection: ₹${adminCodAmount})` : ''}.
             </span>
           </div>
         )}

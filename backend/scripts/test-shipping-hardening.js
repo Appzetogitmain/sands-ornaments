@@ -3,14 +3,17 @@
  *
  * Tests:
  * 1. Shipment model schema validation for all statuses, including FAILED_ORDER_SAVE.
- * 2. Two-phase rollback behavior when remote cancellation succeeds vs fails.
- * 3. Mixed order status calculations (allShipped, anyShipped, allDelivered, Cancelled guard).
+ * 2. Order shipping status resolution logic (mixed orders, cancellations, partial fulfillment).
+ * 3. Two-phase rollback behavior when remote cancellation succeeds vs fails.
+ * 4. Shiprocket COD payload calculation (discounts, shipping charges, collectable amount).
+ * 5. Mixed order proportional COD allocation.
  */
 
 const assert = require("assert");
 const mongoose = require("mongoose");
 const Shipment = require("../src/models/Shipment");
-const Order = require("../src/models/Order");
+const ShiprocketProvider = require("../src/services/shipping/shiprocket.service");
+const shiprocketService = new ShiprocketProvider();
 
 async function runTests() {
   console.log("════════════════════════════════════════════════════════════");
@@ -125,7 +128,6 @@ async function runTests() {
         { name: "Seller Pendant", sellerId },
       ],
     };
-    // Admin shipment is cancelled, seller shipment is still picked up
     const shipments = [
       { status: "CANCELLED", isAdminShipment: true },
       { status: "PICKED_UP", sellerId },
@@ -162,7 +164,6 @@ async function runTests() {
       { status: "DELIVERED", isAdminShipment: true },
       { status: "OUT_FOR_DELIVERY", sellerId },
     ];
-    // Both shipments are shipped/in-transit, so order remains 'Shipped' (not 'Delivered')
     assert.strictEqual(computeStatus(order, partialDeliver), "Shipped");
 
     const fullDeliver = [
@@ -178,11 +179,11 @@ async function runTests() {
     assert.strictEqual(computeStatus(order, shipments), "Packed");
   });
 
-  // 3. Two-phase rollback simulation
+  // 3. Two-phase rollback behavior
   console.log("\n3. Two-phase rollback behavior");
   console.log("───────────────────────────────");
 
-  test("When remote cancellation succeeds, orphaned shipment is purged", async () => {
+  test("When remote cancellation succeeds, orphaned shipment is purged", () => {
     let deletedId = null;
     const fakeShipment = {
       _id: "ship_123",
@@ -198,7 +199,7 @@ async function runTests() {
     assert.strictEqual(deletedId, "ship_123", "Shipment should be flagged for deletion");
   });
 
-  test("When remote cancellation is rejected, shipment is preserved with FAILED_ORDER_SAVE", async () => {
+  test("When remote cancellation is rejected, shipment is preserved with FAILED_ORDER_SAVE", () => {
     let preserved = false;
     const fakeShipment = {
       _id: "ship_456",
@@ -220,6 +221,110 @@ async function runTests() {
     assert.strictEqual(preserved, true);
     assert.strictEqual(fakeShipment.status, "FAILED_ORDER_SAVE");
     assert.strictEqual(fakeShipment.timeline.length, 1);
+  });
+
+  // 4. Shiprocket Payload & COD Precision
+  console.log("\n4. Shiprocket Payload & COD Precision");
+  console.log("─────────────────────────────────────");
+
+  test("Prepaid order generates payment_method='Prepaid' with 0 discount/shipping", () => {
+    const payload = {
+      orderId: "ORD_TEST_1",
+      deliveryAddress: { name: "Aman", address: "Main Rd", city: "Ranchi", pincode: "834001", state: "Jharkhand", phone: "9876543210" },
+      package: { weight: 200, length: 10, breadth: 10, height: 5 },
+      paymentMode: "prepaid",
+      codAmount: 0,
+      items: [{ name: "Gold Ring", price: 5000, quantity: 1, sku: "SKU1" }],
+    };
+
+    const orderPayload = shiprocketService._buildOrderPayload(payload);
+    assert.strictEqual(orderPayload.payment_method, "Prepaid");
+    assert.strictEqual(orderPayload.sub_total, 5000);
+    assert.strictEqual(orderPayload.total_discount, 0);
+    assert.strictEqual(orderPayload.shipping_charges, 0);
+  });
+
+  test("COD order with discount: factors total_discount so collectable equals codAmount", () => {
+    // Items subtotal = ₹1000, but customer applied ₹100 coupon, so COD amount is ₹900
+    const payload = {
+      orderId: "ORD_TEST_2",
+      deliveryAddress: { name: "Aman", address: "Main Rd", city: "Ranchi", pincode: "834001", state: "Jharkhand", phone: "9876543210" },
+      package: { weight: 200 },
+      paymentMode: "cod",
+      codAmount: 900,
+      items: [{ name: "Silver Pendant", price: 1000, quantity: 1, sku: "SKU2" }],
+    };
+
+    const orderPayload = shiprocketService._buildOrderPayload(payload);
+    assert.strictEqual(orderPayload.payment_method, "COD");
+    assert.strictEqual(orderPayload.sub_total, 1000);
+    assert.strictEqual(orderPayload.total_discount, 100);
+    assert.strictEqual(orderPayload.shipping_charges, 0);
+
+    const netCollectable = orderPayload.sub_total + orderPayload.shipping_charges - orderPayload.total_discount;
+    assert.strictEqual(netCollectable, 900, "Courier collects exactly the discounted COD total");
+  });
+
+  test("COD order with shipping charges: factors shipping_charges so collectable equals codAmount", () => {
+    // Items subtotal = ₹400, shipping fee = ₹50, total COD amount = ₹450
+    const payload = {
+      orderId: "ORD_TEST_3",
+      deliveryAddress: { name: "Priya", address: "Station Rd", city: "Patna", pincode: "800001", state: "Bihar", phone: "9876543211" },
+      package: { weight: 200 },
+      paymentMode: "cod",
+      codAmount: 450,
+      items: [{ name: "Silver Nose Pin", price: 400, quantity: 1, sku: "SKU3" }],
+    };
+
+    const orderPayload = shiprocketService._buildOrderPayload(payload);
+    assert.strictEqual(orderPayload.payment_method, "COD");
+    assert.strictEqual(orderPayload.sub_total, 400);
+    assert.strictEqual(orderPayload.shipping_charges, 50);
+    assert.strictEqual(orderPayload.total_discount, 0);
+
+    const netCollectable = orderPayload.sub_total + orderPayload.shipping_charges - orderPayload.total_discount;
+    assert.strictEqual(netCollectable, 450, "Courier collects exactly the total including shipping");
+  });
+
+  test("Mixed order proportional COD allocation divides order.total without excess or loss", () => {
+    // Admin items = ₹600, Seller items = ₹1400. Total order = ₹1800 (after ₹200 order-level coupon)
+    const adminItems = [{ price: 600, quantity: 1 }];
+    const sellerItems = [{ price: 1400, quantity: 1 }];
+    const allItems = [...adminItems, ...sellerItems];
+    const orderTotal = 1800;
+
+    const adminSubtotal = adminItems.reduce((s, i) => s + i.price * i.quantity, 0);
+    const sellerSubtotal = sellerItems.reduce((s, i) => s + i.price * i.quantity, 0);
+    const orderSubtotal = allItems.reduce((s, i) => s + i.price * i.quantity, 0);
+
+    const adminCod = Math.round((orderTotal * adminSubtotal / orderSubtotal) * 100) / 100;
+    const sellerCod = Math.round((orderTotal * sellerSubtotal / orderSubtotal) * 100) / 100;
+
+    assert.strictEqual(adminCod, 540);
+    assert.strictEqual(sellerCod, 1260);
+    assert.strictEqual(adminCod + sellerCod, 1800, "Sum of split shipments exactly matches order total");
+
+    // Test Shiprocket payload for admin portion
+    const adminShipPayload = shiprocketService._buildOrderPayload({
+      orderId: "ORD_MIXED_1",
+      deliveryAddress: { name: "Customer", address: "A", city: "B", pincode: "123456", state: "C", phone: "123" },
+      paymentMode: "cod",
+      codAmount: adminCod,
+      items: adminItems,
+    });
+    const adminCollectable = adminShipPayload.sub_total + adminShipPayload.shipping_charges - adminShipPayload.total_discount;
+    assert.strictEqual(adminCollectable, 540);
+
+    // Test Shiprocket payload for seller portion
+    const sellerShipPayload = shiprocketService._buildOrderPayload({
+      orderId: "ORD_MIXED_1",
+      deliveryAddress: { name: "Customer", address: "A", city: "B", pincode: "123456", state: "C", phone: "123" },
+      paymentMode: "cod",
+      codAmount: sellerCod,
+      items: sellerItems,
+    });
+    const sellerCollectable = sellerShipPayload.sub_total + sellerShipPayload.shipping_charges - sellerShipPayload.total_discount;
+    assert.strictEqual(sellerCollectable, 1260);
   });
 
   console.log("\n════════════════════════════════════════════════════════════");
