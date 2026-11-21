@@ -80,14 +80,24 @@ const updateOrderShippingStatus = async (orderId) => {
   const anyShipped = activeShipments.some((s) =>
     ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
   );
+  if (order.status === "Cancelled") {
+    order.sellerShipments = shipments.map((s) => ({
+      sellerId: s.sellerId,
+      shipmentId: s._id,
+      courier: s.courier,
+      awbNumber: s.awbNumber,
+      status: s.status,
+    }));
+    await order.save();
+    return;
+  }
+
   if (allDelivered) {
     order.status = "Delivered";
   } else if (allShipped) {
     order.status = "Shipped";
   } else if (anyShipped) {
-    if (!["Shipped", "Out for Delivery", "Delivered"].includes(order.status)) {
-      order.status = "Processing";
-    }
+    order.status = "Processing";
   } else if (activeShipments.length === 0 && order.status === "Shipped") {
     order.status = "Packed";
   }
@@ -179,6 +189,9 @@ exports.checkServiceability = async (req, res) => {
  * Create shipment for seller's items in an order.
  */
 exports.createShipment = async (req, res) => {
+  let provider = null;
+  let courierResult = null;
+  let shipment = null;
   try {
     const sellerId = req.user.userId;
     const { orderId } = req.params;
@@ -197,6 +210,10 @@ exports.createShipment = async (req, res) => {
     // Fetch order
     const order = await Order.findById(orderId).populate("items.productId", "name images");
     if (!order) return error(res, "Order not found", 404);
+
+    if (["Cancelled", "Delivered", "Returned"].includes(order.status)) {
+      return error(res, `Cannot create shipment for an order with status '${order.status}'`, 400);
+    }
 
     // Verify seller has items in this order
     const sellerItems = filterSellerItems(order.items, sellerId);
@@ -284,7 +301,7 @@ exports.createShipment = async (req, res) => {
     const deliveryAddress = buildDeliveryAddress(shippingAddr);
 
     // Check serviceability first
-    const provider = getCourierProvider(courier);
+    provider = getCourierProvider(courier);
     const serviceResult = await provider.checkServiceability({
       pickupPincode: pickupAddress.pincode,
       deliveryPincode: deliveryAddress.pincode,
@@ -311,7 +328,7 @@ exports.createShipment = async (req, res) => {
     }));
 
     // Create shipment with courier
-    const courierResult = await provider.createShipment({
+    courierResult = await provider.createShipment({
       orderId: order.orderId || order._id.toString(),
       pickupAddress,
       deliveryAddress,
@@ -337,7 +354,7 @@ exports.createShipment = async (req, res) => {
     }
 
     // Save shipment to DB
-    const shipment = await Shipment.create({
+    shipment = await Shipment.create({
       orderId: order._id,
       sellerId,
       courier,
@@ -379,6 +396,48 @@ exports.createShipment = async (req, res) => {
     return success(res, { shipment }, "Shipment created successfully", 201);
   } catch (err) {
     console.error("[Seller Shipping] Create shipment error:", err.message);
+
+    let remoteCancelled = true;
+
+    // Rollback Step 1: Attempt to cancel remote Shiprocket order FIRST if created
+    if (courierResult?.shiprocketOrderId && provider && typeof provider.cancelShipment === "function") {
+      try {
+        const rollbackRes = await provider.cancelShipment({
+          shiprocketOrderId: courierResult.shiprocketOrderId,
+          awbNumber: courierResult.awbNumber,
+        });
+        if (rollbackRes?.cancelled === false) {
+          remoteCancelled = false;
+          console.warn("[Seller Shipping] Remote rollback rejected by Shiprocket:", rollbackRes.message);
+        } else {
+          console.log(`[Seller Shipping] Rolled back remote Shiprocket order ${courierResult.shiprocketOrderId} after local failure.`);
+        }
+      } catch (rollbackErr) {
+        remoteCancelled = false;
+        console.error("[Seller Shipping] Failed to rollback remote order:", rollbackErr.message);
+      }
+    }
+
+    // Rollback Step 2: Handle local DB shipment document
+    if (shipment?._id) {
+      if (remoteCancelled || !courierResult?.shiprocketOrderId) {
+        try {
+          await Shipment.findByIdAndDelete(shipment._id);
+          console.log(`[Seller Shipping] Purged orphaned local shipment ${shipment._id} after failure.`);
+        } catch (_) {}
+      } else {
+        try {
+          shipment.status = "FAILED_ORDER_SAVE";
+          shipment.timeline.push({
+            status: "FAILED_ORDER_SAVE",
+            message: `Shipment created in Shiprocket (AWB: ${courierResult?.awbNumber || "Pending"}), but local order status failed to save: ${err.message}. Remote cancellation was not accepted.`,
+            date: new Date(),
+          });
+          await shipment.save();
+        } catch (_) {}
+      }
+    }
+
     return error(res, err.message, 500);
   }
 };

@@ -14,6 +14,7 @@ const STATUS_BADGE = {
   OUT_FOR_DELIVERY: 'bg-orange-50 text-orange-700 border-orange-200',
   DELIVERED: 'bg-emerald-50 text-emerald-700 border-emerald-200',
   FAILED: 'bg-red-50 text-red-700 border-red-200',
+  FAILED_ORDER_SAVE: 'bg-rose-50 text-rose-700 border-rose-200',
   CANCELLED: 'bg-gray-50 text-gray-500 border-gray-200',
 };
 
@@ -123,6 +124,23 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
     }
   };
 
+  const handleCancelShipment = async (shipmentId) => {
+    if (!window.confirm('Are you sure you want to cancel this Shiprocket shipment?')) return;
+    setActionLoading(true);
+    try {
+      await adminShippingService.cancelShipment(shipmentId);
+      toast.success('Shipment cancelled successfully');
+      loadData();
+      if (onOrderUpdated) {
+        onOrderUpdated();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to cancel shipment');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 flex items-center justify-center gap-2 text-gray-400 text-xs font-semibold">
@@ -197,6 +215,15 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           </div>
         </div>
 
+        {activeShipment.status === 'FAILED_ORDER_SAVE' && (
+          <div className="text-[11px] bg-rose-50 border border-rose-200 rounded-xl p-3 text-rose-800 flex items-start gap-2">
+            <AlertCircle size={14} className="text-rose-600 shrink-0 mt-0.5" />
+            <span className="leading-snug">
+              Order status update failed after Shiprocket creation. Remote order is still active with AWB <strong>{awb}</strong>. You can track or cancel it.
+            </span>
+          </div>
+        )}
+
         {/* Action buttons */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
           {labelUrl ? (
@@ -243,6 +270,18 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
               <ExternalLink size={13} />
               Track Status
             </a>
+          )}
+
+          {!['DELIVERED', 'RTO_DELIVERED', 'CANCELLED'].includes(activeShipment.status) && (
+            <button
+              type="button"
+              onClick={() => handleCancelShipment(activeShipment._id)}
+              disabled={actionLoading}
+              className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl border border-rose-200 text-rose-600 hover:bg-rose-50 text-[10px] font-black uppercase tracking-widest transition-all disabled:opacity-50"
+            >
+              {actionLoading ? <Loader2 size={13} className="animate-spin" /> : <AlertCircle size={13} />}
+              Cancel Shipment
+            </button>
           )}
         </div>
       </div>
@@ -399,11 +438,21 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           </span>
         </div>
 
+        {/* Cancelled Order Warning */}
+        {order?.orderStatus === 'Cancelled' && (
+          <div className="text-[11px] bg-rose-50 border border-rose-200 rounded-xl p-3 text-rose-800 flex items-start gap-2">
+            <AlertCircle size={14} className="text-rose-600 shrink-0 mt-0.5" />
+            <span className="leading-snug">
+              This order has been cancelled and cannot be dispatched.
+            </span>
+          </div>
+        )}
+
         {/* Create Button */}
         <button
           type="button"
           onClick={handleCreateShipment}
-          disabled={creating || pickupLocations.length === 0 || ['Delivered', 'Returned'].includes(order?.orderStatus) || (order?.orderStatus === 'Cancelled' && !hasCancelledShipment)}
+          disabled={creating || pickupLocations.length === 0 || ['Delivered', 'Cancelled', 'Returned'].includes(order?.orderStatus)}
           className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[#3E2723] to-[#5D4037] text-white text-[11px] font-black uppercase tracking-widest hover:from-[#2d1e1b] hover:to-[#4a342c] transition-all shadow-md hover:shadow-lg disabled:opacity-50"
         >
           {creating ? (
@@ -414,7 +463,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           ) : (
             <>
               <Truck size={15} />
-              <span>Create Shiprocket Shipment</span>
+              <span>{order?.orderStatus === 'Cancelled' ? 'Order Cancelled' : 'Create Shiprocket Shipment'}</span>
             </>
           )}
         </button>

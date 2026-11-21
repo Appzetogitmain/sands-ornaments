@@ -68,14 +68,25 @@ const _updateOrderFromShipments = async (orderId) => {
   const anyShipped = activeShipments.some((s) =>
     ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
   );
+
+  if (order.status === "Cancelled") {
+    order.sellerShipments = shipments.map((s) => ({
+      sellerId: s.sellerId,
+      shipmentId: s._id,
+      courier: s.courier,
+      awbNumber: s.awbNumber,
+      status: s.status,
+    }));
+    await order.save();
+    return;
+  }
+
   if (allDelivered) {
     order.status = "Delivered";
   } else if (allShipped) {
     order.status = "Shipped";
   } else if (anyShipped) {
-    if (!["Shipped", "Out for Delivery", "Delivered"].includes(order.status)) {
-      order.status = "Processing";
-    }
+    order.status = "Processing";
   } else if (activeShipments.length === 0 && order.status === "Shipped") {
     order.status = "Packed";
   }

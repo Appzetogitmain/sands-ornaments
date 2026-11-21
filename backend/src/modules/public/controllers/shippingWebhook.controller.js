@@ -17,6 +17,18 @@ const updateOrderShippingStatus = async (orderId) => {
 
   const previousStatus = order.status;
 
+  if (order.status === "Cancelled") {
+    order.sellerShipments = shipments.map((s) => ({
+      sellerId: s.sellerId,
+      shipmentId: s._id,
+      courier: s.courier,
+      awbNumber: s.awbNumber,
+      status: s.status,
+    }));
+    await order.save();
+    return;
+  }
+
   const sellerIdsInOrder = [...new Set(
     (order.items || []).map((item) => String(item.sellerId || "")).filter(Boolean)
   )];
