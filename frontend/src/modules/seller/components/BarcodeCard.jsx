@@ -17,13 +17,15 @@ const BarcodeCard = ({ barcode }) => {
 
     return (
         <div className="bg-white rounded-2xl border border-gray-100 p-6 flex flex-col items-center gap-4 shadow-sm hover:shadow-md transition-all">
-            <div className="bg-[#FDFBF7] p-4 rounded-xl border border-[#EFEBE9] w-full flex justify-center">
+            <div className="bg-white p-3 rounded-xl border border-[#EFEBE9] w-full flex justify-start items-center overflow-hidden">
                 <Barcode 
                     value={barcode.number} 
-                    width={1.5} 
-                    height={50} 
-                    fontSize={12}
-                    background="#FDFBF7"
+                    width={1.0} 
+                    height={24} 
+                    fontSize={9}
+                    margin={0}
+                    textAlign="left"
+                    background="transparent"
                 />
             </div>
             

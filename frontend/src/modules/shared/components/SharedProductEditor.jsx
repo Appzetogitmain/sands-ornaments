@@ -202,6 +202,87 @@ const ProductEditorSession = ({
         downloadSvgNode(svgNode, `serial-${serialCode}.svg`);
     };
 
+    const handlePrintSerialBarcode = (serialCode) => {
+        const container = serialBarcodeRefs.current[serialCode];
+        const svgNode = container?.querySelector?.('svg');
+        if (!svgNode) {
+            toast.error('Barcode preview is not ready yet');
+            return;
+        }
+
+        const printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            toast.error("Popup blocker prevented opening the print window. Please allow popups for this site.");
+            return;
+        }
+
+        const serializer = new XMLSerializer();
+        const svgMarkup = serializer.serializeToString(svgNode);
+
+        printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <title>Tag Barcode - ${serialCode}</title>
+    <style>
+        @page {
+            margin: 0;
+            size: auto;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background: #fff;
+            color: #000;
+            -webkit-print-color-adjust: exact;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, monospace;
+        }
+        .tag-container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            padding: 2px 0 0 2px;
+            width: max-content;
+        }
+        .tag-barcode {
+            display: block;
+            text-align: left;
+        }
+        .tag-barcode svg {
+            display: block;
+            width: 105px;
+            max-width: 100%;
+            height: auto;
+            margin: 0;
+        }
+        @media print {
+            body {
+                margin: 0;
+                padding: 0;
+            }
+            .tag-container {
+                padding: 1px 0 0 1px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="tag-container">
+        <div class="tag-barcode">${svgMarkup}</div>
+    </div>
+    <script>
+        setTimeout(() => {
+            window.print();
+        }, 300);
+    </script>
+</body>
+</html>`);
+        printWindow.document.close();
+    };
+
     const handleDownloadAllSerialBarcodes = (variant) => {
         const codes = (variant.serialCodes || []).map(c => c.code);
         if (codes.length === 0) return;
@@ -224,7 +305,6 @@ const ProductEditorSession = ({
                 svgItemsHtml += `
                     <div class="barcode-card">
                         <div class="barcode-svg">${svgMarkup}</div>
-                        <div class="barcode-code">${code}</div>
                     </div>
                 `;
             }
@@ -236,80 +316,103 @@ const ProductEditorSession = ({
             return;
         }
 
-        printWindow.document.write(`
-            <html>
-            <head>
-                <title>Print Barcodes - ${variant.name || 'variant'}</title>
-                <style>
-                    body {
-                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-                        margin: 0;
-                        padding: 30px;
-                        background: white;
-                        color: black;
-                        -webkit-print-color-adjust: exact;
-                    }
-                    .grid {
-                        display: grid;
-                        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-                        gap: 20px;
-                    }
-                    .barcode-card {
-                        border: 1px solid #eaeaea;
-                        border-radius: 16px;
-                        padding: 20px;
-                        text-align: center;
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        page-break-inside: avoid;
-                        background: #fff;
-                    }
-                    .barcode-svg svg {
-                        width: 140px;
-                        height: auto;
-                    }
-                    .barcode-code {
-                        font-size: 11px;
-                        font-weight: 700;
-                        font-family: monospace;
-                        margin-top: 10px;
-                        letter-spacing: 1px;
-                        color: #333;
-                    }
-                    @media print {
-                        body {
-                            padding: 0;
-                        }
-                        .grid {
-                            grid-template-columns: repeat(3, 1fr);
-                            gap: 15px;
-                        }
-                        .barcode-card {
-                            border: 1px solid #ccc;
-                            box-shadow: none;
-                        }
-                    }
-                </style>
-            </head>
-            <body>
-                <h3 style="margin-top: 0; margin-bottom: 25px; text-transform: uppercase; font-size: 12px; font-weight: 900; letter-spacing: 2px; border-bottom: 2px solid #000; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
-                    <span>Barcodes Batch - ${variant.name || 'variant'}</span>
-                    <span style="color: #666; font-size: 10px;">${codes.length} Units</span>
-                </h3>
-                <div class="grid">
-                    ${svgItemsHtml}
-                </div>
-                <script>
-                    // Add a tiny delay to ensure SVGs are completely rendered before print dialog opens
-                    setTimeout(() => {
-                        window.print();
-                    }, 500);
-                </script>
-            </body>
-            </html>
-        `);
+        printWindow.document.write(`<!DOCTYPE html>
+<html>
+<head>
+    <title>Print Barcodes - ${variant.name || 'variant'}</title>
+    <style>
+        @page {
+            margin: 0;
+            size: auto;
+        }
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 15px;
+            background: white;
+            color: black;
+            -webkit-print-color-adjust: exact;
+        }
+        .no-print-header {
+            margin-top: 0;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 1.5px;
+            border-bottom: 2px solid #000;
+            padding-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+            gap: 10px;
+        }
+        .barcode-card {
+            border: 1px dashed #e0e0e0;
+            border-radius: 8px;
+            padding: 6px 8px;
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            page-break-inside: avoid;
+            background: #fff;
+        }
+        .barcode-svg {
+            display: flex;
+            justify-content: flex-start;
+            width: 100%;
+        }
+        .barcode-svg svg {
+            width: 105px;
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 0;
+        }
+        @media print {
+            body {
+                padding: 0;
+                margin: 0;
+            }
+            .no-print-header {
+                display: none !important;
+            }
+            .grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 6px;
+            }
+            .barcode-card {
+                border: none;
+                padding: 2px 4px;
+                box-shadow: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="no-print-header">
+        <span>Barcodes Batch - ${variant.name || 'variant'}</span>
+        <span style="color: #666; font-size: 10px;">${codes.length} Units</span>
+    </div>
+    <div class="grid">
+        ${svgItemsHtml}
+    </div>
+    <script>
+        setTimeout(() => {
+            window.print();
+        }, 400);
+    </script>
+</body>
+</html>`);
         printWindow.document.close();
     };
 
@@ -1082,6 +1185,7 @@ const ProductEditorSession = ({
                                 updateVariantSerialQuantity={updateVariantSerialQuantity}
                                 handleDownloadAllSerialBarcodes={handleDownloadAllSerialBarcodes}
                                 handleDownloadSerialBarcode={handleDownloadSerialBarcode}
+                                handlePrintSerialBarcode={handlePrintSerialBarcode}
                                 setSerialBarcodeRef={setSerialBarcodeRef}
                                 handleVariantImageUpload={handleVariantImageUpload}
                                 handleRemoveVariantUpload={handleRemoveVariantUpload}
@@ -1166,12 +1270,14 @@ const ProductEditorSession = ({
 
                                 <div className="p-8 bg-gray-50 rounded-[2.5rem] border border-gray-100 flex flex-col items-center gap-6">
                                     <p className="text-[9px] font-black text-gray-400 uppercase tracking-widest">Visual Signature (Barcode)</p>
-                                    <div className="w-full flex justify-center bg-white p-6 rounded-2xl border border-gray-100 shadow-inner">
+                                    <div className="w-full flex justify-start bg-white p-4 rounded-2xl border border-gray-100 shadow-inner">
                                         <Barcode 
                                             value={createdProductData?.productCode || 'REGISTERED'} 
-                                            width={1.5} 
-                                            height={50} 
-                                            fontSize={12}
+                                            width={1.0} 
+                                            height={26} 
+                                            fontSize={9}
+                                            margin={0}
+                                            textAlign="left"
                                             background="#ffffff"
                                         />
                                     </div>

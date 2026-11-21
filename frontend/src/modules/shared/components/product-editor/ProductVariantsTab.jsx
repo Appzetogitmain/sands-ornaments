@@ -1,7 +1,7 @@
 import React from 'react';
 import { 
     Tag, Sparkles, Scale, Zap, IndianRupee, CheckCircle2 as SuccessIcon, 
-    Layers, Calculator, Box, Barcode as BarcodeIcon, Copy, Download, 
+    Layers, Calculator, Box, Barcode as BarcodeIcon, Copy, Download, Printer, 
     Plus, Trash2, ImagePlus, FileText, ChevronDown, ChevronUp, X, Info,
     CheckCircle2
 } from 'lucide-react';
@@ -23,6 +23,7 @@ const ProductVariantsTab = ({
     updateVariantSerialQuantity,
     handleDownloadAllSerialBarcodes,
     handleDownloadSerialBarcode,
+    handlePrintSerialBarcode,
     setSerialBarcodeRef,
     handleVariantImageUpload,
     handleRemoveVariantUpload,
@@ -600,25 +601,39 @@ const ProductVariantsTab = ({
                                                                                 {serialStatus.replace('_', ' ')}
                                                                             </div>
                                                                         </div>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleDownloadSerialBarcode(codeObj.code)}
-                                                                            className="shrink-0 p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-[#3E2723] hover:border-[#3E2723] transition-all cursor-pointer"
-                                                                            title="Download unit barcode"
-                                                                        >
-                                                                            <Download size={14} />
-                                                                        </button>
+                                                                        <div className="flex items-center gap-1.5 shrink-0">
+                                                                            {handlePrintSerialBarcode && (
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handlePrintSerialBarcode(codeObj.code)}
+                                                                                    className="p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-[#3E2723] hover:border-[#3E2723] transition-all cursor-pointer"
+                                                                                    title="Print tag barcode (aligned for jewellery tags)"
+                                                                                >
+                                                                                    <Printer size={14} />
+                                                                                </button>
+                                                                            )}
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleDownloadSerialBarcode(codeObj.code)}
+                                                                                className="p-2 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-[#3E2723] hover:border-[#3E2723] transition-all cursor-pointer"
+                                                                                title="Download unit barcode SVG"
+                                                                            >
+                                                                                <Download size={14} />
+                                                                            </button>
+                                                                        </div>
                                                                     </div>
                                                                     <div
-                                                                        className="bg-[#FDFBF7] border border-[#EFEBE9] rounded-xl px-3 py-3 overflow-hidden flex justify-center"
+                                                                        className="bg-white border border-[#EFEBE9] rounded-xl px-2.5 py-2 overflow-hidden flex justify-start items-center"
                                                                         ref={(node) => setSerialBarcodeRef(codeObj.code, node)}
                                                                     >
                                                                         <Barcode
                                                                             value={codeObj.code}
-                                                                            width={1.2}
-                                                                            height={30}
-                                                                            fontSize={10}
-                                                                            background="#FDFBF7"
+                                                                            width={1.0}
+                                                                            height={22}
+                                                                            fontSize={9}
+                                                                            margin={0}
+                                                                            textAlign="left"
+                                                                            background="transparent"
                                                                         />
                                                                     </div>
                                                                 </div>
