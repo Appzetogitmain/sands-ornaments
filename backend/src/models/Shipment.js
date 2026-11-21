@@ -41,6 +41,7 @@ const shipmentSchema = new mongoose.Schema({
       "OUT_FOR_DELIVERY",
       "DELIVERED",
       "FAILED",
+      "FAILED_ORDER_SAVE",
       "RTO_INITIATED",
       "RTO_DELIVERED",
       "CANCELLED",

@@ -722,7 +722,9 @@ exports.createShipment = async (req, res) => {
         try {
           await Shipment.findByIdAndDelete(createdShipment._id);
           console.log(`[Admin Shipping] Purged orphaned local shipment ${createdShipment._id} after failure.`);
-        } catch (_) {}
+        } catch (dbErr) {
+          console.error(`[Admin Shipping] Failed to delete orphaned local shipment ${createdShipment._id}:`, dbErr.message);
+        }
       } else {
         // Remote order could NOT be cancelled in Shiprocket:
         // Keep the local shipment record so the active AWB and tracking are NOT lost or untracked
@@ -734,7 +736,9 @@ exports.createShipment = async (req, res) => {
             date: new Date(),
           });
           await createdShipment.save();
-        } catch (_) {}
+        } catch (statusSaveErr) {
+          console.error(`[Admin Shipping] Failed to save FAILED_ORDER_SAVE status on shipment ${createdShipment._id}:`, statusSaveErr.message);
+        }
       }
     }
 

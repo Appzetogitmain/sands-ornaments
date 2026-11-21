@@ -14,6 +14,7 @@ const STATUS_COLORS = {
   OUT_FOR_DELIVERY: 'bg-orange-50 text-orange-700 border-orange-200',
   DELIVERED:        'bg-emerald-50 text-emerald-700 border-emerald-200',
   FAILED:           'bg-red-50 text-red-700 border-red-200',
+  FAILED_ORDER_SAVE:'bg-rose-50 text-rose-700 border-rose-200',
   RTO_INITIATED:    'bg-rose-50 text-rose-700 border-rose-200',
   RTO_DELIVERED:    'bg-gray-50 text-gray-600 border-gray-200',
   CANCELLED:        'bg-gray-50 text-gray-500 border-gray-200',
@@ -22,7 +23,7 @@ const STATUS_COLORS = {
 const STATUS_LABELS = {
   CREATED: 'Created', PICKUP_SCHEDULED: 'Pickup Scheduled', PICKED_UP: 'Picked Up',
   IN_TRANSIT: 'In Transit', OUT_FOR_DELIVERY: 'Out for Delivery', DELIVERED: 'Delivered',
-  FAILED: 'Failed', RTO_INITIATED: 'RTO', RTO_DELIVERED: 'RTO Delivered', CANCELLED: 'Cancelled',
+  FAILED: 'Failed', FAILED_ORDER_SAVE: 'Failed Order Save', RTO_INITIATED: 'RTO', RTO_DELIVERED: 'RTO Delivered', CANCELLED: 'Cancelled',
 };
 
 const COURIER_LABELS = { delhivery: 'Delhivery', bluedart: 'Blue Dart', shiprocket: 'Shiprocket' };

@@ -424,7 +424,9 @@ exports.createShipment = async (req, res) => {
         try {
           await Shipment.findByIdAndDelete(shipment._id);
           console.log(`[Seller Shipping] Purged orphaned local shipment ${shipment._id} after failure.`);
-        } catch (_) {}
+        } catch (dbErr) {
+          console.error(`[Seller Shipping] Failed to delete orphaned local shipment ${shipment._id}:`, dbErr.message);
+        }
       } else {
         try {
           shipment.status = "FAILED_ORDER_SAVE";
@@ -434,7 +436,9 @@ exports.createShipment = async (req, res) => {
             date: new Date(),
           });
           await shipment.save();
-        } catch (_) {}
+        } catch (statusSaveErr) {
+          console.error(`[Seller Shipping] Failed to save FAILED_ORDER_SAVE status on shipment ${shipment._id}:`, statusSaveErr.message);
+        }
       }
     }
 

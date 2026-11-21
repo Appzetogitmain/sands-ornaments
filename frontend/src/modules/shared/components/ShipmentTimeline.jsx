@@ -9,6 +9,7 @@ const STATUS_CONFIG = {
   OUT_FOR_DELIVERY: { label: 'Out for Delivery',  color: 'bg-orange-100 text-orange-700', icon: Truck },
   DELIVERED:        { label: 'Delivered',          color: 'bg-emerald-100 text-emerald-700', icon: CheckCircle },
   FAILED:           { label: 'Failed',            color: 'bg-red-100 text-red-700',       icon: XCircle },
+  FAILED_ORDER_SAVE:{ label: 'Failed Order Save', color: 'bg-rose-100 text-rose-700',     icon: AlertTriangle },
   RTO_INITIATED:    { label: 'RTO Initiated',     color: 'bg-rose-100 text-rose-700',     icon: RotateCcw },
   RTO_DELIVERED:    { label: 'RTO Delivered',      color: 'bg-gray-100 text-gray-700',     icon: RotateCcw },
   CANCELLED:        { label: 'Cancelled',         color: 'bg-gray-100 text-gray-500',     icon: XCircle },
