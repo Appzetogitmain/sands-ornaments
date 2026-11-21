@@ -60,7 +60,8 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
   }, [loadData]);
 
   const adminShipments = shipments.filter((s) => s.isAdminShipment || !s.sellerId);
-  const activeShipment = adminShipments.find((s) => s.status !== 'CANCELLED') || adminShipments[0];
+  const activeShipment = adminShipments.find((s) => s.status !== 'CANCELLED');
+  const hasCancelledShipment = adminShipments.some((s) => s.status === 'CANCELLED');
 
   const handleCopyAwb = (awb) => {
     if (!awb) return;
@@ -305,6 +306,15 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           </div>
         )}
 
+        {hasCancelledShipment && (
+          <div className="text-[11px] bg-amber-50 border border-amber-200 rounded-xl p-3 text-amber-900 flex items-start gap-2">
+            <AlertCircle size={14} className="text-amber-700 shrink-0 mt-0.5" />
+            <span className="leading-snug">
+              <strong>Previous shipment cancelled:</strong> You can configure package dimensions and dispatch a new Shiprocket shipment below.
+            </span>
+          </div>
+        )}
+
         {/* Pickup Location selection */}
         <div className="space-y-1.5">
           <label className="flex items-center gap-1 text-[10px] font-black text-gray-400 uppercase tracking-widest">
@@ -393,7 +403,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
         <button
           type="button"
           onClick={handleCreateShipment}
-          disabled={creating || pickupLocations.length === 0 || ['Delivered', 'Cancelled', 'Returned'].includes(order?.orderStatus)}
+          disabled={creating || pickupLocations.length === 0 || ['Delivered', 'Returned'].includes(order?.orderStatus) || (order?.orderStatus === 'Cancelled' && !hasCancelledShipment)}
           className="w-full flex items-center justify-center gap-2 px-4 py-3.5 rounded-xl bg-gradient-to-r from-[#3E2723] to-[#5D4037] text-white text-[11px] font-black uppercase tracking-widest hover:from-[#2d1e1b] hover:to-[#4a342c] transition-all shadow-md hover:shadow-lg disabled:opacity-50"
         >
           {creating ? (

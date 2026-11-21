@@ -52,18 +52,18 @@ const updateOrderShippingStatus = async (orderId) => {
   const anyShipped = activeShipments.some((s) =>
     ["PICKED_UP", "IN_TRANSIT", "OUT_FOR_DELIVERY", "DELIVERED"].includes(s.status)
   );
-  const allCancelled = shipments.length > 0 && shipments.every((s) => s.status === "CANCELLED");
 
   if (allDelivered) {
     order.status = "Delivered";
-  } else if (allCancelled) {
-    order.status = "Cancelled";
   } else if (allShipped) {
     order.status = "Shipped";
   } else if (anyShipped) {
     if (!["Shipped", "Out for Delivery", "Delivered"].includes(order.status)) {
       order.status = "Processing";
     }
+  } else if (activeShipments.length === 0 && order.status === "Shipped") {
+    // If all active shipments were cancelled and order was marked Shipped, revert to Packed so it can be re-dispatched
+    order.status = "Packed";
   }
 
   order.sellerShipments = shipments.map((s) => ({
@@ -447,6 +447,7 @@ exports.getOrderShipments = async (req, res) => {
 exports.createShipment = async (req, res) => {
   let courierResult = null;
   let provider = null;
+  let createdShipment = null;
   try {
     const { orderId } = req.params;
     const { courier = "shiprocket", packageInfo, pickupLocationName, preferredCourierId } = req.body;
@@ -613,7 +614,7 @@ exports.createShipment = async (req, res) => {
     const trackingUrl = courierResult.trackingUrl ||
       (courierResult.awbNumber ? `https://shiprocket.co/tracking/${courierResult.awbNumber}` : "");
 
-    const shipment = await Shipment.create({
+    createdShipment = await Shipment.create({
       orderId: order._id,
       sellerId: null,
       isAdminShipment: true,
@@ -665,18 +666,35 @@ exports.createShipment = async (req, res) => {
     }
     await order.save();
 
-    return success(res, { shipment, order }, "Shipment created successfully with Shiprocket", 201);
+    return success(res, { shipment: createdShipment, order }, "Shipment created successfully with Shiprocket", 201);
   } catch (err) {
     console.error("[Admin Shipping] Create shipment error:", err);
 
-    // Rollback: if remote order was created in Shiprocket before local DB save failed, cancel it
+    // Rollback 1: if local DB shipment was created before order.save() failed, purge it so it doesn't block future attempts
+    if (createdShipment?._id) {
+      try {
+        await Shipment.findByIdAndDelete(createdShipment._id);
+        console.log(`[Admin Shipping] Cleaned up orphaned local shipment ${createdShipment._id} after failure.`);
+      } catch (dbCleanupErr) {
+        try {
+          createdShipment.status = "CANCELLED";
+          await createdShipment.save();
+        } catch (_) {}
+      }
+    }
+
+    // Rollback 2: if remote order was created in Shiprocket before local DB save failed, cancel it
     if (courierResult?.shiprocketOrderId && provider && typeof provider.cancelShipment === "function") {
       try {
-        await provider.cancelShipment({
+        const rollbackRes = await provider.cancelShipment({
           shiprocketOrderId: courierResult.shiprocketOrderId,
           awbNumber: courierResult.awbNumber,
         });
-        console.log(`[Admin Shipping] Rolled back remote Shiprocket order ${courierResult.shiprocketOrderId} after local database failure.`);
+        if (rollbackRes?.cancelled === false) {
+          console.warn("[Admin Shipping] Remote rollback returned false:", rollbackRes.message);
+        } else {
+          console.log(`[Admin Shipping] Rolled back remote Shiprocket order ${courierResult.shiprocketOrderId} after local database failure.`);
+        }
       } catch (rollbackErr) {
         console.error("[Admin Shipping] Failed to rollback remote order after local failure:", rollbackErr.message);
       }
