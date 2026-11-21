@@ -9,6 +9,7 @@ const Order = require("../../../models/Order");
 const { success, error, paginated } = require("../../../utils/apiResponse");
 const { getCourierProvider } = require("../../../services/shipping/courierFactory");
 const { isValidInternalStatus, getInternalStatuses } = require("../../../services/shipping/shippingStatusMapper");
+const { calculateOrderCodAllocations, getOrderVendorGroups } = require("../../../services/shipping/codAllocation");
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
@@ -537,32 +538,52 @@ exports.createShipment = async (req, res) => {
 
     const isCod = order.paymentMethod === "cod";
     const mode = isCod ? "cod" : "prepaid";
+    if (req.body.paymentMode && req.body.paymentMode !== mode) {
+      return error(
+        res,
+        `Payment mode cannot be changed. Order ${order.orderNumber || order._id} is ${isCod ? "Cash on Delivery (COD)" : "Prepaid"}.`,
+        400
+      );
+    }
 
     let codAmount = 0;
     if (isCod) {
-      const adminSubtotal = adminItems.reduce(
-        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
-        0
-      );
-      const orderSubtotal = (order.items || []).reduce(
-        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
-        0
-      );
-      const isPureAdminOrder = sellerItems.length === 0;
-      const proportionalCod = (orderSubtotal > 0 && !isPureAdminOrder)
-        ? Math.round(((Number(order.total) || 0) * adminSubtotal / orderSubtotal) * 100) / 100
-        : Math.round(Number(order.total || 0) * 100) / 100;
+      const allocations = calculateOrderCodAllocations(order);
+      const allocatedCod = allocations["admin"] || 0;
 
-      const inputCod = Number(req.body.codAmount);
-      if (isPureAdminOrder) {
-        codAmount = (inputCod > 0 && inputCod <= Number(order.total)) ? inputCod : proportionalCod;
+      // Check existing active shipments for seller groups in this order
+      const otherActiveShipments = await Shipment.find({
+        orderId: order._id,
+        $or: [{ isAdminShipment: false }, { sellerId: { $ne: null } }],
+        status: { $ne: "CANCELLED" },
+      });
+
+      const vendorGroups = getOrderVendorGroups(order);
+      const shippedOtherGroups = new Set(
+        otherActiveShipments.map((s) => String(s.sellerId))
+      );
+      const isLastRemainingGroup = vendorGroups.length > 1 && shippedOtherGroups.size === vendorGroups.length - 1;
+
+      if (isLastRemainingGroup && otherActiveShipments.length > 0) {
+        const sumOtherCod = otherActiveShipments.reduce((sum, s) => sum + (Number(s.codAmount) || 0), 0);
+        codAmount = Math.max(0, Math.round(((Number(order.total) || 0) - sumOtherCod) * 100) / 100);
       } else {
-        // Mixed order: input must not be the full un-split order total
-        if (inputCod > 0 && inputCod < Number(order.total)) {
-          codAmount = inputCod;
-        } else {
-          codAmount = proportionalCod;
+        codAmount = allocatedCod;
+      }
+
+      if (req.body.codAmount !== undefined && req.body.codAmount !== null && String(req.body.codAmount).trim() !== "") {
+        const inputCod = Number(req.body.codAmount);
+        if (!isNaN(inputCod) && Math.abs(inputCod - codAmount) > 0.05) {
+          return error(
+            res,
+            `Invalid COD amount. The allocated COD share for admin items is ₹${codAmount.toFixed(2)}, but received ₹${inputCod.toFixed(2)}.`,
+            400
+          );
         }
+      }
+
+      if (codAmount <= 0) {
+        return error(res, "COD amount is required for COD orders", 400);
       }
     }
 

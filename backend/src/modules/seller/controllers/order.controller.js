@@ -7,6 +7,7 @@ const {
   confirmCommissionsForOrder,
   reverseCommissionsForOrder
 } = require("../../../services/commissionService");
+const { calculateOrderCodAllocations } = require("../../../services/shipping/codAllocation");
 
 /**
  * Aggregate per-seller, per-order net commission totals for a list of order IDs.
@@ -98,6 +99,8 @@ const buildSellerOrderSummary = (order, sellerId, commissionEntry = null) => {
 
   const sellerCommission = commissionEntry || { confirmed: 0, pending: 0, reversed: 0, net: 0, discountShare: 0, status: "none" };
   const sellerNetEarning = Math.max(0, Number(sellerSubtotal) - Number(sellerCommission.net || 0) - Number(sellerCommission.discountShare || 0));
+  const codAllocations = calculateOrderCodAllocations(order);
+  const sellerCodAmount = codAllocations[String(sellerId)] || 0;
 
   return {
     _id: order._id,
@@ -125,6 +128,7 @@ const buildSellerOrderSummary = (order, sellerId, commissionEntry = null) => {
     allowedNextStatuses: allItemsOwnedBySeller ? (allowedTransitions[order.status] || []) : [],
     sellerCommission,
     sellerNetEarning,
+    sellerCodAmount,
     commissionSummary: order.commissionSummary || null,
   };
 };

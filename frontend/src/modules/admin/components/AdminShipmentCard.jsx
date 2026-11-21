@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { adminShippingService } from '../services/adminShippingService';
+import { calculateOrderCodAllocations } from '../../../utils/codAllocation';
 
 const STATUS_BADGE = {
   CREATED: 'bg-blue-50 text-blue-700 border-blue-200',
@@ -297,13 +298,8 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
   const isPureSellerOrder = items.length > 0 && adminItems.length === 0;
   const isMixedOrder = adminItems.length > 0 && sellerItems.length > 0;
 
-  const adminSubtotal = adminItems.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
-  const orderSubtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
-  const adminCodAmount = isCod
-    ? (isMixedOrder && orderSubtotal > 0
-        ? Math.round((((Number(order?.total) || 0) * adminSubtotal) / orderSubtotal) * 100) / 100
-        : Math.round((Number(order?.total) || 0) * 100) / 100)
-    : 0;
+  const codAllocations = calculateOrderCodAllocations(order);
+  const adminCodAmount = isCod ? (codAllocations['admin'] || 0) : 0;
 
   if (isPureSellerOrder) {
     return (
@@ -340,7 +336,7 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
           </div>
         </div>
         <span className={`text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full border ${isCod ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>
-          {isCod ? `COD: ₹${adminCodAmount}` : 'Prepaid'}
+          {isCod ? `COD: ₹${adminCodAmount.toFixed(2)}` : 'Prepaid'}
         </span>
       </div>
 

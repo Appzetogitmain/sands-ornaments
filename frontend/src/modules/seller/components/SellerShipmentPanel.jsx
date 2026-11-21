@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { sellerShippingService } from '../services/sellerShippingService';
 import { pickupLocationService } from '../services/pickupLocationService';
+import { calculateOrderCodAllocations } from '../../../utils/codAllocation';
 import ShipmentTimeline from '../../shared/components/ShipmentTimeline';
 
 const COURIERS = [
@@ -22,13 +23,29 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
   const [cancelling, setCancelling] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
-  // Calculate seller proportional COD
+  // Payment mode is strictly bound to order payment method
+  const isCod = order?.paymentMethod === 'cod';
+  const paymentMode = isCod ? 'cod' : 'prepaid';
+  const isSingleSeller = order?.allItemsOwnedBySeller ?? false;
+
+  // Calculate seller proportional COD using Largest Remainder or server-provided amount
   const calculateSellerCod = (ord) => {
     if (!ord || ord.paymentMethod !== 'cod') return 0;
+    if (ord.sellerCodAmount !== undefined && ord.sellerCodAmount !== null) {
+      return Number(ord.sellerCodAmount) || 0;
+    }
     const ordTotal = Number(ord.total) || 0;
     const items = ord.sellerItems || (ord.items || []).filter((item) => item.sellerId);
-    const isSingleSeller = ord.allItemsOwnedBySeller ?? (items.length > 0 && items.length === (ord.items || []).length);
-    if (isSingleSeller) return Math.round(ordTotal * 100) / 100;
+    const singleSeller = ord.allItemsOwnedBySeller ?? (items.length > 0 && items.length === (ord.items || []).length);
+    if (singleSeller) return Math.round(ordTotal * 100) / 100;
+
+    const mySellerId = items[0]?.sellerId;
+    if (mySellerId && ord.items && ord.items.length > 0) {
+      const allocations = calculateOrderCodAllocations(ord);
+      if (allocations[String(mySellerId)] !== undefined) {
+        return allocations[String(mySellerId)];
+      }
+    }
 
     const sellerSub = Number(ord.sellerSubtotal) || items.reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
     const ordSub = Number(ord.subtotal) || (ord.items || []).reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
@@ -36,11 +53,11 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
     return Math.round(((ordTotal * sellerSub) / ordSub) * 100) / 100;
   };
 
+  const effectiveCodAmount = calculateSellerCod(order);
+
   // Create form state
   const [selectedCourier, setSelectedCourier] = useState('');
   const [packageInfo, setPackageInfo] = useState({ weight: '', length: '', breadth: '', height: '' });
-  const [paymentMode, setPaymentMode] = useState(order?.paymentMethod === 'cod' ? 'cod' : 'prepaid');
-  const [codAmount, setCodAmount] = useState(() => calculateSellerCod(order));
 
   // Pickup location state (for Shiprocket)
   const [pickupLocations, setPickupLocations] = useState([]);
@@ -56,13 +73,6 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
   useEffect(() => {
     if (orderId) fetchShipments();
   }, [orderId]);
-
-  useEffect(() => {
-    if (order) {
-      setPaymentMode(order.paymentMethod === 'cod' ? 'cod' : 'prepaid');
-      setCodAmount(calculateSellerCod(order));
-    }
-  }, [order]);
 
   const fetchShipments = async () => {
     setLoading(true);
@@ -136,7 +146,7 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
       setMessage({ type: 'error', text: 'Please fill all package dimensions' });
       return;
     }
-    if (paymentMode === 'cod' && (!codAmount || codAmount <= 0)) {
+    if (isCod && (!effectiveCodAmount || effectiveCodAmount <= 0)) {
       setMessage({ type: 'error', text: 'COD amount is required for COD orders' });
       return;
     }
@@ -153,7 +163,7 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
           height: Number(packageInfo.height),
         },
         paymentMode,
-        codAmount: paymentMode === 'cod' ? Number(codAmount) : 0,
+        codAmount: isCod ? Number(effectiveCodAmount) : 0,
         // Only sent for Shiprocket
         pickupLocationId: selectedCourier === 'shiprocket' ? selectedPickupLocationId || undefined : undefined,
       });
@@ -472,33 +482,32 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
               {/* Payment Mode */}
               <div className="mb-6">
                 <label className="block text-[10px] uppercase tracking-wider text-gray-500 font-bold mb-2">Payment Mode</label>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setPaymentMode('prepaid')}
-                    className={`px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${paymentMode === 'prepaid' ? 'border-[#3E2723] bg-[#3E2723]/5 text-[#3E2723]' : 'border-gray-200 text-gray-600'}`}
-                  >
-                    Prepaid
-                  </button>
-                  <button
-                    onClick={() => setPaymentMode('cod')}
-                    className={`px-4 py-2.5 rounded-xl border-2 text-sm font-bold transition-all ${paymentMode === 'cod' ? 'border-[#3E2723] bg-[#3E2723]/5 text-[#3E2723]' : 'border-gray-200 text-gray-600'}`}
-                  >
-                    COD
-                  </button>
+                <div className="flex items-center gap-3">
+                  <span className={`px-4 py-2 rounded-xl border text-xs font-bold ${
+                    isCod
+                      ? 'border-amber-300 bg-amber-50 text-amber-800'
+                      : 'border-emerald-300 bg-emerald-50 text-emerald-800'
+                  }`}>
+                    {isCod ? 'Cash on Delivery (COD)' : 'Prepaid (Online Payment)'}
+                  </span>
+                  <span className="text-[11px] text-gray-400">
+                    Locked to customer payment method
+                  </span>
                 </div>
-                {paymentMode === 'cod' && (
+                {isCod && (
                   <div className="mt-3">
-                    <label className="text-[10px] text-gray-400 font-medium">COD Amount (₹)</label>
+                    <label className="text-[10px] text-gray-400 font-medium">Collectable COD Amount (₹)</label>
                     <input
                       type="number"
                       step="0.01"
-                      value={codAmount}
-                      onChange={(e) => setCodAmount(e.target.value)}
-                      className="w-full mt-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E2723]/20 focus:border-[#3E2723] max-w-xs"
+                      value={effectiveCodAmount.toFixed(2)}
+                      readOnly
+                      disabled
+                      className="w-full mt-1 px-3 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-700 text-sm font-semibold max-w-xs cursor-not-allowed select-none"
                     />
-                    {order && !order.allItemsOwnedBySeller && (
+                    {!isSingleSeller && (
                       <p className="mt-1 text-[10px] text-amber-600 font-medium">
-                        Multi-seller order: proportional share for your items is ₹{calculateSellerCod(order)} (Order Total: ₹{order?.total || 0}).
+                        Multi-seller order: proportional share for your items is ₹{effectiveCodAmount.toFixed(2)} (Order Total: ₹{order?.total || 0}).
                       </p>
                     )}
                   </div>

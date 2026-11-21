@@ -13,6 +13,7 @@ const assert = require("assert");
 const mongoose = require("mongoose");
 const Shipment = require("../src/models/Shipment");
 const ShiprocketProvider = require("../src/services/shipping/shiprocket.service");
+const { calculateOrderCodAllocations, getOrderVendorGroups } = require("../src/services/shipping/codAllocation");
 const shiprocketService = new ShiprocketProvider();
 
 async function runTests() {
@@ -327,8 +328,60 @@ async function runTests() {
     assert.strictEqual(sellerCollectable, 1260);
   });
 
-  test("Seller backend resolves to proportional COD when client submits full order total in mixed order", () => {
-    // Order total is ₹1800. Admin items = ₹600, Seller items = ₹1400.
+  test("Three-way split of ₹101 order: Largest Remainder Method prevents 1-paisa drift (₹101.00 total, not ₹101.01)", () => {
+    // ₹101 order split equally across three sellers (₹100 subtotal each)
+    const order = {
+      total: 101,
+      paymentMethod: "cod",
+      items: [
+        { price: 100, quantity: 1, sellerId: "seller_A" },
+        { price: 100, quantity: 1, sellerId: "seller_B" },
+        { price: 100, quantity: 1, sellerId: "seller_C" },
+      ],
+    };
+
+    const allocations = calculateOrderCodAllocations(order);
+    const sum = Object.values(allocations).reduce((s, a) => s + a, 0);
+
+    // Naive independent rounding would produce 33.67 * 3 = 101.01
+    // Largest Remainder Method distributes the 2 paise remainder to top 2: 33.67, 33.67, 33.66
+    assert.strictEqual(allocations["seller_A"], 33.67);
+    assert.strictEqual(allocations["seller_B"], 33.67);
+    assert.strictEqual(allocations["seller_C"], 33.66);
+    assert.strictEqual(Math.round(sum * 100) / 100, 101.00, "Sum of allocations must exactly equal ₹101.00");
+  });
+
+  test("COD allocation rejects payment mode alteration", () => {
+    const isCodOrder = { paymentMethod: "cod" };
+    const isPrepaidOrder = { paymentMethod: "prepaid" };
+
+    const validateMode = (order, requestedMode) => {
+      const isCod = order.paymentMethod === "cod";
+      const mode = isCod ? "cod" : "prepaid";
+      if (requestedMode && requestedMode !== mode) {
+        throw new Error(`Payment mode cannot be changed from order payment method (${isCod ? "COD" : "Prepaid"}).`);
+      }
+      return mode;
+    };
+
+    // Attempting to switch COD order to Prepaid must throw
+    assert.throws(
+      () => validateMode(isCodOrder, "prepaid"),
+      /Payment mode cannot be changed/
+    );
+
+    // Attempting to switch Prepaid order to COD must throw
+    assert.throws(
+      () => validateMode(isPrepaidOrder, "cod"),
+      /Payment mode cannot be changed/
+    );
+
+    // Matching modes succeed
+    assert.strictEqual(validateMode(isCodOrder, "cod"), "cod");
+    assert.strictEqual(validateMode(isPrepaidOrder, "prepaid"), "prepaid");
+  });
+
+  test("Seller COD validation rejects arbitrary lower amounts and enforces allocated share", () => {
     const order = {
       total: 1800,
       paymentMethod: "cod",
@@ -337,32 +390,28 @@ async function runTests() {
         { price: 1400, quantity: 1, sellerId: "seller_1" },
       ],
     };
-    const sellerItems = order.items.filter((i) => i.sellerId === "seller_1");
 
-    // Client form accidentally submits full order.total (1800)
-    const clientSubmittedCod = 1800;
+    const allocations = calculateOrderCodAllocations(order);
+    const allocatedCod = allocations["seller_1"]; // 1260
 
-    const sellerSubtotal = sellerItems.reduce((s, i) => s + i.price * i.quantity, 0);
-    const orderSubtotal = order.items.reduce((s, i) => s + i.price * i.quantity, 0);
-    const isSingleSellerOrder = sellerItems.length === order.items.length;
-    const proportionalCod = (orderSubtotal > 0 && !isSingleSellerOrder)
-      ? Math.round(((order.total * sellerSubtotal) / orderSubtotal) * 100) / 100
-      : Math.round(order.total * 100) / 100;
-
-    let finalCodAmount = 0;
-    const inputCod = Number(clientSubmittedCod);
-    if (isSingleSellerOrder) {
-      finalCodAmount = (inputCod > 0 && inputCod <= Number(order.total)) ? inputCod : proportionalCod;
-    } else {
-      if (inputCod > 0 && inputCod < Number(order.total)) {
-        finalCodAmount = inputCod;
-      } else {
-        finalCodAmount = proportionalCod;
+    const validateCodInput = (inputCod) => {
+      let finalCodAmount = allocatedCod;
+      if (inputCod !== undefined && inputCod !== null && String(inputCod).trim() !== "") {
+        const parsed = Number(inputCod);
+        if (!isNaN(parsed) && Math.abs(parsed - finalCodAmount) > 0.05) {
+          throw new Error(`Invalid COD amount. The allocated COD share for your items is ₹${finalCodAmount.toFixed(2)}, but received ₹${parsed.toFixed(2)}.`);
+        }
       }
-    }
+      return finalCodAmount;
+    };
 
-    // Backend must correct full order total (1800) to proportional amount (1260)
-    assert.strictEqual(finalCodAmount, 1260, "Backend must correct full order total to proportional share");
+    // Seller tries to input an arbitrary low COD amount (e.g. ₹50 or ₹100 instead of ₹1260)
+    assert.throws(() => validateCodInput(50), /Invalid COD amount/);
+    assert.throws(() => validateCodInput(100), /Invalid COD amount/);
+
+    // Exact matching amount or omitted amount succeeds with allocated share
+    assert.strictEqual(validateCodInput(1260), 1260);
+    assert.strictEqual(validateCodInput(undefined), 1260);
   });
 
   test("Rounding precision consistency: both frontend and backend preserve two decimals", () => {

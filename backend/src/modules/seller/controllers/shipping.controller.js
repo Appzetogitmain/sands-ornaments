@@ -10,6 +10,7 @@ const Seller = require("../../../models/Seller");
 const PickupLocation = require("../../../models/PickupLocation");
 const { success, error, paginated } = require("../../../utils/apiResponse");
 const { getCourierProvider, getAvailableCouriers } = require("../../../services/shipping/courierFactory");
+const { calculateOrderCodAllocations, getOrderVendorGroups } = require("../../../services/shipping/codAllocation");
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -250,32 +251,51 @@ exports.createShipment = async (req, res) => {
     if (!pkg.weight || pkg.weight <= 0) return error(res, "Package weight is required", 400);
     if (!pkg.length || !pkg.breadth || !pkg.height) return error(res, "Package dimensions (length, breadth, height) are required", 400);
 
-    // Validate payment mode
-    const mode = paymentMode || (order.paymentMethod === "cod" ? "cod" : "prepaid");
+    // Validate payment mode: strictly bound to order payment method
+    const isCod = order.paymentMethod === "cod";
+    const mode = isCod ? "cod" : "prepaid";
+    if (paymentMode && paymentMode !== mode) {
+      return error(
+        res,
+        `Payment mode cannot be changed. Order ${order.orderNumber || order._id} is ${isCod ? "Cash on Delivery (COD)" : "Prepaid"}.`,
+        400
+      );
+    }
+
     let finalCodAmount = 0;
     if (mode === "cod") {
-      const sellerSubtotal = sellerItems.reduce(
-        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
-        0
-      );
-      const orderSubtotal = (order.items || []).reduce(
-        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
-        0
-      );
-      const isSingleSellerOrder = sellerItems.length === (order.items || []).length;
-      const proportionalCod = (orderSubtotal > 0 && !isSingleSellerOrder)
-        ? Math.round(((Number(order.total) || 0) * sellerSubtotal / orderSubtotal) * 100) / 100
-        : Math.round(Number(order.total || 0) * 100) / 100;
+      const allocations = calculateOrderCodAllocations(order);
+      const allocatedCod = allocations[String(sellerId)] || 0;
 
-      const inputCod = Number(codAmount);
-      if (isSingleSellerOrder) {
-        finalCodAmount = (inputCod > 0 && inputCod <= Number(order.total)) ? inputCod : proportionalCod;
+      // Check existing active shipments for other vendor groups in this order
+      const otherActiveShipments = await Shipment.find({
+        orderId: order._id,
+        sellerId: { $ne: sellerId },
+        status: { $ne: "CANCELLED" },
+      });
+
+      const vendorGroups = getOrderVendorGroups(order);
+      const shippedOtherGroups = new Set(
+        otherActiveShipments.map((s) => (s.isAdminShipment ? "admin" : String(s.sellerId)))
+      );
+      const isLastRemainingGroup = vendorGroups.length > 1 && shippedOtherGroups.size === vendorGroups.length - 1;
+
+      if (isLastRemainingGroup && otherActiveShipments.length > 0) {
+        const sumOtherCod = otherActiveShipments.reduce((sum, s) => sum + (Number(s.codAmount) || 0), 0);
+        finalCodAmount = Math.max(0, Math.round(((Number(order.total) || 0) - sumOtherCod) * 100) / 100);
       } else {
-        // Mixed/multi-seller order: if input was omitted, <= 0, or equal to the full un-split order total, use proportionalCod
-        if (inputCod > 0 && inputCod < Number(order.total)) {
-          finalCodAmount = inputCod;
-        } else {
-          finalCodAmount = proportionalCod;
+        finalCodAmount = allocatedCod;
+      }
+
+      // If client supplied codAmount, verify it matches the authoritative allocated share
+      if (codAmount !== undefined && codAmount !== null && String(codAmount).trim() !== "") {
+        const inputCod = Number(codAmount);
+        if (!isNaN(inputCod) && Math.abs(inputCod - finalCodAmount) > 0.05) {
+          return error(
+            res,
+            `Invalid COD amount. The allocated COD share for your items is ₹${finalCodAmount.toFixed(2)}, but received ₹${inputCod.toFixed(2)}.`,
+            400
+          );
         }
       }
 
