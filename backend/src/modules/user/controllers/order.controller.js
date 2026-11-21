@@ -721,7 +721,7 @@ exports.cancelOrder = async (req, res) => {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return error(res, "Invalid order id", 400);
     }
-    const order = await Order.findOne({
+    let order = await Order.findOne({
       _id: req.params.id,
       userId: req.user.userId,
     });
@@ -753,22 +753,24 @@ exports.cancelOrder = async (req, res) => {
       );
     }
 
-    // Cancel any pre-pickup courier shipments (e.g. CREATED, PICKUP_SCHEDULED)
+    // Record each successful courier cancellation immediately. If a later step fails,
+    // a retry can finish the order without asking the courier to cancel it again.
     for (const shipment of activeShipments) {
+      let cancelRes;
       try {
         const provider = getCourierProvider(shipment.courier);
-        if (provider && typeof provider.cancelShipment === "function") {
-          const cancelRes = await provider.cancelShipment({
-            awbNumber: shipment.awbNumber,
-            waybill: shipment.waybill,
-            shiprocketOrderId: shipment.shiprocketOrderId,
-          });
-          if (cancelRes && cancelRes.cancelled === false) {
-            console.warn(`[Order Cancel] Courier ${shipment.courier} cancellation notice: ${cancelRes.message}`);
-          }
-        }
+        cancelRes = await provider.cancelShipment({
+          awbNumber: shipment.awbNumber,
+          waybill: shipment.waybill,
+          shiprocketOrderId: shipment.shiprocketOrderId,
+        });
       } catch (courierErr) {
-        console.warn(`[Order Cancel] Failed to cancel courier shipment ${shipment._id}:`, courierErr.message);
+        console.error(`[Order Cancel] Failed to cancel courier shipment ${shipment._id}:`, courierErr);
+        return error(res, `Could not cancel the ${shipment.courier} shipment. Please try again or contact support.`, 502);
+      }
+      if (cancelRes?.cancelled !== true) {
+        console.error(`[Order Cancel] Courier ${shipment.courier} rejected cancellation of ${shipment._id}:`, cancelRes?.message);
+        return error(res, `Could not cancel the ${shipment.courier} shipment. Please try again or contact support.`, 502);
       }
       shipment.status = "CANCELLED";
       shipment.timeline.push({
@@ -780,138 +782,165 @@ exports.cancelOrder = async (req, res) => {
     }
 
     const reason = (req.body?.reason && typeof req.body.reason === "string" ? req.body.reason.trim() : "") || "Cancelled by user";
-    const previousPaymentStatus = order.paymentStatus;
-
-    order.status = "Cancelled";
-    order.timeline.push({
-      status: "Cancelled",
-      note: `Cancelled by user: ${reason}`,
-      date: new Date(),
-    });
-
-    // Process online refund for paid Razorpay orders
-    if (
-      order.paymentMethod === "razorpay" &&
-      order.paymentStatus === "paid" &&
-      order.razorpayPaymentId &&
-      order.refundStatus !== "processed"
-    ) {
-      try {
-        order.refundStatus = "pending";
-        const refundResult = await razorpayProcessRefund(
-          order.razorpayPaymentId,
-          order.total,
-          {
-            orderId: String(order.orderId || order._id),
-            reason: reason || "Cancelled by user",
-            cancelledBy: "customer",
-          }
-        );
-        order.refundId = refundResult.id;
-        order.refundStatus = "processed";
-        order.refundAmount = order.total;
-        order.refundedAt = new Date();
-        order.paymentStatus = "refunded";
-        order.timeline.push({
-          status: "Cancelled",
-          note: `Online refund of ₹${order.total} initiated successfully (Razorpay Refund ID: ${refundResult.id}).`,
-          date: new Date(),
-        });
-      } catch (refundErr) {
-        console.error("[Order Cancel] Razorpay auto-refund error:", refundErr.message);
-        order.refundStatus = "failed";
-        order.timeline.push({
-          status: "Cancelled",
-          note: `Automatic online refund failed (${refundErr.message}). Sands Ornaments support team will process your refund manually.`,
-          date: new Date(),
-        });
-      }
-    }
-
-    await order.save();
-
-    // Refund any applied gift cards (restoring balance and updating status)
-    if (
-      Array.isArray(order.appliedGiftCards) &&
-      order.appliedGiftCards.length > 0
-    ) {
-      for (const gc of order.appliedGiftCards) {
-        if (!gc.cardId || !gc.amountUsed) continue;
-        const updatedCard = await GiftCard.findOneAndUpdate(
-          { _id: gc.cardId },
-          {
-            $inc: { balance: gc.amountUsed },
-            $pull: { redemptions: { orderId: order.orderId } },
-          },
-          { new: true },
-        );
-        if (updatedCard) {
-          const newStatus =
-            updatedCard.balance <= 0
-              ? "used"
-              : updatedCard.balance < updatedCard.value
-                ? "partially_used"
-                : "active";
-          await GiftCard.updateOne({ _id: gc.cardId }, { status: newStatus });
-          console.log(
-            `[GiftCard] Refunded ₹${gc.amountUsed} back to card ${gc.code} (new balance: ₹${updatedCard.balance}) for cancelled order ${order.orderId}`,
-          );
+    let previousPaymentStatus = order.paymentStatus;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        // Re-read inside the transaction so a competing status change cannot
+        // cancel (or restock) the same order twice.
+        const currentOrder = await Order.findOne({
+          _id: order._id,
+          userId: req.user.userId,
+        }).session(session);
+        if (!currentOrder || !CANCELLABLE_STATUSES.includes(currentOrder.status)) {
+          const conflict = new Error("Order is no longer eligible for cancellation");
+          conflict.statusCode = 409;
+          throw conflict;
         }
+        order = currentOrder;
+        previousPaymentStatus = currentOrder.paymentStatus;
+
+        order.status = "Cancelled";
+        order.timeline.push({
+          status: "Cancelled",
+          note: `Cancelled by user: ${reason}`,
+          date: new Date(),
+        });
+
+        if (order.paymentMethod === "razorpay" && previousPaymentStatus === "paid" && order.razorpayPaymentId) {
+          order.refundStatus = "pending";
+        }
+
+        // Refund any applied gift cards (restoring balance and updating status)
+        if (
+          Array.isArray(order.appliedGiftCards) &&
+          order.appliedGiftCards.length > 0
+        ) {
+          for (const gc of order.appliedGiftCards) {
+            if (!gc.cardId || !gc.amountUsed) continue;
+            const updatedCard = await GiftCard.findOneAndUpdate(
+              { _id: gc.cardId, "redemptions.orderId": order.orderId },
+              {
+                $inc: { balance: gc.amountUsed },
+                $pull: { redemptions: { orderId: order.orderId } },
+              },
+              { new: true, session },
+            );
+            if (!updatedCard && ["cod", "paid"].includes(previousPaymentStatus)) {
+              throw new Error(`Cannot restore gift card ${gc.code || gc.cardId} for order ${order.orderId}`);
+            }
+            if (updatedCard) {
+              const newStatus =
+                updatedCard.balance <= 0
+                  ? "used"
+                  : updatedCard.balance < updatedCard.value
+                    ? "partially_used"
+                    : "active";
+              await GiftCard.updateOne({ _id: gc.cardId }, { status: newStatus }, { session });
+              console.log(
+                `[GiftCard] Refunded ₹${gc.amountUsed} back to card ${gc.code} (new balance: ₹${updatedCard.balance}) for cancelled order ${order.orderId}`,
+              );
+            }
+          }
+        }
+
+        // Restock only if stock was already deducted (COD or paid Razorpay orders)
+        if (previousPaymentStatus === "cod" || previousPaymentStatus === "paid" || order.paymentStatus === "refunded") {
+          for (const item of order.items) {
+            const product = await Product.findById(item.productId).session(session);
+            const variant = product?.variants.id(item.variantId);
+            if (!product || !variant) {
+              if (item.isGiftCard) continue;
+              throw new Error(`Cannot restore stock for order item ${item.productId}/${item.variantId}`);
+            }
+
+            const quantity = Number(item.quantity) || 0;
+            if (quantity <= 0) continue;
+
+            const previousStock = Number(variant.stock) || 0;
+            const variantIndex = product.variants.findIndex(
+              (v) => String(v._id) === String(item.variantId),
+            );
+
+            if (isSerializedVariant(product, variant)) {
+              restockSerializedUnits({
+                product,
+                variant,
+                quantity,
+                variantIndex,
+              });
+            } else {
+              variant.stock = previousStock + quantity;
+            }
+
+            variant.sold = Math.max(0, (Number(variant.sold) || 0) - quantity);
+            await product.save({ session });
+
+            await StockLog.create([{
+              productId: item.productId,
+              variantId: item.variantId,
+              changeType: "return",
+              previousStock,
+              newStock: variant.stock,
+              change: variant.stock - previousStock,
+              reason: `Order ${order.orderId} cancelled by user: ${reason}`,
+              userId: req.user.userId,
+            }], { session });
+          }
+        }
+
+        await order.save({ session });
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    // The refund is external to MongoDB. Start it only after the cancellation
+    // and all balance/stock reversals have committed.
+    if (order.refundStatus === "pending" && order.paymentMethod === "razorpay" && order.razorpayPaymentId) {
+      let refundUpdate;
+      try {
+        const refundResult = await razorpayProcessRefund(order.razorpayPaymentId, order.total, {
+          orderId: String(order.orderId || order._id),
+          reason,
+          cancelledBy: "customer",
+        });
+        refundUpdate = {
+          refundId: refundResult.id,
+          refundStatus: "processed",
+          refundAmount: order.total,
+          refundedAt: new Date(),
+          paymentStatus: "refunded",
+          timeline: { status: "Cancelled", note: `Online refund of ₹${order.total} initiated successfully (Razorpay Refund ID: ${refundResult.id}).`, date: new Date() },
+        };
+      } catch (refundErr) {
+        console.error("[Order Cancel] Razorpay auto-refund error:", refundErr);
+        refundUpdate = {
+          refundStatus: "failed",
+          timeline: { status: "Cancelled", note: `Automatic online refund failed (${refundErr.message}). Sands Ornaments support team will process your refund manually.`, date: new Date() },
+        };
+      }
+      try {
+        await Order.updateOne({ _id: order._id, status: "Cancelled" }, {
+          $set: Object.fromEntries(Object.entries(refundUpdate).filter(([key]) => key !== "timeline")),
+          $push: { timeline: refundUpdate.timeline },
+        });
+        Object.assign(order, Object.fromEntries(Object.entries(refundUpdate).filter(([key]) => key !== "timeline")));
+        order.timeline.push(refundUpdate.timeline);
+      } catch (refundSaveErr) {
+        console.error(`[Order Cancel] Refund result for order ${order.orderId} (refund ID: ${refundUpdate.refundId || "none"}) could not be saved; reconcile with Razorpay:`, refundSaveErr);
       }
     }
 
-    // Reverse platform commission ledger entries (decision F: full reversal).
-    // Safe: never let a ledger error block the cancellation itself.
+    // Commission reversal and notifications are best effort after commit.
     try {
       await reverseCommissionsForOrder(order._id, {
         triggeredBy: "order_cancelled",
-        reasonNote: reason || "Cancelled by user",
+        reasonNote: reason,
         safe: true,
       });
     } catch (e) {
       console.error("[Commission] User-cancel reversal error:", e.message);
-    }
-
-    // Restock only if stock was already deducted (COD or paid Razorpay orders)
-    if (previousPaymentStatus === "cod" || previousPaymentStatus === "paid" || order.paymentStatus === "refunded") {
-      for (const item of order.items) {
-        const product = await Product.findById(item.productId);
-        const variant = product?.variants.id(item.variantId);
-        if (!product || !variant) continue;
-
-        const quantity = Number(item.quantity) || 0;
-        if (quantity <= 0) continue;
-
-        const previousStock = Number(variant.stock) || 0;
-        const variantIndex = product.variants.findIndex(
-          (v) => String(v._id) === String(item.variantId),
-        );
-
-        if (isSerializedVariant(product, variant)) {
-          restockSerializedUnits({
-            product,
-            variant,
-            quantity,
-            variantIndex,
-          });
-        } else {
-          variant.stock = previousStock + quantity;
-        }
-
-        variant.sold = Math.max(0, (Number(variant.sold) || 0) - quantity);
-        await product.save();
-
-        await StockLog.create({
-          productId: item.productId,
-          variantId: item.variantId,
-          changeType: "return",
-          previousStock,
-          newStock: variant.stock,
-          change: variant.stock - previousStock,
-          reason: `Order ${order.orderId} cancelled by user: ${reason}`,
-          userId: req.user.userId,
-        });
-      }
     }
 
     // Real-time socket updates to user
@@ -961,6 +990,6 @@ exports.cancelOrder = async (req, res) => {
 
     return success(res, { order }, "Order cancelled successfully");
   } catch (err) {
-    return error(res, err.message);
+    return error(res, err.message, err.statusCode || 500);
   }
 };

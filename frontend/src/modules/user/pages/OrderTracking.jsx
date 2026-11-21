@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useShop } from '../../../context/ShopContext';
 import { Package, ArrowLeft, RefreshCw, Check, Clock } from 'lucide-react';
 import FAQSection from '../components/FAQSection';
-import CancelOrderModal from '../components/profile/CancelOrderModal';
+import CancelOrderModal from '../components/Profile/CancelOrderModal';
 
 const formatCurrency = (value) => `₹${Math.round(Number(value || 0)).toLocaleString('en-IN')}`;
 

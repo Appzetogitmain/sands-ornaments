@@ -29,4 +29,4 @@ export default defineConfig([
       'react-refresh/only-export-components': 'off',
     },
   },
-])
+]);
