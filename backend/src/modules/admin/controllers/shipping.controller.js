@@ -540,21 +540,28 @@ exports.createShipment = async (req, res) => {
 
     let codAmount = 0;
     if (isCod) {
-      if (Number(req.body.codAmount) > 0) {
-        codAmount = Number(req.body.codAmount);
+      const adminSubtotal = adminItems.reduce(
+        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+        0
+      );
+      const orderSubtotal = (order.items || []).reduce(
+        (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
+        0
+      );
+      const isPureAdminOrder = sellerItems.length === 0;
+      const proportionalCod = (orderSubtotal > 0 && !isPureAdminOrder)
+        ? Math.round(((Number(order.total) || 0) * adminSubtotal / orderSubtotal) * 100) / 100
+        : Math.round(Number(order.total || 0) * 100) / 100;
+
+      const inputCod = Number(req.body.codAmount);
+      if (isPureAdminOrder) {
+        codAmount = (inputCod > 0 && inputCod <= Number(order.total)) ? inputCod : proportionalCod;
       } else {
-        const adminSubtotal = adminItems.reduce(
-          (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
-          0
-        );
-        const orderSubtotal = (order.items || []).reduce(
-          (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
-          0
-        );
-        if (sellerItems.length === 0 || orderSubtotal <= 0) {
-          codAmount = Number(order.total) || 0;
+        // Mixed order: input must not be the full un-split order total
+        if (inputCod > 0 && inputCod < Number(order.total)) {
+          codAmount = inputCod;
         } else {
-          codAmount = Math.round(((Number(order.total) || 0) * adminSubtotal / orderSubtotal) * 100) / 100;
+          codAmount = proportionalCod;
         }
       }
     }

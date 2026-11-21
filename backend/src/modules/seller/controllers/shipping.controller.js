@@ -252,8 +252,8 @@ exports.createShipment = async (req, res) => {
 
     // Validate payment mode
     const mode = paymentMode || (order.paymentMethod === "cod" ? "cod" : "prepaid");
-    let finalCodAmount = Number(codAmount) || 0;
-    if (mode === "cod" && finalCodAmount <= 0) {
+    let finalCodAmount = 0;
+    if (mode === "cod") {
       const sellerSubtotal = sellerItems.reduce(
         (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
         0
@@ -262,15 +262,26 @@ exports.createShipment = async (req, res) => {
         (sum, i) => sum + (Number(i.price) || 0) * (Number(i.quantity) || 1),
         0
       );
-      if (sellerItems.length === (order.items || []).length || orderSubtotal <= 0) {
-        finalCodAmount = Number(order.total) || 0;
-      } else {
-        finalCodAmount = Math.round(((Number(order.total) || 0) * sellerSubtotal / orderSubtotal) * 100) / 100;
-      }
-    }
+      const isSingleSellerOrder = sellerItems.length === (order.items || []).length;
+      const proportionalCod = (orderSubtotal > 0 && !isSingleSellerOrder)
+        ? Math.round(((Number(order.total) || 0) * sellerSubtotal / orderSubtotal) * 100) / 100
+        : Math.round(Number(order.total || 0) * 100) / 100;
 
-    if (mode === "cod" && finalCodAmount <= 0) {
-      return error(res, "COD amount is required for COD orders", 400);
+      const inputCod = Number(codAmount);
+      if (isSingleSellerOrder) {
+        finalCodAmount = (inputCod > 0 && inputCod <= Number(order.total)) ? inputCod : proportionalCod;
+      } else {
+        // Mixed/multi-seller order: if input was omitted, <= 0, or equal to the full un-split order total, use proportionalCod
+        if (inputCod > 0 && inputCod < Number(order.total)) {
+          finalCodAmount = inputCod;
+        } else {
+          finalCodAmount = proportionalCod;
+        }
+      }
+
+      if (finalCodAmount <= 0) {
+        return error(res, "COD amount is required for COD orders", 400);
+      }
     }
 
     // ── Pickup address: prefer pickupLocationId, fallback to seller profile ──────

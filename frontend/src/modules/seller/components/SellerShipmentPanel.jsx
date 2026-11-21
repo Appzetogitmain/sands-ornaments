@@ -22,11 +22,25 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
   const [cancelling, setCancelling] = useState(false);
   const [message, setMessage] = useState({ type: '', text: '' });
 
+  // Calculate seller proportional COD
+  const calculateSellerCod = (ord) => {
+    if (!ord || ord.paymentMethod !== 'cod') return 0;
+    const ordTotal = Number(ord.total) || 0;
+    const items = ord.sellerItems || (ord.items || []).filter((item) => item.sellerId);
+    const isSingleSeller = ord.allItemsOwnedBySeller ?? (items.length > 0 && items.length === (ord.items || []).length);
+    if (isSingleSeller) return Math.round(ordTotal * 100) / 100;
+
+    const sellerSub = Number(ord.sellerSubtotal) || items.reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
+    const ordSub = Number(ord.subtotal) || (ord.items || []).reduce((s, i) => s + (Number(i.price) || 0) * (Number(i.quantity) || 1), 0);
+    if (ordSub <= 0 || sellerSub <= 0) return Math.round(ordTotal * 100) / 100;
+    return Math.round(((ordTotal * sellerSub) / ordSub) * 100) / 100;
+  };
+
   // Create form state
   const [selectedCourier, setSelectedCourier] = useState('');
   const [packageInfo, setPackageInfo] = useState({ weight: '', length: '', breadth: '', height: '' });
   const [paymentMode, setPaymentMode] = useState(order?.paymentMethod === 'cod' ? 'cod' : 'prepaid');
-  const [codAmount, setCodAmount] = useState(order?.total || 0);
+  const [codAmount, setCodAmount] = useState(() => calculateSellerCod(order));
 
   // Pickup location state (for Shiprocket)
   const [pickupLocations, setPickupLocations] = useState([]);
@@ -42,6 +56,13 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
   useEffect(() => {
     if (orderId) fetchShipments();
   }, [orderId]);
+
+  useEffect(() => {
+    if (order) {
+      setPaymentMode(order.paymentMethod === 'cod' ? 'cod' : 'prepaid');
+      setCodAmount(calculateSellerCod(order));
+    }
+  }, [order]);
 
   const fetchShipments = async () => {
     setLoading(true);
@@ -470,10 +491,16 @@ const SellerShipmentPanel = ({ order, onShipmentCreated }) => {
                     <label className="text-[10px] text-gray-400 font-medium">COD Amount (₹)</label>
                     <input
                       type="number"
+                      step="0.01"
                       value={codAmount}
                       onChange={(e) => setCodAmount(e.target.value)}
                       className="w-full mt-1 px-3 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-[#3E2723]/20 focus:border-[#3E2723] max-w-xs"
                     />
+                    {order && !order.allItemsOwnedBySeller && (
+                      <p className="mt-1 text-[10px] text-amber-600 font-medium">
+                        Multi-seller order: proportional share for your items is ₹{calculateSellerCod(order)} (Order Total: ₹{order?.total || 0}).
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

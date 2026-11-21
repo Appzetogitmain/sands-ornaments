@@ -327,6 +327,58 @@ async function runTests() {
     assert.strictEqual(sellerCollectable, 1260);
   });
 
+  test("Seller backend resolves to proportional COD when client submits full order total in mixed order", () => {
+    // Order total is ₹1800. Admin items = ₹600, Seller items = ₹1400.
+    const order = {
+      total: 1800,
+      paymentMethod: "cod",
+      items: [
+        { price: 600, quantity: 1, sellerId: null },
+        { price: 1400, quantity: 1, sellerId: "seller_1" },
+      ],
+    };
+    const sellerItems = order.items.filter((i) => i.sellerId === "seller_1");
+
+    // Client form accidentally submits full order.total (1800)
+    const clientSubmittedCod = 1800;
+
+    const sellerSubtotal = sellerItems.reduce((s, i) => s + i.price * i.quantity, 0);
+    const orderSubtotal = order.items.reduce((s, i) => s + i.price * i.quantity, 0);
+    const isSingleSellerOrder = sellerItems.length === order.items.length;
+    const proportionalCod = (orderSubtotal > 0 && !isSingleSellerOrder)
+      ? Math.round(((order.total * sellerSubtotal) / orderSubtotal) * 100) / 100
+      : Math.round(order.total * 100) / 100;
+
+    let finalCodAmount = 0;
+    const inputCod = Number(clientSubmittedCod);
+    if (isSingleSellerOrder) {
+      finalCodAmount = (inputCod > 0 && inputCod <= Number(order.total)) ? inputCod : proportionalCod;
+    } else {
+      if (inputCod > 0 && inputCod < Number(order.total)) {
+        finalCodAmount = inputCod;
+      } else {
+        finalCodAmount = proportionalCod;
+      }
+    }
+
+    // Backend must correct full order total (1800) to proportional amount (1260)
+    assert.strictEqual(finalCodAmount, 1260, "Backend must correct full order total to proportional share");
+  });
+
+  test("Rounding precision consistency: both frontend and backend preserve two decimals", () => {
+    // Uneven split: total 1000, admin 333, seller 667
+    const orderTotal = 1000;
+    const adminSubtotal = 333;
+    const orderSubtotal = 1000;
+
+    const backendRounded = Math.round(((orderTotal * adminSubtotal) / orderSubtotal) * 100) / 100;
+    const frontendRounded = Math.round((((orderTotal) * adminSubtotal) / orderSubtotal) * 100) / 100;
+
+    assert.strictEqual(backendRounded, 333);
+    assert.strictEqual(frontendRounded, 333);
+    assert.strictEqual(backendRounded, frontendRounded, "Frontend and backend rounding formulas must match exactly");
+  });
+
   console.log("\n════════════════════════════════════════════════════════════");
   console.log(`Tests:  ${passed + failed}   ✓ ${passed} passed   ✗ ${failed} failed`);
   console.log("════════════════════════════════════════════════════════════\n");

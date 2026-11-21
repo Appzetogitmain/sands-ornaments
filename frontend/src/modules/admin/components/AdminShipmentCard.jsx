@@ -301,8 +301,8 @@ const AdminShipmentCard = ({ order, onOrderUpdated }) => {
   const orderSubtotal = items.reduce((sum, item) => sum + (Number(item.price) || 0) * (Number(item.quantity) || 1), 0);
   const adminCodAmount = isCod
     ? (isMixedOrder && orderSubtotal > 0
-        ? Math.round(((order?.total || 0) * adminSubtotal) / orderSubtotal)
-        : Number(order?.total || 0))
+        ? Math.round((((Number(order?.total) || 0) * adminSubtotal) / orderSubtotal) * 100) / 100
+        : Math.round((Number(order?.total) || 0) * 100) / 100)
     : 0;
 
   if (isPureSellerOrder) {
