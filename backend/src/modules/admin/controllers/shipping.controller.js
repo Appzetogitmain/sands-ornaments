@@ -435,20 +435,35 @@ exports.createShipment = async (req, res) => {
     }
 
     const shippingAddr = order.shippingAddress || {};
-    if (!shippingAddr.pincode) return error(res, "Customer delivery pincode is missing", 400);
-    if (!shippingAddr.phone) return error(res, "Customer phone is missing", 400);
-    const customerName = [shippingAddr.firstName, shippingAddr.lastName].filter(Boolean).join(" ");
-    if (!customerName) return error(res, "Customer name is missing", 400);
-    const customerAddress = [shippingAddr.flatNo, shippingAddr.area].filter(Boolean).join(", ");
+    const customerPincode = String(shippingAddr.pincode || "").trim();
+    if (!customerPincode) return error(res, "Customer delivery pincode is missing", 400);
+
+    const customerPhone = String(shippingAddr.phone || order.customerPhone || "").trim();
+    if (!customerPhone) return error(res, "Customer phone is missing", 400);
+
+    const customerName = [shippingAddr.firstName, shippingAddr.lastName].filter(Boolean).join(" ") ||
+      shippingAddr.name ||
+      order.customerName ||
+      "Customer";
+
+    const customerAddress = [
+      shippingAddr.flatNo,
+      shippingAddr.area,
+      shippingAddr.address,
+      shippingAddr.addressLine1,
+      shippingAddr.district,
+    ].filter(Boolean).join(", ") || shippingAddr.street || "";
+
     if (!customerAddress) return error(res, "Customer address is missing", 400);
 
     const deliveryAddress = {
       name: customerName,
-      phone: String(shippingAddr.phone || "").trim(),
+      phone: customerPhone,
+      email: shippingAddr.email || order.customerEmail || "",
       address: customerAddress,
       city: shippingAddr.city || "",
       state: shippingAddr.state || "",
-      pincode: String(shippingAddr.pincode || "").trim(),
+      pincode: customerPincode,
       country: shippingAddr.country || "India",
     };
 
