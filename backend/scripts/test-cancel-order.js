@@ -7,6 +7,13 @@ const mongoose = require("mongoose");
 const Order = require("../src/models/Order");
 const Shipment = require("../src/models/Shipment");
 const orderRoutes = require("../src/modules/user/routes/order.routes");
+const {
+  generateOrderId,
+  generateReturnId,
+  generateReplacementId,
+  generateReplId,
+  generateTicketId,
+} = require("../src/utils/generateId");
 
 async function runTests() {
   console.log("════════════════════════════════════════════════════════════");
@@ -52,6 +59,19 @@ async function runTests() {
   test("Shipment schema allows 'CANCELLED' status", () => {
     const enumValues = Shipment.schema.path("status").enumValues;
     assert(enumValues.includes("CANCELLED"), "'CANCELLED' must be a valid Shipment status");
+  });
+
+  test("generateReplacementId is defined and outputs valid replacement format", () => {
+    assert.strictEqual(typeof generateReplacementId, "function", "generateReplacementId must be a function");
+    assert.strictEqual(typeof generateReplId, "function", "generateReplId alias must be a function");
+    const id = generateReplacementId();
+    assert(/^REP-\d{6}$/.test(id), `Replacement ID must match REP-XXXXXX format, got: ${id}`);
+  });
+
+  test("generateReturnId is defined and outputs valid return format", () => {
+    assert.strictEqual(typeof generateReturnId, "function", "generateReturnId must be a function");
+    const id = generateReturnId();
+    assert(/^RET-\d{6}$/.test(id), `Return ID must match RET-XXXXXX format, got: ${id}`);
   });
 
   // 2. Cancellation Status Guard Logic
